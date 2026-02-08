@@ -7,9 +7,12 @@
 
 import Groq from "groq-sdk";
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
+function getGroqClient() {
+  if (!process.env.GROQ_API_KEY) {
+    throw new Error("GROQ_API_KEY environment variable is not configured.");
+  }
+  return new Groq({ apiKey: process.env.GROQ_API_KEY });
+}
 
 interface ChatMessage {
   role: "system" | "user" | "assistant";
@@ -44,7 +47,7 @@ export async function* streamAIResponse(
   // Add the new user message
   messages.push({ role: "user", content: userMessage });
 
-  const stream = await groq.chat.completions.create({
+  const stream = await getGroqClient().chat.completions.create({
     model,
     messages,
     temperature: options.temperature ?? 0.7,
@@ -83,7 +86,7 @@ export async function getAIResponse(
   messages.push(...context);
   messages.push({ role: "user", content: userMessage });
 
-  const completion = await groq.chat.completions.create({
+  const completion = await getGroqClient().chat.completions.create({
     model,
     messages,
     temperature: options.temperature ?? 0.7,
@@ -97,7 +100,7 @@ export async function getAIResponse(
  * Generate a short title for a conversation from its first message.
  */
 export async function generateTitle(firstMessage: string): Promise<string> {
-  const completion = await groq.chat.completions.create({
+  const completion = await getGroqClient().chat.completions.create({
     model: "llama-3.1-8b-instant",
     messages: [
       {

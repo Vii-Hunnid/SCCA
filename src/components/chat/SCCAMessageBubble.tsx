@@ -1,15 +1,18 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { cn } from "@/lib/utils";
+import { useState } from 'react';
+import { motion } from 'framer-motion';
 import {
   Copy,
   Check,
   Pencil,
   Trash2,
   RefreshCw,
-} from "lucide-react";
-import type { SCCAMessage } from "@/types/chat";
+  User,
+  Bot,
+  AlertTriangle,
+} from 'lucide-react';
+import type { SCCAMessage } from '@/types/chat';
 
 interface SCCAMessageBubbleProps {
   message: SCCAMessage;
@@ -33,8 +36,8 @@ export function SCCAMessageBubble({
   const [copied, setCopied] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const isUser = message.role === "user";
-  const isAssistant = message.role === "assistant";
+  const isUser = message.role === 'user';
+  const isAssistant = message.role === 'assistant';
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(message.content);
@@ -62,46 +65,68 @@ export function SCCAMessageBubble({
   };
 
   return (
-    <div
-      className={cn(
-        "group flex gap-3 px-4 py-3",
-        isUser ? "flex-row-reverse" : "flex-row"
-      )}
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      className={`group flex gap-3 px-4 py-3 ${
+        isUser ? 'flex-row-reverse' : 'flex-row'
+      }`}
     >
       {/* Avatar */}
       <div
-        className={cn(
-          "flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white",
+        className={`flex-shrink-0 w-7 h-7 rounded flex items-center justify-center ${
           isUser
-            ? "bg-gradient-to-br from-blue-500 to-blue-600"
-            : "bg-gradient-to-br from-emerald-500 to-emerald-600"
-        )}
+            ? 'bg-neon-cyan/10 border border-neon-cyan/30'
+            : 'bg-neon-green/10 border border-neon-green/30'
+        }`}
       >
-        {isUser ? "U" : "G"}
+        {isUser ? (
+          <User className="w-3.5 h-3.5 text-neon-cyan" />
+        ) : (
+          <Bot className="w-3.5 h-3.5 text-neon-green" />
+        )}
       </div>
 
-      {/* Message content */}
-      <div className={cn("flex flex-col max-w-[75%]", isUser ? "items-end" : "items-start")}>
-        {/* Edit confirmation dialog */}
+      {/* Content */}
+      <div
+        className={`flex flex-col max-w-[75%] ${
+          isUser ? 'items-end' : 'items-start'
+        }`}
+      >
+        {/* Label */}
+        <span
+          className={`text-[10px] mb-1 tracking-wider uppercase ${
+            isUser ? 'text-neon-cyan/60' : 'text-neon-green/60'
+          }`}
+        >
+          {isUser ? 'You' : 'SCCA'}
+        </span>
+
+        {/* Destructive edit confirmation */}
         {showConfirm && (
-          <div className="mb-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm">
-            <p className="font-medium text-destructive">
-              This will delete all messages after this point and regenerate the
-              response. This action cannot be undone.
+          <div className="mb-2 p-3 bg-neon-red/5 border border-neon-red/20 rounded text-xs">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle className="w-3.5 h-3.5 text-neon-red" />
+              <span className="text-neon-red font-medium">Destructive Edit</span>
+            </div>
+            <p className="text-terminal-dim mb-2">
+              All messages after this point will be permanently deleted and the
+              response will be regenerated.
             </p>
-            <div className="mt-2 flex gap-2">
+            <div className="flex gap-2">
               <button
                 onClick={confirmEdit}
-                className="px-3 py-1 bg-destructive text-destructive-foreground rounded text-xs font-medium"
+                className="px-3 py-1 bg-neon-red/10 border border-neon-red/30 text-neon-red rounded text-xs hover:bg-neon-red/20 transition-colors"
               >
-                Confirm Edit
+                Confirm
               </button>
               <button
                 onClick={() => {
                   setShowConfirm(false);
                   setIsEditing(false);
                 }}
-                className="px-3 py-1 bg-muted rounded text-xs"
+                className="px-3 py-1 bg-cyber-mid/50 text-terminal-dim rounded text-xs hover:bg-cyber-mid transition-colors"
               >
                 Cancel
               </button>
@@ -109,20 +134,19 @@ export function SCCAMessageBubble({
           </div>
         )}
 
-        {/* Bubble */}
+        {/* Message bubble */}
         <div
-          className={cn(
-            "rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
+          className={`rounded px-4 py-2.5 text-sm leading-relaxed ${
             isUser
-              ? "bg-primary text-primary-foreground rounded-br-md"
-              : "bg-muted rounded-bl-md"
-          )}
+              ? 'bg-neon-cyan/5 border border-neon-cyan/15 text-terminal-text'
+              : 'bg-cyber-mid/30 border border-cyber-light/10 text-terminal-text'
+          }`}
         >
           {isEditing ? (
             <textarea
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
-              className="w-full min-h-[60px] bg-transparent border-none outline-none resize-none text-sm"
+              className="w-full min-h-[60px] bg-transparent border-none outline-none resize-none text-sm text-terminal-text font-mono"
               autoFocus
             />
           ) : (
@@ -132,51 +156,67 @@ export function SCCAMessageBubble({
           )}
         </div>
 
-        {/* Action buttons */}
+        {/* Actions */}
         <div className="flex gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
+          <ActionButton
             onClick={handleCopy}
-            className="p-1.5 rounded-md hover:bg-muted transition-colors"
             title="Copy"
-          >
-            {copied ? (
-              <Check className="w-3.5 h-3.5 text-emerald-500" />
-            ) : (
-              <Copy className="w-3.5 h-3.5 text-muted-foreground" />
-            )}
-          </button>
+            icon={copied ? Check : Copy}
+            activeColor={copied ? 'text-neon-green' : undefined}
+          />
 
           {isUser && onEdit && (
-            <button
+            <ActionButton
               onClick={handleEdit}
-              className="p-1.5 rounded-md hover:bg-muted transition-colors"
               title="Edit (destructive)"
-            >
-              <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
-            </button>
+              icon={Pencil}
+            />
           )}
 
           {isLastAssistant && isAssistant && onRegenerate && (
-            <button
+            <ActionButton
               onClick={onRegenerate}
-              className="p-1.5 rounded-md hover:bg-muted transition-colors"
               title="Regenerate"
-            >
-              <RefreshCw className="w-3.5 h-3.5 text-muted-foreground" />
-            </button>
+              icon={RefreshCw}
+            />
           )}
 
           {onDelete && (
-            <button
+            <ActionButton
               onClick={() => onDelete(message.sequence)}
-              className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors"
               title="Delete (destructive)"
-            >
-              <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
-            </button>
+              icon={Trash2}
+              hoverColor="hover:text-neon-red hover:bg-neon-red/10"
+            />
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
+  );
+}
+
+function ActionButton({
+  onClick,
+  title,
+  icon: Icon,
+  activeColor,
+  hoverColor = 'hover:text-neon-cyan hover:bg-neon-cyan/10',
+}: {
+  onClick: () => void;
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  activeColor?: string;
+  hoverColor?: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`p-1.5 rounded transition-colors ${
+        activeColor || `text-terminal-dim ${hoverColor}`
+      }`}
+      title={title}
+    >
+      <Icon className="w-3 h-3" />
+    </button>
   );
 }

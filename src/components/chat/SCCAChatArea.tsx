@@ -1,8 +1,10 @@
-"use client";
+'use client';
 
-import { useRef, useEffect } from "react";
-import { SCCAMessageBubble } from "./SCCAMessageBubble";
-import type { SCCAMessage } from "@/types/chat";
+import { useRef, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Bot, Shield } from 'lucide-react';
+import { SCCAMessageBubble } from './SCCAMessageBubble';
+import type { SCCAMessage } from '@/types/chat';
 
 interface SCCAChatAreaProps {
   messages: SCCAMessage[];
@@ -23,28 +25,30 @@ export function SCCAChatArea({
 }: SCCAChatAreaProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom on new messages or streaming
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, streamingContent]);
 
   const lastAssistantIdx = [...messages]
     .reverse()
-    .findIndex((m) => m.role === "assistant");
+    .findIndex((m) => m.role === 'assistant');
   const lastAssistantSequence =
     lastAssistantIdx >= 0
       ? messages[messages.length - 1 - lastAssistantIdx].sequence
       : -1;
 
   return (
-    <div className="flex-1 overflow-y-auto scrollbar-thin">
+    <div className="flex-1 overflow-y-auto">
       {messages.length === 0 && !isStreaming && (
-        <div className="flex items-center justify-center h-full text-muted-foreground">
+        <div className="flex items-center justify-center h-full">
           <div className="text-center">
-            <h3 className="text-lg font-medium mb-1">Start a conversation</h3>
-            <p className="text-sm">
+            <Shield className="w-8 h-8 text-neon-cyan/30 mx-auto mb-3" />
+            <h3 className="text-sm font-display text-terminal-text mb-1">
+              Secure Channel Ready
+            </h3>
+            <p className="text-xs text-terminal-dim max-w-xs">
               Messages are encrypted with AES-256-GCM and stored as compact
-              binary tokens.
+              binary tokens in a single database row.
             </p>
           </div>
         </div>
@@ -67,35 +71,55 @@ export function SCCAChatArea({
           />
         ))}
 
-        {/* Streaming indicator */}
+        {/* Streaming with content */}
         {isStreaming && streamingContent && (
-          <div className="group flex gap-3 px-4 py-3">
-            <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white bg-gradient-to-br from-emerald-500 to-emerald-600">
-              G
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex gap-3 px-4 py-3"
+          >
+            <div className="flex-shrink-0 w-7 h-7 rounded flex items-center justify-center bg-neon-green/10 border border-neon-green/30">
+              <Bot className="w-3.5 h-3.5 text-neon-green" />
             </div>
             <div className="max-w-[75%]">
-              <div className="rounded-2xl rounded-bl-md bg-muted px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words">
+              <span className="text-[10px] text-neon-green/60 tracking-wider uppercase">
+                SCCA
+              </span>
+              <div className="mt-1 rounded bg-cyber-mid/30 border border-cyber-light/10 px-4 py-2.5 text-sm leading-relaxed text-terminal-text whitespace-pre-wrap break-words">
                 {streamingContent}
-                <span className="inline-block w-2 h-4 bg-foreground/50 animate-pulse ml-0.5" />
+                <span className="inline-block w-1.5 h-4 bg-neon-cyan/50 animate-pulse ml-0.5" />
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
 
-        {/* Streaming without content yet */}
+        {/* Streaming without content */}
         {isStreaming && !streamingContent && (
-          <div className="group flex gap-3 px-4 py-3">
-            <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white bg-gradient-to-br from-emerald-500 to-emerald-600">
-              G
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex gap-3 px-4 py-3"
+          >
+            <div className="flex-shrink-0 w-7 h-7 rounded flex items-center justify-center bg-neon-green/10 border border-neon-green/30">
+              <Bot className="w-3.5 h-3.5 text-neon-green" />
             </div>
-            <div className="rounded-2xl rounded-bl-md bg-muted px-4 py-3">
-              <div className="flex gap-1">
-                <span className="w-2 h-2 rounded-full bg-foreground/30 animate-bounce" style={{ animationDelay: "0ms" }} />
-                <span className="w-2 h-2 rounded-full bg-foreground/30 animate-bounce" style={{ animationDelay: "150ms" }} />
-                <span className="w-2 h-2 rounded-full bg-foreground/30 animate-bounce" style={{ animationDelay: "300ms" }} />
+            <div className="rounded bg-cyber-mid/30 border border-cyber-light/10 px-4 py-3">
+              <div className="flex gap-1.5">
+                <span
+                  className="w-1.5 h-1.5 rounded-full bg-neon-cyan/40 animate-bounce"
+                  style={{ animationDelay: '0ms' }}
+                />
+                <span
+                  className="w-1.5 h-1.5 rounded-full bg-neon-cyan/40 animate-bounce"
+                  style={{ animationDelay: '150ms' }}
+                />
+                <span
+                  className="w-1.5 h-1.5 rounded-full bg-neon-cyan/40 animate-bounce"
+                  style={{ animationDelay: '300ms' }}
+                />
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
 
         <div ref={bottomRef} />
