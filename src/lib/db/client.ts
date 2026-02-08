@@ -107,7 +107,16 @@ export async function createAuditLog(data: {
   ipAddress?: string;
   userAgent?: string;
 }) {
-  return prisma.auditLog.create({ data });
+  return prisma.auditLog.create({
+    data: {
+      userId: data.userId,
+      conversationId: data.conversationId,
+      action: data.action,
+      details: data.details as any,
+      ipAddress: data.ipAddress,
+      userAgent: data.userAgent,
+    },
+  });
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
