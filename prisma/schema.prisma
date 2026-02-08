@@ -12,14 +12,18 @@ datasource db {
 
 // ═════════════════════════════════════════════════════════════════════════════
 // USER MODEL
-// Master key salt stored here - actual key derived from password at login
+// Master key salt stored here - actual key derived at login
 // ═════════════════════════════════════════════════════════════════════════════
 
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
   name          String?
-  passwordHash  String    @map("password_hash")
+  image         String?
+  passwordHash  String?   @map("password_hash")
+
+  // OAuth provider info (null for credential users)
+  oauthProvider String?   @map("oauth_provider")
 
   // Encryption - 16 byte random salt, base64 encoded
   masterKeySalt String    @map("master_key_salt")
