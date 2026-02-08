@@ -1,22 +1,20 @@
-"use client";
+'use client';
 
-import { useMemo } from "react";
+import { useMemo } from 'react';
+import { motion } from 'framer-motion';
 import {
-  Eye,
+  Shield,
   Lock,
   MessageSquare,
   Database,
-  BarChart3,
-  Shield,
   Zap,
   Hash,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { formatBytes } from "@/lib/utils";
+} from 'lucide-react';
+import { formatBytes } from '@/lib/utils';
 
 interface Message {
   id: string;
-  role: "system" | "user" | "assistant";
+  role: 'system' | 'user' | 'assistant';
   content: string;
 }
 
@@ -34,7 +32,6 @@ function estimateTokenSize(content: string) {
       rawBytes * (rawBytes < 50 ? 0.9 : rawBytes < 200 ? 0.55 : 0.45)
     )
   );
-  // 10-byte header + 12-byte nonce + 16-byte auth tag
   const encryptedBytes = 10 + compressedBytes + 12 + 16;
   const compressionRatio = rawBytes > 0 ? rawBytes / compressedBytes : 1;
 
@@ -46,7 +43,7 @@ export function SCCAPreviewPanel({
   isStreaming,
   useSCCA,
 }: SCCAPreviewPanelProps) {
-  const chatMessages = messages.filter((m) => m.role !== "system");
+  const chatMessages = messages.filter((m) => m.role !== 'system');
 
   const stats = useMemo(() => {
     let totalRaw = 0;
@@ -77,227 +74,107 @@ export function SCCAPreviewPanel({
       totalCompressed,
       jsonBaseline,
       messageCount: chatMessages.length,
-      userCount: chatMessages.filter((m) => m.role === "user").length,
-      assistantCount: chatMessages.filter((m) => m.role === "assistant").length,
+      userCount: chatMessages.filter((m) => m.role === 'user').length,
+      assistantCount: chatMessages.filter((m) => m.role === 'assistant').length,
       savingsPercent:
         jsonBaseline > 0
           ? Math.round((1 - totalEncrypted / jsonBaseline) * 100)
           : 0,
       avgCompressionRatio:
-        totalRaw > 0 ? (totalRaw / totalCompressed).toFixed(1) : "0",
+        totalRaw > 0 ? (totalRaw / totalCompressed).toFixed(1) : '0',
     };
   }, [chatMessages]);
 
   return (
-    <div className="w-80 border-l bg-card flex flex-col h-full overflow-hidden">
+    <div className="w-72 border-l border-cyber-light/10 bg-cyber-darker flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-cyber-light/10">
         <div className="flex items-center gap-2">
-          <Eye className="w-4 h-4 text-muted-foreground" />
-          <span className="text-sm font-medium">Preview</span>
+          <Shield className="w-3.5 h-3.5 text-neon-cyan" />
+          <span className="text-xs font-semibold text-neon-cyan tracking-wider uppercase">
+            Metrics
+          </span>
         </div>
         {useSCCA && (
-          <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-500/10 rounded-full">
-            <Lock className="w-3 h-3 text-emerald-500" />
-            <span className="text-[10px] font-medium text-emerald-500">
-              SCCA
-            </span>
+          <div className="flex items-center gap-1.5">
+            <div className="status-dot-active" />
+            <span className="text-[10px] text-neon-green">Active</span>
           </div>
         )}
       </div>
 
       {!useSCCA ? (
-        /* SCCA Disabled Notice */
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="text-center">
-            <Lock className="w-8 h-8 text-orange-400 mx-auto mb-2" />
-            <p className="text-sm font-medium">SCCA Disabled</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Messages are not encrypted
-            </p>
+            <Lock className="w-6 h-6 text-neon-yellow/50 mx-auto mb-2" />
+            <p className="text-xs text-terminal-dim">SCCA Disabled</p>
           </div>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto scrollbar-thin">
-          {/* Chat bubble preview */}
-          <div className="p-3 space-y-2 max-h-[300px] overflow-y-auto border-b">
-            {chatMessages.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-4">
-                No messages yet
-              </p>
-            ) : (
-              chatMessages.map((msg) => {
-                const est = estimateTokenSize(msg.content);
-                const isUser = msg.role === "user";
-
-                return (
-                  <div key={msg.id}>
-                    <div
-                      className={cn(
-                        "flex gap-1.5 items-start",
-                        isUser ? "flex-row-reverse" : "flex-row"
-                      )}
-                    >
-                      <div
-                        className={cn(
-                          "flex-shrink-0 w-5 h-5 rounded flex items-center justify-center text-[8px] font-bold text-white",
-                          isUser
-                            ? "bg-gradient-to-br from-blue-500 to-blue-600"
-                            : "bg-gradient-to-br from-emerald-500 to-emerald-600"
-                        )}
-                      >
-                        {isUser ? "U" : "G"}
-                      </div>
-                      <div
-                        className={cn(
-                          "max-w-[85%] rounded-lg px-2 py-1 text-xs line-clamp-3",
-                          isUser
-                            ? "bg-primary/10 text-primary"
-                            : "bg-muted text-foreground"
-                        )}
-                      >
-                        {msg.content}
-                      </div>
-                    </div>
-                    {/* Per-message metrics */}
-                    <p
-                      className={cn(
-                        "text-[10px] text-muted-foreground mt-0.5",
-                        isUser ? "text-right" : "text-left pl-6"
-                      )}
-                    >
-                      {est.rawBytes} B raw → {est.encryptedBytes} B enc (
-                      {est.compressionRatio.toFixed(1)}x)
-                    </p>
-                  </div>
-                );
-              })
-            )}
-
-            {/* Streaming indicator */}
-            {isStreaming && (
-              <div className="flex gap-1.5 items-start">
-                <div className="flex-shrink-0 w-5 h-5 rounded flex items-center justify-center text-[8px] font-bold text-white bg-gradient-to-br from-emerald-500 to-emerald-600">
-                  G
-                </div>
-                <div className="flex gap-1 bg-muted rounded-lg px-2 py-2">
-                  <span
-                    className="w-1.5 h-1.5 rounded-full bg-foreground/30 animate-bounce"
-                    style={{ animationDelay: "0ms" }}
-                  />
-                  <span
-                    className="w-1.5 h-1.5 rounded-full bg-foreground/30 animate-bounce"
-                    style={{ animationDelay: "150ms" }}
-                  />
-                  <span
-                    className="w-1.5 h-1.5 rounded-full bg-foreground/30 animate-bounce"
-                    style={{ animationDelay: "300ms" }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* SCCA Metrics Grid */}
-          <div className="p-3">
-            <div className="grid grid-cols-2 gap-2">
-              <div className="bg-muted/50 rounded-lg p-2">
-                <div className="flex items-center gap-1 mb-1">
-                  <MessageSquare className="w-3 h-3 text-blue-500" />
-                  <span className="text-[10px] text-muted-foreground">
-                    Messages
-                  </span>
-                </div>
-                <p className="text-sm font-mono font-medium">
-                  {stats.messageCount}
-                </p>
-                <p className="text-[10px] text-muted-foreground">
-                  {stats.userCount}u / {stats.assistantCount}a
-                </p>
-              </div>
-
-              <div className="bg-muted/50 rounded-lg p-2">
-                <div className="flex items-center gap-1 mb-1">
-                  <Database className="w-3 h-3 text-orange-500" />
-                  <span className="text-[10px] text-muted-foreground">
-                    Raw Size
-                  </span>
-                </div>
-                <p className="text-sm font-mono font-medium">
-                  {formatBytes(stats.totalRaw)}
-                </p>
-                <p className="text-[10px] text-muted-foreground">
-                  uncompressed
-                </p>
-              </div>
-
-              <div className="bg-muted/50 rounded-lg p-2">
-                <div className="flex items-center gap-1 mb-1">
-                  <Lock className="w-3 h-3 text-emerald-500" />
-                  <span className="text-[10px] text-muted-foreground">
-                    SCCA Size
-                  </span>
-                </div>
-                <p className="text-sm font-mono font-medium">
-                  {formatBytes(stats.totalEncrypted)}
-                </p>
-                <p className="text-[10px] text-muted-foreground">
-                  enc + packed
-                </p>
-              </div>
-
-              <div className="bg-muted/50 rounded-lg p-2">
-                <div className="flex items-center gap-1 mb-1">
-                  <Zap className="w-3 h-3 text-yellow-500" />
-                  <span className="text-[10px] text-muted-foreground">
-                    Compress
-                  </span>
-                </div>
-                <p className="text-sm font-mono font-medium">
-                  {stats.avgCompressionRatio}x
-                </p>
-                <p className="text-[10px] text-muted-foreground">avg ratio</p>
-              </div>
-            </div>
+        <div className="flex-1 overflow-y-auto">
+          {/* Message Metrics Grid */}
+          <div className="p-3 grid grid-cols-2 gap-2">
+            <MetricCard
+              icon={MessageSquare}
+              label="Messages"
+              value={String(stats.messageCount)}
+              sub={`${stats.userCount}u / ${stats.assistantCount}a`}
+              color="text-neon-cyan"
+            />
+            <MetricCard
+              icon={Database}
+              label="Raw Size"
+              value={formatBytes(stats.totalRaw)}
+              sub="uncompressed"
+              color="text-neon-yellow"
+            />
+            <MetricCard
+              icon={Lock}
+              label="SCCA Size"
+              value={formatBytes(stats.totalEncrypted)}
+              sub="encrypted"
+              color="text-neon-green"
+            />
+            <MetricCard
+              icon={Zap}
+              label="Compress"
+              value={`${stats.avgCompressionRatio}x`}
+              sub="avg ratio"
+              color="text-neon-purple"
+            />
           </div>
 
           {/* Savings Bar */}
           <div className="px-3 pb-3">
-            <div className="bg-muted/50 rounded-lg p-3">
+            <div className="cyber-card p-3">
               <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-1">
-                  <Shield className="w-3 h-3 text-emerald-500" />
-                  <span className="text-[10px] text-muted-foreground">
-                    vs JSON storage
-                  </span>
-                </div>
+                <span className="text-[10px] text-terminal-dim">
+                  vs JSON storage
+                </span>
                 <span
-                  className={cn(
-                    "text-xs font-mono font-medium",
-                    stats.savingsPercent > 0
-                      ? "text-emerald-500"
-                      : "text-orange-500"
-                  )}
+                  className={`text-xs font-mono font-medium ${
+                    stats.savingsPercent > 0 ? 'text-neon-green' : 'text-neon-yellow'
+                  }`}
                 >
-                  {stats.savingsPercent > 0 ? "-" : "+"}
+                  {stats.savingsPercent > 0 ? '-' : '+'}
                   {Math.abs(stats.savingsPercent)}%
                 </span>
               </div>
 
-              {/* Bar */}
-              <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div
-                  className={cn(
-                    "h-full rounded-full transition-all duration-500",
-                    stats.savingsPercent > 0 ? "bg-emerald-500" : "bg-orange-500"
-                  )}
-                  style={{
+              <div className="h-1.5 bg-cyber-mid rounded-full overflow-hidden">
+                <motion.div
+                  className={`h-full rounded-full ${
+                    stats.savingsPercent > 0 ? 'bg-neon-green/60' : 'bg-neon-yellow/60'
+                  }`}
+                  initial={{ width: 0 }}
+                  animate={{
                     width: `${Math.min(100, Math.max(5, 100 - Math.abs(stats.savingsPercent)))}%`,
                   }}
+                  transition={{ duration: 0.5 }}
                 />
               </div>
 
-              <div className="flex justify-between mt-1.5 text-[10px] text-muted-foreground">
+              <div className="flex justify-between mt-1.5 text-[10px] text-terminal-dim">
                 <span>JSON: {formatBytes(stats.jsonBaseline)}</span>
                 <span>SCCA: {formatBytes(stats.totalEncrypted)}</span>
               </div>
@@ -306,27 +183,27 @@ export function SCCAPreviewPanel({
 
           {/* Encryption Details */}
           <div className="px-3 pb-3">
-            <div className="bg-muted/50 rounded-lg p-3">
-              <div className="flex items-center gap-1 mb-2">
-                <Hash className="w-3 h-3 text-muted-foreground" />
-                <span className="text-[10px] font-medium">
-                  Encryption Details
+            <div className="cyber-card p-3">
+              <div className="flex items-center gap-1.5 mb-2">
+                <Hash className="w-3 h-3 text-terminal-dim" />
+                <span className="text-[10px] text-terminal-dim tracking-wider uppercase">
+                  Protocol
                 </span>
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 {[
-                  ["Cipher", "AES-256-GCM"],
-                  ["Key Derivation", "HKDF-SHA256"],
-                  ["Integrity", "SHA-256 Merkle"],
-                  ["Binary Header", "10 bytes"],
-                  ["Compression", "zlib deflate"],
+                  ['Cipher', 'AES-256-GCM'],
+                  ['KDF', 'HKDF-SHA256'],
+                  ['Integrity', 'Merkle-HMAC'],
+                  ['Header', '10 bytes'],
+                  ['Compress', 'zlib deflate'],
                 ].map(([key, value]) => (
                   <div
                     key={key}
                     className="flex justify-between text-[10px] font-mono"
                   >
-                    <span className="text-muted-foreground">{key}</span>
-                    <span>{value}</span>
+                    <span className="text-terminal-dim">{key}</span>
+                    <span className="text-neon-cyan">{value}</span>
                   </div>
                 ))}
               </div>
@@ -334,6 +211,33 @@ export function SCCAPreviewPanel({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function MetricCard({
+  icon: Icon,
+  label,
+  value,
+  sub,
+  color,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+  sub: string;
+  color: string;
+}) {
+  return (
+    <div className="cyber-card p-2.5">
+      <div className="flex items-center gap-1 mb-1">
+        <Icon className={`w-3 h-3 ${color}`} />
+        <span className="text-[10px] text-terminal-dim">{label}</span>
+      </div>
+      <p className="text-sm font-mono font-medium text-terminal-text">
+        {value}
+      </p>
+      <p className="text-[10px] text-terminal-dim">{sub}</p>
     </div>
   );
 }
