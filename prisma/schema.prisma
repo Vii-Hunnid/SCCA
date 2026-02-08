@@ -1,0 +1,130 @@
+// SCCA - Secure Compact Chat Architecture
+// Prisma Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// USER MODEL
+// Master key salt stored here - actual key derived from password at login
+// ═════════════════════════════════════════════════════════════════════════════
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  passwordHash  String    @map("password_hash")
+
+  // Encryption - 16 byte random salt, base64 encoded
+  masterKeySalt String    @map("master_key_salt")
+
+  // Relations
+  conversations SCCAConversation[]
+  sessions      Session[]
+  auditLogs     AuditLog[]
+
+  // Timestamps
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  lastLoginAt   DateTime? @map("last_login_at")
+
+  @@index([email])
+  @@map("users")
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// SESSION MODEL
+// Tracks active sessions for auth
+// ═════════════════════════════════════════════════════════════════════════════
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  token        String   @unique
+  expiresAt    DateTime @map("expires_at")
+
+  ipAddress    String?  @map("ip_address")
+  userAgent    String?  @map("user_agent")
+
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([token])
+  @@map("sessions")
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// CONVERSATION MODEL
+// SINGLE ROW PER CONVERSATION - This is the key SCCA optimization
+// All messages stored as encrypted array in messageTokens (String[])
+// ═════════════════════════════════════════════════════════════════════════════
+
+model SCCAConversation {
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Metadata (unencrypted, searchable)
+  title         String   @default("New Chat")
+  model         String   @default("llama-3.3-70b-versatile")
+
+  // CORE DATA: Array of encrypted message tokens
+  // Each element is base64url-encoded packed binary (header + ciphertext + nonce)
+  messageTokens String[] @map("message_tokens") @default([])
+
+  // Cached count for quick access
+  messageCount  Int      @default(0) @map("message_count")
+
+  // Integrity verification - SHA-256 Merkle root of all messages
+  merkleRoot    String?  @map("merkle_root")
+
+  // Soft delete for GDPR compliance
+  deletedAt     DateTime? @map("deleted_at")
+  deletedBy     String?   @map("deleted_by")
+
+  // Relations
+  auditLogs     AuditLog[]
+
+  // Timestamps
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([userId, updatedAt(sort: Desc)])
+  @@index([userId, deletedAt])
+  @@map("scca_conversations")
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// AUDIT LOG
+// Immutable record of all actions for compliance and debugging
+// ═════════════════════════════════════════════════════════════════════════════
+
+model AuditLog {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  conversationId  String?  @map("conversation_id")
+  conversation    SCCAConversation? @relation(fields: [conversationId], references: [id])
+
+  action          String   // 'create', 'edit', 'delete', 'view', 'regenerate', 'login', 'logout'
+  details         Json?
+
+  ipAddress       String?  @map("ip_address")
+  userAgent       String?  @map("user_agent")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([conversationId, createdAt])
+  @@index([action, createdAt])
+  @@map("audit_logs")
+}
