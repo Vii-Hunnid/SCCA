@@ -14,6 +14,20 @@ app/api/scca/
         route.ts                → POST (send message with streaming)
       edit/
         route.ts                → POST (destructive edit/delete)
+  keys/
+    route.ts                    → GET (list) + POST (create API key)
+    [id]/
+      route.ts                  → DELETE (revoke API key)
+  vault/
+    encrypt/route.ts            → POST (encrypt data)
+    decrypt/route.ts            → POST (decrypt tokens)
+    verify/route.ts             → POST (verify integrity)
+  usage/
+    route.ts                    → GET (usage analytics with period filter)
+  billing/
+    route.ts                    → GET (account/tiers/invoices) + POST (update settings)
+  rate-limits/
+    route.ts                    → GET (current rate limit status)
 ```
 
 ## Authentication Pattern
@@ -110,4 +124,28 @@ Status codes:
 - `400` - Bad request (missing fields)
 - `401` - Unauthorized (no session)
 - `404` - Conversation not found
+- `429` - Rate limit exceeded
+- `402` - Monthly budget exceeded
 - `500` - Server error (encryption failure, DB error)
+
+## Rate Limiting
+
+All Vault and Conversation API endpoints enforce rate limits. See `SCCA_Rate_Limits_Billing_Specification.md` for the full specification.
+
+Rate limit headers are included in every response:
+
+```
+X-RateLimit-Limit-RPM: 60
+X-RateLimit-Remaining-RPM: 45
+X-RateLimit-Tier: tier_1
+```
+
+## Platform Console Pages
+
+```
+app/dashboard/
+  platform/page.tsx             → Platform overview with live rate gauges
+  api-keys/page.tsx             → API key management
+  usage/page.tsx                → Usage analytics with charts
+  billing/page.tsx              → Billing tiers, invoices, settings
+```
