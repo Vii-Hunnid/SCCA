@@ -6,11 +6,12 @@ import {
   Shield,
   MessageSquare,
   Plus,
-  Settings,
+  Key,
   LogOut,
   PanelLeftClose,
   PanelLeft,
   Lock,
+  FileCode,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -90,6 +91,25 @@ export function DashboardShell({
 
             {/* Sidebar Footer */}
             <div className="border-t border-cyber-light/10 p-3 space-y-1">
+              <Link
+                href="/dashboard/api-keys"
+                className={`w-full flex items-center gap-2 px-3 py-2 text-xs rounded transition-colors ${
+                  pathname === '/dashboard/api-keys'
+                    ? 'text-neon-cyan bg-neon-cyan/5'
+                    : 'text-terminal-dim hover:text-neon-cyan hover:bg-cyber-mid/30'
+                }`}
+              >
+                <Key className="w-3.5 h-3.5" />
+                API Keys
+              </Link>
+              <Link
+                href="/docs"
+                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-terminal-dim
+                           hover:text-neon-cyan hover:bg-cyber-mid/30 rounded transition-colors"
+              >
+                <FileCode className="w-3.5 h-3.5" />
+                Documentation
+              </Link>
               <div className="flex items-center gap-2 px-3 py-2 text-xs text-terminal-dim">
                 <Lock className="w-3 h-3 text-neon-green" />
                 <span className="text-neon-green">E2E Encrypted</span>
