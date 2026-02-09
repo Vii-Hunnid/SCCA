@@ -354,6 +354,58 @@ npx prisma db push`}</CodeBlock>
               with Merkle integrity.
             </p>
 
+            <SubTitle>Authentication with API Keys</SubTitle>
+            <p className="text-xs text-terminal-dim leading-relaxed mb-3">
+              Generate an API key from your{' '}
+              <code className="text-neon-cyan bg-cyber-darker px-1 py-0.5 rounded">
+                Dashboard &gt; API Keys
+              </code>{' '}
+              page. Use it in the <code className="text-neon-cyan bg-cyber-darker px-1 py-0.5 rounded">Authorization</code> header
+              for all Vault API requests.
+            </p>
+            <CodeBlock language="bash">{`# All Vault API requests use Bearer auth:
+curl -X POST https://your-scca-instance.com/api/scca/vault/encrypt \\
+  -H "Authorization: Bearer scca_k_your_api_key_here" \\
+  -H "Content-Type: application/json" \\
+  -d '{"data": "hello world", "context": "my-project"}'`}</CodeBlock>
+
+            <div className="cyber-card overflow-hidden mb-6">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-cyber-light/20 bg-cyber-darker">
+                    <th className="text-left p-3 text-terminal-dim tracking-wider uppercase">Endpoint</th>
+                    <th className="text-left p-3 text-terminal-dim tracking-wider uppercase">Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ['POST /api/scca/keys', 'Generate a new API key (session auth only)'],
+                    ['GET /api/scca/keys', 'List your active keys (session auth only)'],
+                    ['DELETE /api/scca/keys/[id]', 'Revoke an API key (session auth only)'],
+                  ].map(([ep, desc]) => (
+                    <tr key={ep} className="border-b border-cyber-light/10">
+                      <td className="p-3"><code className="text-neon-green">{ep}</code></td>
+                      <td className="p-3 text-terminal-dim">{desc}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <CodeBlock language="json">{`// POST /api/scca/keys — Generate a new key
+// Request (requires session cookie auth)
+{ "name": "Production Backend", "expiresInDays": 90 }
+
+// Response (key shown ONCE, save it immediately)
+{
+  "id": "clx...",
+  "name": "Production Backend",
+  "key": "scca_k_a1b2c3d4e5f6...",
+  "keyPrefix": "scca_k_a1b2...",
+  "expiresAt": "2026-05-10T00:00:00.000Z",
+  "warning": "Save this key now. It will not be shown again."
+}`}</CodeBlock>
+
             <div className="cyber-card p-5 mb-6 border-neon-green/20">
               <div className="flex items-start gap-3">
                 <span className="text-neon-green text-sm mt-0.5">&#9656;</span>

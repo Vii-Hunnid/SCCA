@@ -33,6 +33,7 @@ model User {
   conversations SCCAConversation[]
   sessions      Session[]
   auditLogs     AuditLog[]
+  apiKeys       ApiKey[]
 
   // Timestamps
   createdAt     DateTime  @default(now()) @map("created_at")
@@ -132,4 +133,31 @@ model AuditLog {
   @@index([conversationId, createdAt])
   @@index([action, createdAt])
   @@map("audit_logs")
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// API KEY MODEL
+// Bearer token auth for external API access (Vault, Conversations)
+// Key format: scca_k_<64-hex-chars> — only shown once at creation
+// Only the SHA-256 hash is stored; prefix stored for display
+// ═════════════════════════════════════════════════════════════════════════════
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String    // user-given label, e.g. "Production Backend"
+  keyHash     String    @unique @map("key_hash") // SHA-256 of the full key
+  keyPrefix   String    @map("key_prefix")        // first 12 chars for display: "scca_k_a1b2..."
+
+  lastUsedAt  DateTime? @map("last_used_at")
+  expiresAt   DateTime? @map("expires_at")
+  revokedAt   DateTime? @map("revoked_at")
+
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([keyHash])
+  @@index([userId])
+  @@map("api_keys")
 }

@@ -12,8 +12,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions, getMasterKeyFromSession } from "@/lib/auth";
+import { authenticateRequest } from "@/lib/api-key-auth";
 import {
   deriveUserKey,
   deriveConversationKey,
@@ -22,8 +21,8 @@ import {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const user = await authenticateRequest(request);
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -55,8 +54,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Derive the same encryption key using context
-    const masterKey = getMasterKeyFromSession(session);
-    const userKey = deriveUserKey(masterKey, session.user.masterKeySalt);
+    const userKey = deriveUserKey(user.masterKey, user.masterKeySalt);
     const encryptionKey = deriveConversationKey(userKey, context);
 
     // Decrypt each token
