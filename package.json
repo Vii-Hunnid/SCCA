@@ -18,7 +18,7 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
-    "@polar-sh/sdk": "^0.42.5",
+    "@polar-sh/nextjs": "^0.9.3",
     "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^5.22.0",
     "clsx": "^2.1.0",
