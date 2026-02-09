@@ -128,7 +128,7 @@ export default function ApiKeysPage() {
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link
-              href="/dashboard"
+              href="/dashboard/platform"
               className="text-terminal-dim hover:text-neon-cyan transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />

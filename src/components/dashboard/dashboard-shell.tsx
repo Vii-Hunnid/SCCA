@@ -12,6 +12,9 @@ import {
   PanelLeft,
   Lock,
   FileCode,
+  BarChart3,
+  CreditCard,
+  Gauge,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -91,6 +94,18 @@ export function DashboardShell({
 
             {/* Sidebar Footer */}
             <div className="border-t border-cyber-light/10 p-3 space-y-1">
+              {/* Platform Console */}
+              <Link
+                href="/dashboard/platform"
+                className={`w-full flex items-center gap-2 px-3 py-2 text-xs rounded transition-colors ${
+                  pathname === '/dashboard/platform'
+                    ? 'text-neon-cyan bg-neon-cyan/5'
+                    : 'text-terminal-dim hover:text-neon-cyan hover:bg-cyber-mid/30'
+                }`}
+              >
+                <Gauge className="w-3.5 h-3.5" />
+                Platform
+              </Link>
               <Link
                 href="/dashboard/api-keys"
                 className={`w-full flex items-center gap-2 px-3 py-2 text-xs rounded transition-colors ${
@@ -101,6 +116,28 @@ export function DashboardShell({
               >
                 <Key className="w-3.5 h-3.5" />
                 API Keys
+              </Link>
+              <Link
+                href="/dashboard/usage"
+                className={`w-full flex items-center gap-2 px-3 py-2 text-xs rounded transition-colors ${
+                  pathname === '/dashboard/usage'
+                    ? 'text-neon-green bg-neon-green/5'
+                    : 'text-terminal-dim hover:text-neon-green hover:bg-cyber-mid/30'
+                }`}
+              >
+                <BarChart3 className="w-3.5 h-3.5" />
+                Usage
+              </Link>
+              <Link
+                href="/dashboard/billing"
+                className={`w-full flex items-center gap-2 px-3 py-2 text-xs rounded transition-colors ${
+                  pathname === '/dashboard/billing'
+                    ? 'text-neon-purple bg-neon-purple/5'
+                    : 'text-terminal-dim hover:text-neon-purple hover:bg-cyber-mid/30'
+                }`}
+              >
+                <CreditCard className="w-3.5 h-3.5" />
+                Billing
               </Link>
               <Link
                 href="/docs"
