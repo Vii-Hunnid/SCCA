@@ -24,6 +24,7 @@ import {
   getOrCreateBillingAccount,
   getRateLimitHeaders,
   estimateTokens,
+  buildRateLimitExceededResponse,
 } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
@@ -38,10 +39,8 @@ export async function POST(request: NextRequest) {
     const billing = await getOrCreateBillingAccount(user.id);
     const rateLimit = await checkRateLimit(user.id, billing.tier);
     if (!rateLimit.allowed) {
-      return NextResponse.json(
-        { error: "Rate limit exceeded", retryAfterMs: rateLimit.retryAfterMs },
-        { status: 429, headers: getRateLimitHeaders(rateLimit) }
-      );
+      const resp = buildRateLimitExceededResponse(rateLimit);
+      return NextResponse.json(resp.body, { status: resp.status, headers: resp.headers });
     }
 
     const body = await request.json();

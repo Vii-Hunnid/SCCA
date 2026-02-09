@@ -11,6 +11,8 @@ import {
   TrendingUp,
   AlertTriangle,
   RefreshCw,
+  ArrowUpRight,
+  Rocket,
 } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -293,6 +295,56 @@ export default function UsagePage() {
             </div>
           </motion.div>
         )}
+
+        {/* Upgrade Banner — shown when any rate limit is >80% or tier is free */}
+        {data && (() => {
+          const { current, limits } = data.rateLimits;
+          const anyNearLimit =
+            (limits.rpm > 0 && current.rpm / limits.rpm > 0.8) ||
+            (limits.rpd > 0 && current.rpd / limits.rpd > 0.8) ||
+            (limits.tpm > 0 && current.tpm / limits.tpm > 0.8) ||
+            (limits.tpd > 0 && current.tpd / limits.tpd > 0.8);
+          const isFree = data.rateLimits.tier === 'free';
+
+          if (!anyNearLimit && !isFree) return null;
+
+          return (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`mb-6 cyber-card p-4 ${
+                anyNearLimit
+                  ? 'border-neon-red/30 bg-neon-red/5'
+                  : 'border-neon-purple/20 bg-neon-purple/5'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Rocket className={`w-4 h-4 ${anyNearLimit ? 'text-neon-red' : 'text-neon-purple'}`} />
+                  <div>
+                    <p className="text-xs text-terminal-text font-semibold">
+                      {anyNearLimit
+                        ? 'Rate limits nearly exceeded'
+                        : 'Free tier — limited to 10 RPM, 200 RPD'}
+                    </p>
+                    <p className="text-[10px] text-terminal-dim mt-0.5">
+                      {anyNearLimit
+                        ? 'Upgrade your plan to get higher rate limits and avoid interruptions.'
+                        : 'Upgrade for 6x more requests per minute and 25x more per day.'}
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  href="/dashboard/billing"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-neon-purple to-neon-cyan text-cyber-black text-[10px] font-semibold rounded hover:opacity-90 transition-opacity whitespace-nowrap"
+                >
+                  <ArrowUpRight className="w-3 h-3" />
+                  Upgrade Plan
+                </Link>
+              </div>
+            </motion.div>
+          );
+        })()}
 
         {/* Request Timeline Chart */}
         {chartData.length > 0 && (

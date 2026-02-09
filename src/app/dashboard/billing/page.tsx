@@ -15,6 +15,9 @@ import {
   Eye,
   ExternalLink,
   Loader2,
+  ArrowUpRight,
+  Rocket,
+  CheckCircle2,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -104,6 +107,41 @@ export default function BillingPage() {
   const [budgetInput, setBudgetInput] = useState('');
   const [autoUpgrade, setAutoUpgrade] = useState(false);
   const [loadingInvoice, setLoadingInvoice] = useState<string | null>(null);
+  const [checkingOut, setCheckingOut] = useState(false);
+  const [checkoutSuccess, setCheckoutSuccess] = useState(false);
+
+  // Detect ?checkout=success in URL on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('checkout') === 'success') {
+        setCheckoutSuccess(true);
+        // Clean up URL
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
+  }, []);
+
+  const handleUpgrade = async () => {
+    setCheckingOut(true);
+    setError('');
+    try {
+      const res = await fetch('/api/scca/billing/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      if (json.url) {
+        window.location.href = json.url;
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to create checkout');
+    } finally {
+      setCheckingOut(false);
+    }
+  };
 
   const fetchBilling = useCallback(async () => {
     try {
@@ -231,6 +269,69 @@ export default function BillingPage() {
               dismiss
             </button>
           </div>
+        )}
+
+        {/* Checkout Success Banner */}
+        {checkoutSuccess && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-4 cyber-card p-4 border-neon-green/30 bg-neon-green/5"
+          >
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-neon-green" />
+              <span className="text-xs text-neon-green font-semibold">
+                Payment successful! Your tier will be upgraded shortly once the payment is confirmed.
+              </span>
+              <button
+                onClick={() => setCheckoutSuccess(false)}
+                className="ml-auto text-xs text-terminal-dim hover:text-terminal-text"
+              >
+                dismiss
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Upgrade CTA — shown when on free tier */}
+        {data && data.account.tier === 'free' && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 cyber-card p-6 border-neon-purple/30 bg-gradient-to-r from-neon-purple/5 to-neon-cyan/5"
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Rocket className="w-5 h-5 text-neon-purple" />
+                  <h3 className="text-sm font-semibold text-terminal-text">
+                    Upgrade Your Plan
+                  </h3>
+                </div>
+                <p className="text-xs text-terminal-dim max-w-md">
+                  You&apos;re on the free tier (10 RPM, 200 RPD). Upgrade to unlock higher
+                  rate limits, faster throughput, and priority support.
+                </p>
+                <div className="flex gap-2 mt-3 text-[10px] text-terminal-dim">
+                  <span className="bg-cyber-mid px-2 py-0.5 rounded">60+ RPM</span>
+                  <span className="bg-cyber-mid px-2 py-0.5 rounded">5,000+ RPD</span>
+                  <span className="bg-cyber-mid px-2 py-0.5 rounded">100K+ TPM</span>
+                </div>
+              </div>
+              <button
+                onClick={handleUpgrade}
+                disabled={checkingOut}
+                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-neon-purple to-neon-cyan text-cyber-black text-xs font-semibold rounded hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {checkingOut ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                )}
+                {checkingOut ? 'Redirecting...' : 'Upgrade Now'}
+              </button>
+            </div>
+          </motion.div>
         )}
 
         {/* Current Tier + Spend */}
@@ -435,52 +536,72 @@ export default function BillingPage() {
                     <th className="text-right py-2 px-2">TPD</th>
                     <th className="text-right py-2 px-2">$/1M Tokens</th>
                     <th className="text-right py-2 px-2">$/Request</th>
-                    <th className="text-right py-2 pl-2">Unlock</th>
+                    <th className="text-right py-2 px-2">Unlock</th>
+                    <th className="text-right py-2 pl-2"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {data.tiers.map((tier) => (
-                    <tr
-                      key={tier.name}
-                      className={`border-b border-cyber-light/5 ${
-                        tier.isCurrent
-                          ? 'text-neon-cyan bg-neon-cyan/5'
-                          : 'text-terminal-text'
-                      }`}
-                    >
-                      <td className="py-2 pr-3 font-semibold flex items-center gap-1">
-                        {tier.isCurrent && (
-                          <Check className="w-2.5 h-2.5 text-neon-green" />
-                        )}
-                        {tier.displayName}
-                      </td>
-                      <td className="text-right py-2 px-2">
-                        {formatNumber(tier.rpm)}
-                      </td>
-                      <td className="text-right py-2 px-2">
-                        {formatNumber(tier.rpd)}
-                      </td>
-                      <td className="text-right py-2 px-2">
-                        {formatNumber(tier.tpm)}
-                      </td>
-                      <td className="text-right py-2 px-2">
-                        {formatNumber(tier.tpd)}
-                      </td>
-                      <td className="text-right py-2 px-2">
-                        {tier.costPerMillionTokens === 0
-                          ? 'Free'
-                          : formatCostPer(tier.costPerMillionTokens)}
-                      </td>
-                      <td className="text-right py-2 px-2">
-                        {tier.costPerRequest === 0
-                          ? 'Free'
-                          : formatCostPer(tier.costPerRequest)}
-                      </td>
-                      <td className="text-right py-2 pl-2">
-                        {tier.upgradeThresholdDisplay}
-                      </td>
-                    </tr>
-                  ))}
+                  {data.tiers.map((tier, idx) => {
+                    const currentIdx = data.tiers.findIndex((t) => t.isCurrent);
+                    const isUpgradeable = !tier.isCurrent && idx > currentIdx;
+                    return (
+                      <tr
+                        key={tier.name}
+                        className={`border-b border-cyber-light/5 ${
+                          tier.isCurrent
+                            ? 'text-neon-cyan bg-neon-cyan/5'
+                            : 'text-terminal-text'
+                        }`}
+                      >
+                        <td className="py-2 pr-3 font-semibold flex items-center gap-1">
+                          {tier.isCurrent && (
+                            <Check className="w-2.5 h-2.5 text-neon-green" />
+                          )}
+                          {tier.displayName}
+                        </td>
+                        <td className="text-right py-2 px-2">
+                          {formatNumber(tier.rpm)}
+                        </td>
+                        <td className="text-right py-2 px-2">
+                          {formatNumber(tier.rpd)}
+                        </td>
+                        <td className="text-right py-2 px-2">
+                          {formatNumber(tier.tpm)}
+                        </td>
+                        <td className="text-right py-2 px-2">
+                          {formatNumber(tier.tpd)}
+                        </td>
+                        <td className="text-right py-2 px-2">
+                          {tier.costPerMillionTokens === 0
+                            ? 'Free'
+                            : formatCostPer(tier.costPerMillionTokens)}
+                        </td>
+                        <td className="text-right py-2 px-2">
+                          {tier.costPerRequest === 0
+                            ? 'Free'
+                            : formatCostPer(tier.costPerRequest)}
+                        </td>
+                        <td className="text-right py-2 px-2">
+                          {tier.upgradeThresholdDisplay}
+                        </td>
+                        <td className="text-right py-2 pl-2">
+                          {tier.isCurrent ? (
+                            <span className="text-[9px] text-neon-green bg-neon-green/10 px-2 py-0.5 rounded">
+                              Current
+                            </span>
+                          ) : isUpgradeable ? (
+                            <button
+                              onClick={handleUpgrade}
+                              disabled={checkingOut}
+                              className="text-[9px] text-neon-purple bg-neon-purple/10 hover:bg-neon-purple/20 px-2 py-0.5 rounded transition-colors"
+                            >
+                              Upgrade
+                            </button>
+                          ) : null}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
