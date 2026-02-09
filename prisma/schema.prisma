@@ -238,9 +238,11 @@ model BillingAccount {
   // Billing period
   billingCycleStart DateTime @default(now()) @map("billing_cycle_start")
 
-  // Payment info (placeholder - would integrate with Stripe)
-  paymentMethodId  String?  @map("payment_method_id")
-  stripeCustomerId String?  @map("stripe_customer_id")
+  // Payment provider — Polar.sh integration
+  polarCustomerId  String?  @unique @map("polar_customer_id")
+  polarSubscriptionId String? @map("polar_subscription_id")
+  polarProductId   String?  @map("polar_product_id")
+  subscriptionStatus String? @map("subscription_status") // "active", "canceled", "past_due", "trialing"
 
   // Auto-tier upgrade
   autoUpgrade      Boolean  @default(false) @map("auto_upgrade")
@@ -253,6 +255,7 @@ model BillingAccount {
 
   @@index([userId])
   @@index([tier])
+  @@index([polarCustomerId])
   @@map("billing_accounts")
 }
 
@@ -279,12 +282,16 @@ model Invoice {
   // Status: "draft", "pending", "paid", "overdue", "void"
   status           String   @default("draft")
 
-  // Stripe
-  stripeInvoiceId  String?  @map("stripe_invoice_id")
+  // Polar.sh order tracking
+  polarOrderId     String?  @unique @map("polar_order_id")  // Polar order UUID
+  polarInvoiceUrl  String?  @map("polar_invoice_url")       // Generated invoice URL
+  billingReason    String?  @map("billing_reason")           // "purchase", "subscription_create", "subscription_cycle", "subscription_update"
+  currency         String   @default("usd")
 
   createdAt        DateTime @default(now()) @map("created_at")
 
   @@index([billingAccountId, periodStart(sort: Desc)])
   @@index([status])
+  @@index([polarOrderId])
   @@map("invoices")
 }

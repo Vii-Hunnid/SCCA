@@ -11,7 +11,10 @@ import {
   TrendingUp,
   FileText,
   Settings,
-  ChevronRight,
+  Download,
+  Eye,
+  ExternalLink,
+  Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -29,6 +32,9 @@ interface BillingData {
     billingCycleStart: string;
     autoUpgrade: boolean;
     hasPaymentMethod: boolean;
+    subscriptionStatus: string | null;
+    polarCustomerId: string | null;
+    polarSubscriptionId: string | null;
   };
   upgrade: {
     nextTier: string;
@@ -62,6 +68,11 @@ interface BillingData {
     totalTokens: number;
     totalBytes: number;
     status: string;
+    polarOrderId: string | null;
+    polarInvoiceUrl: string | null;
+    billingReason: string | null;
+    currency: string;
+    hasInvoice: boolean;
   }>;
 }
 
@@ -92,6 +103,7 @@ export default function BillingPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [budgetInput, setBudgetInput] = useState('');
   const [autoUpgrade, setAutoUpgrade] = useState(false);
+  const [loadingInvoice, setLoadingInvoice] = useState<string | null>(null);
 
   const fetchBilling = useCallback(async () => {
     try {
@@ -136,6 +148,37 @@ export default function BillingPage() {
       setError(err.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleViewInvoice = async (invoiceId: string, cachedUrl: string | null) => {
+    // If we have a cached URL, open it directly
+    if (cachedUrl) {
+      window.open(cachedUrl, '_blank');
+      return;
+    }
+
+    setLoadingInvoice(invoiceId);
+    try {
+      const res = await fetch(`/api/scca/billing/invoices/${invoiceId}`);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      if (json.url) {
+        window.open(json.url, '_blank');
+        // Update local state so subsequent clicks use cache
+        if (data) {
+          setData({
+            ...data,
+            invoices: data.invoices.map((inv) =>
+              inv.id === invoiceId ? { ...inv, polarInvoiceUrl: json.url } : inv
+            ),
+          });
+        }
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to load invoice');
+    } finally {
+      setLoadingInvoice(null);
     }
   };
 
@@ -207,6 +250,26 @@ export default function BillingPage() {
               <div className="text-xl font-display text-neon-purple">
                 {data.account.tierDisplay}
               </div>
+              {data.account.subscriptionStatus && (
+                <div className="mt-2 flex items-center gap-1.5">
+                  <div
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      data.account.subscriptionStatus === 'active'
+                        ? 'bg-neon-green'
+                        : data.account.subscriptionStatus === 'canceled'
+                        ? 'bg-neon-yellow'
+                        : 'bg-terminal-dim'
+                    }`}
+                  />
+                  <span className="text-[10px] text-terminal-dim capitalize">
+                    {data.account.subscriptionStatus === 'active'
+                      ? 'Subscription Active'
+                      : data.account.subscriptionStatus === 'canceled'
+                      ? 'Cancels at Period End'
+                      : data.account.subscriptionStatus}
+                  </span>
+                </div>
+              )}
             </motion.div>
 
             <motion.div
@@ -442,30 +505,79 @@ export default function BillingPage() {
               {data.invoices.map((inv) => (
                 <div
                   key={inv.id}
-                  className="flex items-center justify-between p-3 rounded bg-cyber-darker/50 border border-cyber-light/5"
+                  className="p-4 rounded bg-cyber-darker/50 border border-cyber-light/5"
                 >
-                  <div>
-                    <div className="text-xs text-terminal-text">
-                      {new Date(inv.periodStart).toLocaleDateString()} —{' '}
-                      {new Date(inv.periodEnd).toLocaleDateString()}
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-terminal-text font-semibold">
+                          {new Date(inv.periodStart).toLocaleDateString()} —{' '}
+                          {new Date(inv.periodEnd).toLocaleDateString()}
+                        </span>
+                        {inv.billingReason && (
+                          <span className="text-[9px] text-terminal-dim bg-cyber-mid px-1.5 py-0.5 rounded">
+                            {inv.billingReason === 'subscription_cycle'
+                              ? 'Renewal'
+                              : inv.billingReason === 'subscription_create'
+                              ? 'New Subscription'
+                              : inv.billingReason === 'subscription_update'
+                              ? 'Plan Change'
+                              : inv.billingReason === 'purchase'
+                              ? 'One-time'
+                              : inv.billingReason}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-terminal-dim mt-1">
+                        {inv.requestCount.toLocaleString()} requests |{' '}
+                        {formatNumber(Number(inv.totalTokens))} tokens |{' '}
+                        {inv.currency.toUpperCase()}
+                      </div>
                     </div>
-                    <div className="text-[10px] text-terminal-dim mt-0.5">
-                      {inv.requestCount.toLocaleString()} requests |{' '}
-                      {formatNumber(Number(inv.totalTokens))} tokens
+
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-semibold text-terminal-text">
+                        {inv.totalDisplay}
+                      </span>
+                      <span
+                        className={`text-[10px] uppercase tracking-wider ${
+                          STATUS_COLORS[inv.status] || 'text-terminal-dim'
+                        }`}
+                      >
+                        {inv.status}
+                      </span>
+
+                      {/* Invoice Actions */}
+                      {inv.hasInvoice && (
+                        <div className="flex items-center gap-1 ml-1">
+                          <button
+                            onClick={() =>
+                              handleViewInvoice(inv.id, inv.polarInvoiceUrl)
+                            }
+                            disabled={loadingInvoice === inv.id}
+                            className="p-1.5 text-terminal-dim hover:text-neon-cyan hover:bg-neon-cyan/5 rounded transition-colors"
+                            title="Preview invoice"
+                          >
+                            {loadingInvoice === inv.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Eye className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                          {inv.polarInvoiceUrl && (
+                            <a
+                              href={inv.polarInvoiceUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1.5 text-terminal-dim hover:text-neon-green hover:bg-neon-green/5 rounded transition-colors"
+                              title="Download invoice"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                            </a>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold text-terminal-text">
-                      {inv.totalDisplay}
-                    </span>
-                    <span
-                      className={`text-[10px] uppercase tracking-wider ${
-                        STATUS_COLORS[inv.status] || 'text-terminal-dim'
-                      }`}
-                    >
-                      {inv.status}
-                    </span>
-                    <ChevronRight className="w-3.5 h-3.5 text-terminal-dim" />
                   </div>
                 </div>
               ))}
@@ -474,12 +586,39 @@ export default function BillingPage() {
             <div className="text-center py-6">
               <FileText className="w-6 h-6 text-terminal-dim/30 mx-auto mb-2" />
               <p className="text-xs text-terminal-dim">
-                No invoices yet. Invoices are generated at the end of each billing
-                cycle.
+                No invoices yet. Invoices are created when payments are processed
+                through Polar.
               </p>
             </div>
           )}
         </motion.div>
+
+        {/* Polar Integration Info */}
+        {data?.account.hasPaymentMethod && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="mt-4 cyber-card p-4 border-neon-cyan/10"
+          >
+            <div className="flex items-center gap-2 text-[10px] text-terminal-dim">
+              <ExternalLink className="w-3 h-3" />
+              <span>
+                Payments processed by{' '}
+                <a
+                  href="https://polar.sh"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-neon-cyan hover:underline"
+                >
+                  Polar.sh
+                </a>
+                . Manage your subscription and payment methods on your Polar
+                customer portal.
+              </span>
+            </div>
+          </motion.div>
+        )}
       </div>
     </div>
   );
