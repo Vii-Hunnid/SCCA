@@ -332,16 +332,18 @@ model UsageRecord {
 
 ```prisma
 model BillingAccount {
-  id                 String   @id
-  userId             String   @unique
-  tier               String   @default("free")
-  totalSpendMicro    BigInt   @default(0)
-  monthlySpendMicro  BigInt   @default(0)
-  monthlyBudgetMicro BigInt   @default(0)
-  billingCycleStart  DateTime @default(now())
-  autoUpgrade        Boolean  @default(false)
-  paymentMethodId    String?
-  stripeCustomerId   String?
+  id                    String   @id
+  userId                String   @unique
+  tier                  String   @default("free")
+  totalSpendMicro       BigInt   @default(0)
+  monthlySpendMicro     BigInt   @default(0)
+  monthlyBudgetMicro    BigInt   @default(0)
+  billingCycleStart     DateTime @default(now())
+  autoUpgrade           Boolean  @default(false)
+  polarCustomerId       String?  @unique  // Polar.sh customer ID
+  polarSubscriptionId   String?           // Active Polar subscription
+  polarProductId        String?           // Subscribed Polar product
+  subscriptionStatus    String?           // "active", "canceled", "past_due"
 }
 ```
 
@@ -358,7 +360,10 @@ model Invoice {
   totalTokens      BigInt   @default(0)
   totalBytes       BigInt   @default(0)
   status           String   @default("draft")
-  stripeInvoiceId  String?
+  polarOrderId     String?  @unique  // Polar order UUID
+  polarInvoiceUrl  String?           // Generated invoice PDF URL
+  billingReason    String?           // "purchase", "subscription_create", "subscription_cycle"
+  currency         String   @default("usd")
 }
 ```
 
@@ -381,14 +386,72 @@ This ensures that clients using SCCA for media encryption (as defined in the med
 
 ---
 
-## 11. Future Considerations
+## 11. Polar.sh Payment Integration
 
-- **Stripe Integration** — Connect `stripeCustomerId` for automatic payment processing
+SCCA uses **Polar.sh** as the payment provider for subscriptions and one-time purchases.
+
+### 11.1 Product: SCCA Connect
+
+| Feature | Details |
+|---------|---------|
+| **Product** | SCCA Connect — Monthly subscription |
+| **Per-message** | $0.0005 per message processed |
+| **Per-API call** | $0.001 per API call |
+| **Billing** | Monthly, usage-based |
+
+### 11.2 Webhook Events
+
+The webhook handler at `POST /api/webhooks/polar` processes these events:
+
+| Event | Action |
+|-------|--------|
+| `order.paid` | Create invoice, update billing spend, auto-upgrade tier |
+| `subscription.created` | Link subscription to billing account |
+| `subscription.updated` | Update subscription status and product/tier |
+| `subscription.canceled` | Mark subscription as canceling |
+
+### 11.3 Webhook Verification
+
+All webhooks are verified using `@polar-sh/sdk/webhooks`:
+
+```typescript
+import { validateEvent, WebhookVerificationError } from "@polar-sh/sdk/webhooks";
+
+const event = validateEvent(body, {
+  "webhook-id": headers["webhook-id"],
+  "webhook-timestamp": headers["webhook-timestamp"],
+  "webhook-signature": headers["webhook-signature"],
+}, process.env.POLAR_WEBHOOK_SECRET);
+```
+
+### 11.4 Invoice Flow
+
+1. Payment processed → `order.paid` webhook → Invoice record created
+2. User clicks "Preview" → `GET /api/scca/billing/invoices/{id}`
+3. Server calls `POST /v1/orders/{polarOrderId}/invoice` (generate)
+4. Server calls `GET /v1/orders/{polarOrderId}/invoice` (get URL)
+5. URL cached in database, returned to client
+6. Client opens URL in new tab (PDF)
+
+### 11.5 Environment Variables
+
+```bash
+POLAR_ACCESS_TOKEN="polar_at_..."   # Organization access token
+POLAR_WEBHOOK_SECRET="whsec_..."    # Webhook signing secret
+POLAR_ENVIRONMENT="sandbox"          # "sandbox" or "production"
+POLAR_TIER_MAP='{"prod_x":"tier_1"}' # Product → tier mapping (JSON)
+```
+
+---
+
+## 12. Future Considerations
+
 - **Webhook Notifications** — Alert users when approaching rate limits or budget caps
 - **Per-Key Rate Limits** — Individual rate limits per API key (not just per user)
 - **Custom Enterprise Tiers** — Negotiated limits and pricing for enterprise customers
 - **Usage Alerts** — Email/webhook when usage exceeds configurable thresholds
 - **Reserved Capacity** — Pre-purchased token blocks at discounted rates
+- **Polar Customer Portal** — Deep link to Polar's hosted customer portal for self-serve subscription management
 
 ---
 

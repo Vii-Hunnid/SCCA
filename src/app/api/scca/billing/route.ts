@@ -74,7 +74,10 @@ export async function GET() {
           : "No limit",
         billingCycleStart: billing.billingCycleStart.toISOString(),
         autoUpgrade: billing.autoUpgrade,
-        hasPaymentMethod: !!billing.paymentMethodId,
+        hasPaymentMethod: !!billing.polarCustomerId,
+        polarCustomerId: billing.polarCustomerId || null,
+        subscriptionStatus: billing.subscriptionStatus || null,
+        polarSubscriptionId: billing.polarSubscriptionId || null,
       },
       upgrade: nextTier
         ? {
@@ -108,6 +111,11 @@ export async function GET() {
         totalTokens: Number(inv.totalTokens),
         totalBytes: Number(inv.totalBytes),
         status: inv.status,
+        polarOrderId: inv.polarOrderId || null,
+        polarInvoiceUrl: inv.polarInvoiceUrl || null,
+        billingReason: inv.billingReason || null,
+        currency: inv.currency,
+        hasInvoice: !!inv.polarOrderId,
       })),
     });
   } catch (err: any) {
