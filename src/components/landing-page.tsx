@@ -61,6 +61,12 @@ export function LandingPage() {
           </div>
           <div className="flex items-center gap-4">
             <Link
+              href="/docs"
+              className="text-sm text-terminal-dim hover:text-neon-cyan transition-colors"
+            >
+              Docs
+            </Link>
+            <Link
               href="/auth/login"
               className="text-sm text-terminal-dim hover:text-neon-cyan transition-colors"
             >
@@ -107,7 +113,7 @@ export function LandingPage() {
                 <ArrowRight className="w-4 h-4 ml-2 inline" />
               </Link>
               <Link
-                href="https://github.com"
+                href="/docs"
                 className="text-sm text-terminal-dim hover:text-terminal-text transition-colors"
               >
                 View Protocol Spec
