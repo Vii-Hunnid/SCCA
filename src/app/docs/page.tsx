@@ -16,12 +16,14 @@ import {
   ArrowLeft,
   Menu,
   X,
+  Code,
 } from 'lucide-react';
 import Link from 'next/link';
 
 type Section =
   | 'overview'
   | 'quickstart'
+  | 'integration'
   | 'api'
   | 'crypto'
   | 'binary'
@@ -30,6 +32,7 @@ type Section =
 const navItems: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: 'overview', label: 'Overview', icon: BookOpen },
   { id: 'quickstart', label: 'Quick Start', icon: ChevronRight },
+  { id: 'integration', label: 'Integration Guide', icon: Code },
   { id: 'api', label: 'API Reference', icon: FileCode },
   { id: 'crypto', label: 'Crypto Engine', icon: Key },
   { id: 'binary', label: 'Binary Format', icon: Database },
@@ -337,6 +340,352 @@ npx prisma db push`}</CodeBlock>
               </code>{' '}
               and register an account to start.
             </p>
+
+            {/* Integration Guide */}
+            <SectionTitle id="integration">Integration Guide</SectionTitle>
+            <p className="text-sm text-terminal-dim leading-relaxed mb-4">
+              Use SCCA as the encrypted chat backend for your own application.
+              Authenticate, create conversations, send messages, and handle
+              streaming responses — all through the REST API.
+            </p>
+
+            <SubTitle>Authentication</SubTitle>
+            <p className="text-xs text-terminal-dim leading-relaxed mb-3">
+              SCCA uses NextAuth for session management. To call the API from an external
+              client, first obtain a session by signing in via the credentials endpoint.
+              The session cookie is used for all subsequent requests.
+            </p>
+            <CodeBlock language="bash">{`# 1. Get CSRF token
+CSRF=$(curl -s -c cookies.txt https://your-scca-instance.com/api/auth/csrf \\
+  | jq -r '.csrfToken')
+
+# 2. Sign in with credentials
+curl -s -b cookies.txt -c cookies.txt \\
+  -X POST https://your-scca-instance.com/api/auth/callback/credentials \\
+  -H "Content-Type: application/x-www-form-urlencoded" \\
+  -d "email=user@example.com&password=yourpassword&csrfToken=$CSRF"
+
+# 3. Now use cookies.txt for all API calls
+curl -b cookies.txt https://your-scca-instance.com/api/scca/conversations`}</CodeBlock>
+
+            <SubTitle>Full Conversation Lifecycle (cURL)</SubTitle>
+            <p className="text-xs text-terminal-dim leading-relaxed mb-3">
+              Create a conversation, send a message, receive the streamed AI response,
+              then edit a message with destructive editing.
+            </p>
+            <CodeBlock language="bash">{`# Create a new conversation
+CONV=$(curl -s -b cookies.txt \\
+  -X POST https://your-scca-instance.com/api/scca/conversations \\
+  -H "Content-Type: application/json" \\
+  -d '{"title": "My Integration Test"}')
+
+CONV_ID=$(echo $CONV | jq -r '.id')
+echo "Created conversation: $CONV_ID"
+
+# Send a message (SSE streaming response)
+curl -N -b cookies.txt \\
+  -X POST "https://your-scca-instance.com/api/scca/conversations/$CONV_ID/messages" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "content": "What is SCCA?",
+    "temperature": 0.7,
+    "max_tokens": 4096
+  }'
+# Each line: data: {"token":"..."} ... data: {"done":true}
+
+# Retrieve the full conversation with decrypted messages
+curl -s -b cookies.txt \\
+  "https://your-scca-instance.com/api/scca/conversations/$CONV_ID"
+
+# Destructive edit: rewrite message at sequence 0, regenerate AI response
+curl -N -b cookies.txt \\
+  -X POST "https://your-scca-instance.com/api/scca/conversations/$CONV_ID/edit" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "sequence": 0,
+    "content": "Explain SCCA encryption in detail",
+    "regenerate": true
+  }'`}</CodeBlock>
+
+            <SubTitle>JavaScript / TypeScript Client</SubTitle>
+            <p className="text-xs text-terminal-dim leading-relaxed mb-3">
+              Integrate SCCA into a Node.js backend or browser app. This example
+              shows the full flow: auth, create, send, and stream.
+            </p>
+            <CodeBlock language="typescript">{`const SCCA_BASE = "https://your-scca-instance.com";
+
+// Helper: authenticated fetch (browser — cookies are sent automatically)
+// For server-side, pass the session cookie from your auth flow.
+
+async function createConversation(title?: string) {
+  const res = await fetch(\`\${SCCA_BASE}/api/scca/conversations\`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ title: title || "New Chat" }),
+  });
+  return res.json(); // { id, title, model, messageCount, ... }
+}
+
+async function sendMessage(
+  conversationId: string,
+  content: string,
+  onToken: (token: string) => void,
+  onDone: (data: { messageCount: number; title: string }) => void
+) {
+  const res = await fetch(
+    \`\${SCCA_BASE}/api/scca/conversations/\${conversationId}/messages\`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        content,
+        temperature: 0.7,
+        max_tokens: 8192,
+      }),
+    }
+  );
+
+  // Parse the SSE stream
+  const reader = res.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\\n");
+    buffer = lines.pop() || "";
+
+    for (const line of lines) {
+      if (!line.startsWith("data: ")) continue;
+      const data = JSON.parse(line.slice(6));
+      if (data.done) {
+        onDone(data);
+      } else if (data.token) {
+        onToken(data.token);
+      }
+    }
+  }
+}
+
+async function getMessages(conversationId: string) {
+  const res = await fetch(
+    \`\${SCCA_BASE}/api/scca/conversations/\${conversationId}\`,
+    { credentials: "include" }
+  );
+  return res.json(); // { id, messages: [...], messageCount, ... }
+}
+
+async function destructiveEdit(
+  conversationId: string,
+  sequence: number,
+  newContent: string,
+  onToken: (token: string) => void,
+  onDone: (data: any) => void
+) {
+  const res = await fetch(
+    \`\${SCCA_BASE}/api/scca/conversations/\${conversationId}/edit\`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        sequence,
+        content: newContent,
+        regenerate: true,
+      }),
+    }
+  );
+
+  // Same SSE parsing as sendMessage
+  const reader = res.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\\n");
+    buffer = lines.pop() || "";
+
+    for (const line of lines) {
+      if (!line.startsWith("data: ")) continue;
+      const data = JSON.parse(line.slice(6));
+      if (data.done) onDone(data);
+      else if (data.token) onToken(data.token);
+    }
+  }
+}
+
+// ── Usage Example ──
+
+async function main() {
+  // 1. Create conversation
+  const conv = await createConversation("Security Review");
+  console.log("Created:", conv.id);
+
+  // 2. Send a message, stream the response
+  let response = "";
+  await sendMessage(
+    conv.id,
+    "How does AES-256-GCM work?",
+    (token) => {
+      response += token;
+      process.stdout.write(token); // stream to console
+    },
+    (data) => console.log("\\nDone. Messages:", data.messageCount)
+  );
+
+  // 3. Edit message 0 and regenerate
+  response = "";
+  await destructiveEdit(
+    conv.id,
+    0,
+    "Explain AES-256-GCM for a beginner",
+    (token) => { response += token; },
+    (data) => console.log("Edited. Messages:", data.messageCount)
+  );
+}`}</CodeBlock>
+
+            <SubTitle>Python Client</SubTitle>
+            <p className="text-xs text-terminal-dim leading-relaxed mb-3">
+              Integrate SCCA from a Python backend using{' '}
+              <code className="text-neon-cyan bg-cyber-darker px-1 py-0.5 rounded">requests</code>.
+            </p>
+            <CodeBlock language="python">{`import requests
+import json
+
+SCCA_BASE = "https://your-scca-instance.com"
+
+class SCCAClient:
+    def __init__(self, base_url: str):
+        self.base = base_url
+        self.session = requests.Session()
+
+    def login(self, email: str, password: str):
+        # Get CSRF token
+        csrf = self.session.get(f"{self.base}/api/auth/csrf").json()["csrfToken"]
+        # Sign in
+        self.session.post(
+            f"{self.base}/api/auth/callback/credentials",
+            data={"email": email, "password": password, "csrfToken": csrf},
+            allow_redirects=False,
+        )
+
+    def create_conversation(self, title: str = "New Chat") -> dict:
+        res = self.session.post(
+            f"{self.base}/api/scca/conversations",
+            json={"title": title},
+        )
+        return res.json()
+
+    def send_message(self, conv_id: str, content: str):
+        """Send a message and yield streamed tokens."""
+        res = self.session.post(
+            f"{self.base}/api/scca/conversations/{conv_id}/messages",
+            json={"content": content, "temperature": 0.7, "max_tokens": 8192},
+            stream=True,
+        )
+        for line in res.iter_lines(decode_unicode=True):
+            if not line or not line.startswith("data: "):
+                continue
+            data = json.loads(line[6:])
+            if data.get("done"):
+                yield {"done": True, **data}
+                break
+            elif "token" in data:
+                yield {"token": data["token"]}
+
+    def get_messages(self, conv_id: str) -> dict:
+        return self.session.get(
+            f"{self.base}/api/scca/conversations/{conv_id}"
+        ).json()
+
+    def destructive_edit(self, conv_id: str, sequence: int, content: str):
+        """Edit a message and yield regenerated tokens."""
+        res = self.session.post(
+            f"{self.base}/api/scca/conversations/{conv_id}/edit",
+            json={"sequence": sequence, "content": content, "regenerate": True},
+            stream=True,
+        )
+        for line in res.iter_lines(decode_unicode=True):
+            if not line or not line.startswith("data: "):
+                continue
+            data = json.loads(line[6:])
+            if data.get("done"):
+                yield {"done": True, **data}
+                break
+            elif "token" in data:
+                yield {"token": data["token"]}
+
+
+# ── Usage ──
+
+client = SCCAClient(SCCA_BASE)
+client.login("user@example.com", "yourpassword")
+
+conv = client.create_conversation("Python Integration")
+print(f"Created: {conv['id']}")
+
+# Stream the AI response
+for event in client.send_message(conv["id"], "What is SCCA?"):
+    if "token" in event:
+        print(event["token"], end="", flush=True)
+    elif event.get("done"):
+        print(f"\\nDone. Messages: {event['messageCount']}")
+
+# Retrieve full conversation
+messages = client.get_messages(conv["id"])
+for msg in messages["messages"]:
+    print(f"[{msg['role']}] {msg['content'][:80]}")`}</CodeBlock>
+
+            <SubTitle>Handling SSE Streams</SubTitle>
+            <p className="text-xs text-terminal-dim leading-relaxed mb-3">
+              Both the <code className="text-neon-cyan bg-cyber-darker px-1 py-0.5 rounded">/messages</code> and{' '}
+              <code className="text-neon-cyan bg-cyber-darker px-1 py-0.5 rounded">/edit</code> endpoints
+              return Server-Sent Events. The format is simple:
+            </p>
+            <CodeBlock language="text">{`data: {"token":"Hello"}         ← AI token (append to response)
+data: {"token":" there"}        ← another token
+data: {"token":"!"}             ← another token
+data: {"done":true,"messageCount":4,"title":"Chat Title"}  ← stream complete
+
+Error events:
+data: {"error":"Unauthorized"}  ← auth failed
+data: {"error":"Not found"}     ← conversation doesn't exist`}</CodeBlock>
+
+            <div className="cyber-card p-5 mb-6 border-neon-yellow/20">
+              <div className="flex items-start gap-3">
+                <span className="text-neon-yellow text-sm mt-0.5">&#9888;</span>
+                <div>
+                  <span className="text-xs font-semibold text-neon-yellow">Important Notes</span>
+                  <ul className="text-[11px] text-terminal-dim mt-2 space-y-1.5 list-none">
+                    <li className="flex gap-2">
+                      <span className="text-neon-cyan">&#8226;</span>
+                      <span>All encryption/decryption happens server-side. The API returns plaintext messages — you don&apos;t need to handle encryption in your client.</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="text-neon-cyan">&#8226;</span>
+                      <span>Destructive edits are irreversible. Messages after the edit point are permanently deleted before the response is regenerated.</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="text-neon-cyan">&#8226;</span>
+                      <span>The session cookie expires based on your NextAuth configuration. Re-authenticate if you receive 401 responses.</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="text-neon-cyan">&#8226;</span>
+                      <span>Rate limiting is not enforced by default. If deploying publicly, add rate limiting middleware.</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
 
             {/* API Reference */}
             <SectionTitle id="api">API Reference</SectionTitle>
