@@ -34,6 +34,8 @@ model User {
   sessions      Session[]
   auditLogs     AuditLog[]
   apiKeys       ApiKey[]
+  usageRecords  UsageRecord[]
+  billingAccount BillingAccount?
 
   // Timestamps
   createdAt     DateTime  @default(now()) @map("created_at")
@@ -155,9 +157,134 @@ model ApiKey {
   expiresAt   DateTime? @map("expires_at")
   revokedAt   DateTime? @map("revoked_at")
 
+  // Usage tracking
+  usageRecords UsageRecord[]
+
   createdAt   DateTime  @default(now()) @map("created_at")
 
   @@index([keyHash])
   @@index([userId])
   @@map("api_keys")
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// USAGE RECORD
+// Tracks every API request for metering, billing, and rate limit enforcement.
+// Modeled after OpenAI/Anthropic/xAI consumption tracking:
+//   - Requests per minute (RPM), Requests per day (RPD)
+//   - Tokens per minute (TPM), Tokens per day (TPD)
+//   - Bytes processed (for Vault encrypt/decrypt)
+// ═════════════════════════════════════════════════════════════════════════════
+
+model UsageRecord {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  apiKeyId     String?  @map("api_key_id")
+  apiKey       ApiKey?  @relation(fields: [apiKeyId], references: [id])
+
+  // What happened
+  endpoint     String   // e.g. "vault/encrypt", "vault/decrypt", "vault/verify", "conversations/messages"
+  method       String   // "POST", "GET", etc.
+  statusCode   Int      @map("status_code")
+
+  // Metering
+  requestTokens  Int    @default(0) @map("request_tokens")   // input tokens (prompt length / 4 approx)
+  responseTokens Int    @default(0) @map("response_tokens")  // output tokens
+  totalTokens    Int    @default(0) @map("total_tokens")     // request + response
+  bytesIn        Int    @default(0) @map("bytes_in")         // request body size
+  bytesOut       Int    @default(0) @map("bytes_out")        // response body size
+
+  // Cost tracking (in microdollars: $0.01 = 10000 microdollars)
+  costMicro      Int    @default(0) @map("cost_micro")
+
+  // Timing
+  latencyMs      Int    @default(0) @map("latency_ms")
+
+  // Rate limit snapshot at time of request
+  rateLimitTier  String @default("free") @map("rate_limit_tier")
+
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, endpoint, createdAt])
+  @@index([apiKeyId, createdAt])
+  @@index([createdAt])
+  @@map("usage_records")
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// BILLING ACCOUNT
+// Tracks user's billing tier, spend, and payment status.
+// Tier system inspired by OpenAI/Anthropic usage tiers:
+//   free → tier_1 → tier_2 → tier_3 → tier_4 → enterprise
+// Each tier unlocks higher rate limits and quotas.
+// ═════════════════════════════════════════════════════════════════════════════
+
+model BillingAccount {
+  id               String   @id @default(cuid())
+  userId           String   @unique @map("user_id")
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Tier: "free", "tier_1", "tier_2", "tier_3", "tier_4", "enterprise"
+  tier             String   @default("free")
+
+  // Spend tracking (microdollars)
+  totalSpendMicro  BigInt   @default(0) @map("total_spend_micro")   // lifetime spend
+  monthlySpendMicro BigInt  @default(0) @map("monthly_spend_micro") // current billing period
+  monthlyBudgetMicro BigInt @default(0) @map("monthly_budget_micro") // user-set monthly cap (0 = no cap)
+
+  // Billing period
+  billingCycleStart DateTime @default(now()) @map("billing_cycle_start")
+
+  // Payment info (placeholder - would integrate with Stripe)
+  paymentMethodId  String?  @map("payment_method_id")
+  stripeCustomerId String?  @map("stripe_customer_id")
+
+  // Auto-tier upgrade
+  autoUpgrade      Boolean  @default(false) @map("auto_upgrade")
+
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  invoices         Invoice[]
+
+  @@index([userId])
+  @@index([tier])
+  @@map("billing_accounts")
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// INVOICE
+// Monthly billing records for each billing cycle.
+// ═════════════════════════════════════════════════════════════════════════════
+
+model Invoice {
+  id               String   @id @default(cuid())
+  billingAccountId String   @map("billing_account_id")
+  billingAccount   BillingAccount @relation(fields: [billingAccountId], references: [id], onDelete: Cascade)
+
+  // Period
+  periodStart      DateTime @map("period_start")
+  periodEnd        DateTime @map("period_end")
+
+  // Totals (microdollars)
+  totalMicro       BigInt   @default(0) @map("total_micro")
+  requestCount     Int      @default(0) @map("request_count")
+  totalTokens      BigInt   @default(0) @map("total_tokens")
+  totalBytes       BigInt   @default(0) @map("total_bytes")
+
+  // Status: "draft", "pending", "paid", "overdue", "void"
+  status           String   @default("draft")
+
+  // Stripe
+  stripeInvoiceId  String?  @map("stripe_invoice_id")
+
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@index([billingAccountId, periodStart(sort: Desc)])
+  @@index([status])
+  @@map("invoices")
 }
