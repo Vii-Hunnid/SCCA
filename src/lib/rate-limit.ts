@@ -330,3 +330,40 @@ export function getRateLimitHeaders(result: RateLimitResult): Record<string, str
 export function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
 }
+
+/**
+ * Build a 429 rate-limit-exceeded JSON response with upgrade info.
+ */
+export function buildRateLimitExceededResponse(
+  result: RateLimitResult
+): { body: Record<string, unknown>; status: number; headers: Record<string, string> } {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "";
+  const upgradeUrl = appUrl ? `${appUrl}/dashboard/billing` : "/dashboard/billing";
+
+  return {
+    body: {
+      error: "Rate limit exceeded",
+      message:
+        result.tier === "free"
+          ? "You've hit the free tier rate limit. Upgrade your plan for higher limits."
+          : `You've exceeded your ${TIER_LIMITS[result.tier]?.displayName || result.tier} rate limits. Wait or upgrade for higher limits.`,
+      tier: result.tier,
+      tierDisplay: TIER_LIMITS[result.tier]?.displayName || result.tier,
+      retryAfterMs: result.retryAfterMs,
+      current: result.current,
+      limits: {
+        rpm: result.limits.rpm,
+        rpd: result.limits.rpd,
+        tpm: result.limits.tpm,
+        tpd: result.limits.tpd,
+      },
+      upgrade: {
+        url: upgradeUrl,
+        checkoutApi: `${appUrl}/api/scca/billing/checkout`,
+        message: "POST to checkoutApi to get a Polar checkout URL, or visit the upgrade URL in your browser.",
+      },
+    },
+    status: 429,
+    headers: getRateLimitHeaders(result),
+  };
+}
