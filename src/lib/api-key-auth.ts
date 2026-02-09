@@ -23,6 +23,7 @@ export interface AuthenticatedUser {
   masterKeySalt: string;
   masterKey: Buffer;
   authMethod: "api_key" | "session";
+  apiKeyId?: string;
 }
 
 /**
@@ -92,6 +93,7 @@ async function authenticateApiKey(
     masterKeySalt: apiKey.user.masterKeySalt,
     masterKey,
     authMethod: "api_key",
+    apiKeyId: apiKey.id,
   };
 }
 

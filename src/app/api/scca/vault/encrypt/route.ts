@@ -21,12 +21,30 @@ import {
   computeMerkleRoot,
   estimateStorageSize,
 } from "@/lib/crypto/engine";
+import {
+  checkRateLimit,
+  recordUsage,
+  getOrCreateBillingAccount,
+  getRateLimitHeaders,
+  estimateTokens,
+} from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
   try {
     const user = await authenticateRequest(request);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Check rate limits
+    const billing = await getOrCreateBillingAccount(user.id);
+    const rateLimit = await checkRateLimit(user.id, billing.tier);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded", retryAfterMs: rateLimit.retryAfterMs },
+        { status: 429, headers: getRateLimitHeaders(rateLimit) }
+      );
     }
 
     const body = await request.json();
@@ -111,7 +129,7 @@ export async function POST(request: NextRequest) {
     // Calculate metrics
     const totalEncryptedBytes = estimateStorageSize(tokens);
 
-    return NextResponse.json({
+    const responseBody = {
       tokens,
       merkleRoot,
       context,
@@ -127,6 +145,28 @@ export async function POST(request: NextRequest) {
         kdf: "HKDF-SHA256",
         integrity: "HMAC-SHA256-chain",
       },
+    };
+
+    const responseStr = JSON.stringify(responseBody);
+    const bodyStr = JSON.stringify(body);
+
+    // Record usage (fire-and-forget — don't block the response)
+    recordUsage({
+      userId: user.id,
+      apiKeyId: user.apiKeyId,
+      endpoint: "vault/encrypt",
+      method: "POST",
+      statusCode: 200,
+      requestTokens: estimateTokens(bodyStr),
+      responseTokens: estimateTokens(responseStr),
+      bytesIn: Buffer.byteLength(bodyStr, "utf-8"),
+      bytesOut: Buffer.byteLength(responseStr, "utf-8"),
+      latencyMs: Date.now() - startTime,
+      tier: billing.tier,
+    }).catch((e) => console.error("[vault/encrypt] usage recording failed:", e));
+
+    return NextResponse.json(responseBody, {
+      headers: getRateLimitHeaders(rateLimit),
     });
   } catch (err: any) {
     console.error("[vault/encrypt]", err);

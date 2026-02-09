@@ -20,12 +20,30 @@ import {
   computeMerkleRoot,
   verifyIntegrity,
 } from "@/lib/crypto/engine";
+import {
+  checkRateLimit,
+  recordUsage,
+  getOrCreateBillingAccount,
+  getRateLimitHeaders,
+  estimateTokens,
+} from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
   try {
     const user = await authenticateRequest(request);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Check rate limits
+    const billing = await getOrCreateBillingAccount(user.id);
+    const rateLimit = await checkRateLimit(user.id, billing.tier);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded", retryAfterMs: rateLimit.retryAfterMs },
+        { status: 429, headers: getRateLimitHeaders(rateLimit) }
+      );
     }
 
     const body = await request.json();
@@ -82,13 +100,35 @@ export async function POST(request: NextRequest) {
       integrityKey
     );
 
-    return NextResponse.json({
+    const responseBody = {
       valid: rootValid && integrity.valid,
       merkleRootMatch: rootValid,
       computedRoot,
       tokenCount: tokens.length,
       errors: integrity.errors,
       lastValidSequence: integrity.lastValidSequence,
+    };
+
+    const responseStr = JSON.stringify(responseBody);
+    const bodyStr = JSON.stringify(body);
+
+    // Record usage (fire-and-forget)
+    recordUsage({
+      userId: user.id,
+      apiKeyId: user.apiKeyId,
+      endpoint: "vault/verify",
+      method: "POST",
+      statusCode: 200,
+      requestTokens: estimateTokens(bodyStr),
+      responseTokens: estimateTokens(responseStr),
+      bytesIn: Buffer.byteLength(bodyStr, "utf-8"),
+      bytesOut: Buffer.byteLength(responseStr, "utf-8"),
+      latencyMs: Date.now() - startTime,
+      tier: billing.tier,
+    }).catch((e) => console.error("[vault/verify] usage recording failed:", e));
+
+    return NextResponse.json(responseBody, {
+      headers: getRateLimitHeaders(rateLimit),
     });
   } catch (err: any) {
     console.error("[vault/verify]", err);
