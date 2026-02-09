@@ -17,12 +17,14 @@ import {
   Menu,
   X,
   Code,
+  Server,
 } from 'lucide-react';
 import Link from 'next/link';
 
 type Section =
   | 'overview'
   | 'quickstart'
+  | 'vault'
   | 'integration'
   | 'api'
   | 'crypto'
@@ -32,7 +34,8 @@ type Section =
 const navItems: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: 'overview', label: 'Overview', icon: BookOpen },
   { id: 'quickstart', label: 'Quick Start', icon: ChevronRight },
-  { id: 'integration', label: 'Integration Guide', icon: Code },
+  { id: 'vault', label: 'Vault API', icon: Server },
+  { id: 'integration', label: 'Chat Integration', icon: Code },
   { id: 'api', label: 'API Reference', icon: FileCode },
   { id: 'crypto', label: 'Crypto Engine', icon: Key },
   { id: 'binary', label: 'Binary Format', icon: Database },
@@ -340,6 +343,334 @@ npx prisma db push`}</CodeBlock>
               </code>{' '}
               and register an account to start.
             </p>
+
+            {/* Vault API */}
+            <SectionTitle id="vault">Vault API</SectionTitle>
+            <p className="text-sm text-terminal-dim leading-relaxed mb-4">
+              Use SCCA&apos;s encryption engine directly — encrypt, decrypt, and verify
+              any data through the Vault API. No chat required. Store the
+              encrypted tokens in your own database, pass them between services,
+              or use them anywhere you need AES-256-GCM + zlib compression
+              with Merkle integrity.
+            </p>
+
+            <div className="cyber-card p-5 mb-6 border-neon-green/20">
+              <div className="flex items-start gap-3">
+                <span className="text-neon-green text-sm mt-0.5">&#9656;</span>
+                <div>
+                  <span className="text-xs font-semibold text-neon-green">How it works</span>
+                  <p className="text-[11px] text-terminal-dim mt-1 leading-relaxed">
+                    Every authenticated user gets their own derived encryption keys.
+                    The <code className="text-neon-cyan">context</code> parameter isolates keys
+                    per project/use case — data encrypted under <code className="text-neon-cyan">&quot;billing&quot;</code> cannot
+                    be decrypted with <code className="text-neon-cyan">&quot;user-data&quot;</code>, even by the same user.
+                    The server handles all crypto. You send plaintext in, get encrypted tokens out.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <SubTitle>Encrypt Data</SubTitle>
+            <Endpoint
+              method="POST"
+              path="/api/scca/vault/encrypt"
+              description="Encrypt one or more strings. Returns encrypted tokens and a Merkle integrity root."
+            >
+              <CodeBlock language="json">{`// Request
+{
+  "data": "sensitive user data to encrypt",
+  "context": "my-app-billing"
+}
+
+// Or encrypt multiple items at once
+{
+  "data": [
+    "first item to encrypt",
+    "second item to encrypt",
+    "third item to encrypt"
+  ],
+  "context": "my-app-billing"
+}
+
+// Response: 200 OK
+{
+  "tokens": [
+    "AQAAAAAn..."
+  ],
+  "merkleRoot": "a1b2c3d4e5f6...",
+  "context": "my-app-billing",
+  "metadata": {
+    "itemCount": 1,
+    "originalBytes": 30,
+    "encryptedBytes": 1098,
+    "compressionRatio": 0.365,
+    "cipher": "AES-256-GCM",
+    "kdf": "HKDF-SHA256",
+    "integrity": "HMAC-SHA256-chain"
+  }
+}`}</CodeBlock>
+            </Endpoint>
+
+            <SubTitle>Decrypt Data</SubTitle>
+            <Endpoint
+              method="POST"
+              path="/api/scca/vault/decrypt"
+              description="Decrypt tokens back to plaintext. Must use the same context as encryption."
+            >
+              <CodeBlock language="json">{`// Request
+{
+  "tokens": ["AQAAAAAn..."],
+  "context": "my-app-billing"
+}
+
+// Response: 200 OK
+{
+  "data": [
+    {
+      "content": "sensitive user data to encrypt",
+      "sequence": 0,
+      "timestamp": "2026-02-09T12:00:00.000Z",
+      "contentHash": "a1b2c3d4e5f67890"
+    }
+  ],
+  "context": "my-app-billing"
+}`}</CodeBlock>
+            </Endpoint>
+
+            <SubTitle>Verify Integrity</SubTitle>
+            <Endpoint
+              method="POST"
+              path="/api/scca/vault/verify"
+              description="Verify that tokens haven't been tampered with using the Merkle-HMAC chain."
+            >
+              <CodeBlock language="json">{`// Request
+{
+  "tokens": ["AQAAAAAn...", "AQEAAAAn..."],
+  "merkleRoot": "a1b2c3d4e5f6...",
+  "context": "my-app-billing"
+}
+
+// Response: 200 OK
+{
+  "valid": true,
+  "merkleRootMatch": true,
+  "computedRoot": "a1b2c3d4e5f6...",
+  "tokenCount": 2,
+  "errors": [],
+  "lastValidSequence": 1
+}`}</CodeBlock>
+            </Endpoint>
+
+            <SubTitle>Usage: Encrypt Data in Your System (cURL)</SubTitle>
+            <CodeBlock language="bash">{`# Authenticate first (see Authentication section below)
+
+# Encrypt sensitive data
+curl -s -b cookies.txt \\
+  -X POST https://your-scca-instance.com/api/scca/vault/encrypt \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "data": ["user SSN: 123-45-6789", "credit card: 4111-1111-1111-1111"],
+    "context": "pii-vault"
+  }' | jq .
+
+# Store the tokens and merkleRoot in your own database
+# Later, decrypt when needed:
+curl -s -b cookies.txt \\
+  -X POST https://your-scca-instance.com/api/scca/vault/decrypt \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "tokens": ["<token-from-encrypt>", "<token-from-encrypt>"],
+    "context": "pii-vault"
+  }' | jq .data
+
+# Verify nothing was tampered with:
+curl -s -b cookies.txt \\
+  -X POST https://your-scca-instance.com/api/scca/vault/verify \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "tokens": ["<token-from-encrypt>", "<token-from-encrypt>"],
+    "merkleRoot": "<root-from-encrypt>",
+    "context": "pii-vault"
+  }' | jq .valid`}</CodeBlock>
+
+            <SubTitle>Usage: JavaScript / TypeScript</SubTitle>
+            <CodeBlock language="typescript">{`const SCCA = "https://your-scca-instance.com";
+
+// Encrypt data for storage
+async function encryptData(data: string | string[], context: string) {
+  const res = await fetch(\`\${SCCA}/api/scca/vault/encrypt\`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ data, context }),
+  });
+  return res.json();
+  // { tokens: [...], merkleRoot: "...", metadata: {...} }
+}
+
+// Decrypt tokens back to plaintext
+async function decryptData(tokens: string[], context: string) {
+  const res = await fetch(\`\${SCCA}/api/scca/vault/decrypt\`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ tokens, context }),
+  });
+  return res.json();
+  // { data: [{ content, sequence, timestamp, contentHash }] }
+}
+
+// Verify integrity
+async function verifyData(
+  tokens: string[],
+  merkleRoot: string,
+  context: string
+) {
+  const res = await fetch(\`\${SCCA}/api/scca/vault/verify\`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ tokens, merkleRoot, context }),
+  });
+  return res.json();
+  // { valid: true/false, errors: [...] }
+}
+
+// ── Example: Encrypt user PII before storing in your DB ──
+
+async function storeUserData(userId: string, sensitiveFields: string[]) {
+  // Encrypt with SCCA — each user gets a unique context
+  const result = await encryptData(sensitiveFields, \`user-\${userId}-pii\`);
+
+  // Store encrypted tokens in YOUR database
+  await yourDB.users.update({
+    where: { id: userId },
+    data: {
+      encryptedPII: result.tokens,       // string[]
+      piiMerkleRoot: result.merkleRoot,  // for verification
+    },
+  });
+}
+
+async function readUserData(userId: string) {
+  const user = await yourDB.users.findUnique({ where: { id: userId } });
+
+  // Verify integrity first
+  const check = await verifyData(
+    user.encryptedPII,
+    user.piiMerkleRoot,
+    \`user-\${userId}-pii\`
+  );
+  if (!check.valid) throw new Error("Data tampered with!");
+
+  // Decrypt
+  const result = await decryptData(
+    user.encryptedPII,
+    \`user-\${userId}-pii\`
+  );
+  return result.data.map((d: any) => d.content);
+}`}</CodeBlock>
+
+            <SubTitle>Usage: Python</SubTitle>
+            <CodeBlock language="python">{`import requests, json
+
+class SCCAVault:
+    def __init__(self, base_url: str, session: requests.Session):
+        self.base = base_url
+        self.session = session
+
+    def encrypt(self, data, context: str) -> dict:
+        """Encrypt a string or list of strings."""
+        res = self.session.post(
+            f"{self.base}/api/scca/vault/encrypt",
+            json={"data": data, "context": context},
+        )
+        res.raise_for_status()
+        return res.json()
+
+    def decrypt(self, tokens: list, context: str) -> list:
+        """Decrypt tokens back to plaintext."""
+        res = self.session.post(
+            f"{self.base}/api/scca/vault/decrypt",
+            json={"tokens": tokens, "context": context},
+        )
+        res.raise_for_status()
+        return res.json()["data"]
+
+    def verify(self, tokens: list, merkle_root: str, context: str) -> dict:
+        """Verify token integrity."""
+        res = self.session.post(
+            f"{self.base}/api/scca/vault/verify",
+            json={
+                "tokens": tokens,
+                "merkleRoot": merkle_root,
+                "context": context,
+            },
+        )
+        res.raise_for_status()
+        return res.json()
+
+
+# ── Example: Encrypt logs before storage ──
+
+vault = SCCAVault("https://your-scca-instance.com", authenticated_session)
+
+# Encrypt sensitive log entries
+result = vault.encrypt(
+    data=[
+        "User john@example.com logged in from 192.168.1.1",
+        "Payment of $499.99 processed for order #12345",
+        "API key sk_live_abc123 was rotated",
+    ],
+    context="audit-logs-2026"
+)
+
+# Store result["tokens"] and result["merkleRoot"] in your system
+print(f"Encrypted {result['metadata']['itemCount']} items")
+print(f"Compression ratio: {result['metadata']['compressionRatio']}")
+
+# Later — verify and decrypt
+check = vault.verify(stored_tokens, stored_merkle_root, "audit-logs-2026")
+assert check["valid"], f"Integrity check failed: {check['errors']}"
+
+entries = vault.decrypt(stored_tokens, "audit-logs-2026")
+for entry in entries:
+    print(f"[{entry['timestamp']}] {entry['content']}")`}</CodeBlock>
+
+            <div className="cyber-card p-5 mb-6 border-neon-cyan/20">
+              <div className="flex items-start gap-3">
+                <span className="text-neon-cyan text-sm mt-0.5">&#9881;</span>
+                <div>
+                  <span className="text-xs font-semibold text-neon-cyan">Use Cases</span>
+                  <ul className="text-[11px] text-terminal-dim mt-2 space-y-1.5 list-none">
+                    <li className="flex gap-2">
+                      <span className="text-neon-green">&#8226;</span>
+                      <span><strong className="text-terminal-text">PII Storage</strong> — Encrypt user data (SSN, addresses, payment info) before storing in your database</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="text-neon-green">&#8226;</span>
+                      <span><strong className="text-terminal-text">Audit Logs</strong> — Encrypt sensitive log entries with tamper-proof Merkle verification</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="text-neon-green">&#8226;</span>
+                      <span><strong className="text-terminal-text">Internal Chat</strong> — Add encryption to your existing chat system without rebuilding it</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="text-neon-green">&#8226;</span>
+                      <span><strong className="text-terminal-text">Config Secrets</strong> — Encrypt API keys and credentials at rest with per-project isolation</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="text-neon-green">&#8226;</span>
+                      <span><strong className="text-terminal-text">File Metadata</strong> — Encrypt file descriptions, tags, or annotations before cloud storage</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="text-neon-green">&#8226;</span>
+                      <span><strong className="text-terminal-text">AI Pipelines</strong> — Encrypt prompts and responses in your AI workflow, verify they weren&apos;t modified in transit</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
 
             {/* Integration Guide */}
             <SectionTitle id="integration">Integration Guide</SectionTitle>
