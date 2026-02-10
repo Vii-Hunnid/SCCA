@@ -143,7 +143,7 @@ export function LandingPage() {
                 href="/docs"
                 className="text-sm text-terminal-dim hover:text-terminal-text transition-colors"
               >
-                View Protocol Spec
+                View Protocol Spec...
               </Link>
             </div>
           </motion.div>
