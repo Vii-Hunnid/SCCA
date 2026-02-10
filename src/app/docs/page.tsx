@@ -172,13 +172,6 @@ export default function DocsPage() {
                 height={100}
                 priority
                 className="object-contain"
-              />              <Image
-                src="/logo.jpg"
-                alt="SCCA logo"
-                width={100}
-                height={100}
-                priority
-                className="object-contain"
               />
             </Link>
             <span className="text-cyber-light/40">|</span>
