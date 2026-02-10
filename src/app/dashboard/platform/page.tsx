@@ -108,16 +108,16 @@ export default function PlatformPage() {
               href="/dashboard"
               className="text-terminal-dim hover:text-neon-cyan transition-colors"
             >
-              <ArrowLeft className="w-4 h-4" />
-              <Image
-                src="/logo.jpg"
-                alt="SCCA logo"
-                width={100}
-                height={100}
-                priority
-                className="object-contain"
-              />            
+              <ArrowLeft className="w-4 h-4" />           
             </Link>
+            <Image
+              src="/logo.jpg"
+              alt="SCCA logo"
+              width={100}
+              height={100}
+              priority
+              className="object-contain"
+            /> 
             <div className="flex items-center gap-2">
               <span className="text-sm text-terminal-text font-semibold tracking-wide">
                 Platform
