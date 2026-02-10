@@ -116,11 +116,11 @@ export default function PlatformPage() {
                 height={100}
                 priority
                 className="object-contain"
-              />            </Link>
+              />            
+            </Link>
             <div className="flex items-center gap-2">
-              <Shield className="w-4 h-4 text-neon-cyan" />
               <span className="text-sm text-terminal-text font-semibold tracking-wide">
-                SCCA Platform
+                Platform
               </span>
             </div>
           </div>
