@@ -20,6 +20,7 @@ import {
   Server,
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 type Section =
   | 'overview'
@@ -164,10 +165,21 @@ export default function DocsPage() {
               className="flex items-center gap-2 text-terminal-dim hover:text-neon-cyan transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
-              <Shield className="w-5 h-5 text-neon-cyan" />
-              <span className="font-display text-xs tracking-[0.3em] text-neon-cyan uppercase">
-                SCCA
-              </span>
+              <Image
+                src="/logo.jpg"
+                alt="SCCA logo"
+                width={100}
+                height={100}
+                priority
+                className="object-contain"
+              />              <Image
+                src="/logo.jpg"
+                alt="SCCA logo"
+                width={100}
+                height={100}
+                priority
+                className="object-contain"
+              />
             </Link>
             <span className="text-cyber-light/40">|</span>
             <span className="text-xs text-terminal-dim tracking-wider uppercase">

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Shield, UserPlus, Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 function GitHubIcon({ className }: { className?: string }) {
   return (
@@ -115,10 +116,14 @@ export default function RegisterPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-6">
-            <Shield className="w-6 h-6 text-neon-cyan" />
-            <span className="font-display text-sm tracking-[0.3em] text-neon-cyan uppercase">
-              SCCA
-            </span>
+            <Image
+              src="/logo.jpg"
+              alt="SCCA logo"
+              width={400}
+              height={400}
+              priority
+              className="object-contain"
+            />
           </Link>
           <h1 className="text-xl font-display font-semibold text-terminal-text mb-2">
             Create Identity

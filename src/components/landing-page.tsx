@@ -117,6 +117,17 @@ export function LandingPage() {
               <span className="text-slate-700 dark:neon-text">Chat Architecture</span>
             </h1>
 
+            <div className="flex items-center justify-center my-4">
+              <Image
+                src="/full_logo.jpg"
+                alt="SCCA logo"
+                width={200}
+                height={200}
+                priority
+                className="object-contain"
+              />
+            </div>
+
             <p className="text-terminal-dim max-w-xl mx-auto leading-relaxed mb-8">
               Privacy-first AI conversations with AES-256-GCM encryption,
               single-row storage, and cryptographic integrity verification.
