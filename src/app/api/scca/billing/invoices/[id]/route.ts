@@ -14,7 +14,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getPolarApiBase } from "@/lib/polar";
+// import { getPolarApiBase } from "@/lib/polar";
 
 export async function GET(
   request: NextRequest,
@@ -55,7 +55,7 @@ export async function GET(
     }
 
     // Generate + retrieve invoice from Polar
-    const polarBase = getPolarApiBase();
+    const polarBase = "https://sandbox-api.polar.sh";
     const accessToken = process.env.POLAR_ACCESS_TOKEN;
 
     if (!accessToken) {
