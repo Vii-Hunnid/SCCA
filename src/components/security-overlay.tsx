@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield } from 'lucide-react';
+import Image from 'next/image';
 
 const bootSequence = [
   { text: '> Initializing SCCA Protocol v1.0...', delay: 0 },
@@ -50,7 +50,15 @@ export function SecurityOverlay() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
             >
-              <Shield className="w-8 h-8 text-neon-cyan" />
+              <div className="relative h-10 w-10">
+                <Image
+                  src="/logo.jpg"
+                  alt="SCCA logo"
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              </div>
               <span className="font-display text-xl tracking-widest text-neon-cyan">
                 SCCA
               </span>

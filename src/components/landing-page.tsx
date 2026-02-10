@@ -2,7 +2,6 @@
 
 import { motion } from 'framer-motion';
 import {
-  Shield,
   Lock,
   Zap,
   Database,
@@ -10,6 +9,8 @@ import {
   GitBranch,
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
+import { useTheme } from '@/components/providers';
 
 const features = [
   {
@@ -48,18 +49,33 @@ const item = {
 };
 
 export function LandingPage() {
+  const { theme, toggleTheme } = useTheme();
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="border-b border-cyber-light/10">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Shield className="w-5 h-5 text-neon-cyan" />
-            <span className="font-display text-sm tracking-[0.3em] text-neon-cyan uppercase">
-              SCCA
-            </span>
+            <div className="relative h-auto w-32">
+              <Image
+                src="/logo.jpg"
+                alt="SCCA logo"
+                width={400}
+                height={400}
+                priority
+                className="object-contain"
+              />
+            </div>
           </div>
           <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="text-xs md:text-sm px-3 py-1.5 rounded-full border border-slate-300/60 bg-white/70 text-slate-700 shadow-sm hover:bg-slate-100 dark:border-neon-cyan/40 dark:bg-cyber-dark/80 dark:text-terminal-text dark:hover:bg-cyber-mid transition-colors"
+            >
+              {theme === 'dark' ? 'Day mode' : 'Night mode'}
+            </button>
             <Link
               href="/docs"
               className="text-sm text-terminal-dim hover:text-neon-cyan transition-colors"
@@ -98,7 +114,7 @@ export function LandingPage() {
             <h1 className="text-4xl md:text-5xl font-display font-bold tracking-tight mb-4">
               <span className="text-terminal-text">Secure Compact</span>
               <br />
-              <span className="neon-text">Chat Architecture</span>
+              <span className="text-slate-700 dark:neon-text">Chat Architecture</span>
             </h1>
 
             <p className="text-terminal-dim max-w-xl mx-auto leading-relaxed mb-8">
@@ -138,7 +154,7 @@ export function LandingPage() {
                 <h3 className="text-sm font-semibold text-terminal-text mb-2 tracking-wide">
                   {feature.title}
                 </h3>
-                <p className="text-xs text-terminal-dim leading-relaxed">
+                <p className="text-xs text-neon-cyan dark:text-terminal-green leading-relaxed">
                   {feature.description}
                 </p>
               </motion.div>
@@ -166,7 +182,7 @@ export function LandingPage() {
                 { label: 'Compression', value: 'zlib' },
               ].map((stat) => (
                 <div key={stat.label}>
-                  <div className="text-xs text-terminal-dim mb-1">{stat.label}</div>
+                  <div className="text-xs text-lime-400 dark:text-terminal-dim mb-1">{stat.label}</div>
                   <div className="text-sm neon-text font-semibold">{stat.value}</div>
                 </div>
               ))}

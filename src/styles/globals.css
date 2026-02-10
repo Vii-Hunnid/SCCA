@@ -10,7 +10,11 @@
   }
 
   body {
-    @apply bg-cyber-black text-terminal-text font-mono antialiased;
+    @apply bg-white text-slate-900 font-mono antialiased;
+  }
+
+  .dark body {
+    @apply bg-cyber-black text-terminal-text;
   }
 
   ::selection {
