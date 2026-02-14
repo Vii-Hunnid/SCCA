@@ -32,14 +32,17 @@ export async function POST(request: NextRequest) {
     // If no productId provided, try to get one from config
     if (!productId) {
       // Try POLAR_TIER_MAP first
+      const rawTierMap = process.env.POLAR_TIER_MAP || "";
       try {
-        const tierMap = JSON.parse(process.env.POLAR_TIER_MAP || "{}");
+        const tierMap = JSON.parse(rawTierMap);
         const productIds = Object.keys(tierMap);
         if (productIds.length > 0) {
           productId = productIds[0];
         }
-      } catch {
-        // Invalid JSON, fall through
+      } catch (parseErr) {
+        console.warn(
+          `[billing/checkout] POLAR_TIER_MAP is not valid JSON: "${rawTierMap}". Falling back to POLAR_DEFAULT_PRODUCT_ID.`
+        );
       }
 
       // Fallback to dedicated env var
@@ -52,7 +55,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "No product configured. Set POLAR_TIER_MAP or POLAR_DEFAULT_PRODUCT_ID in your environment.",
+            "No product configured. Set POLAR_TIER_MAP (as valid JSON, e.g. {\"product-uuid\":\"tier_1\"}) or POLAR_DEFAULT_PRODUCT_ID in your environment variables.",
         },
         { status: 400 }
       );
