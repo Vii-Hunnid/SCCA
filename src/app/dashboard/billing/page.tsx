@@ -624,11 +624,20 @@ export default function BillingPage() {
           transition={{ delay: 0.25 }}
           className="cyber-card p-5"
         >
-          <div className="flex items-center gap-2 mb-4">
-            <FileText className="w-4 h-4 text-terminal-dim" />
-            <span className="text-sm text-terminal-text font-semibold">
-              Invoice History
-            </span>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-terminal-dim" />
+              <span className="text-sm text-terminal-text font-semibold">
+                Invoice History
+              </span>
+            </div>
+            <Link
+              href="/dashboard/invoices"
+              className="text-[10px] text-neon-cyan hover:text-neon-cyan/80 transition-colors flex items-center gap-1"
+            >
+              View All
+              <ExternalLink className="w-3 h-3" />
+            </Link>
           </div>
           {data?.invoices.length ? (
             <div className="space-y-2">

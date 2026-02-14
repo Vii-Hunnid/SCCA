@@ -12,6 +12,7 @@ import {
   PanelLeft,
   Lock,
   FileCode,
+  FileText,
   BarChart3,
   CreditCard,
   Gauge,
@@ -143,6 +144,17 @@ export function DashboardShell({
               >
                 <CreditCard className="w-3.5 h-3.5" />
                 Billing
+              </Link>
+              <Link
+                href="/dashboard/invoices"
+                className={`w-full flex items-center gap-2 px-3 py-2 text-xs rounded transition-colors ${
+                  pathname === '/dashboard/invoices'
+                    ? 'text-neon-purple bg-neon-purple/5'
+                    : 'text-terminal-dim hover:text-neon-purple hover:bg-cyber-mid/30'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5" />
+                Invoices
               </Link>
               <Link
                 href="/docs"
