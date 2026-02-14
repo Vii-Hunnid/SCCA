@@ -5,10 +5,11 @@
  * The user is redirected to Polar's hosted checkout page.
  *
  * Request:
- *   { productId?: string }
+ *   { tier?: string, productId?: string }
  *
- * If no productId is provided, uses the first product from POLAR_TIER_MAP
- * or falls back to POLAR_DEFAULT_PRODUCT_ID.
+ * - If `tier` is provided (e.g. "tier_2"), looks up the product ID from POLAR_TIER_MAP.
+ * - If `productId` is provided directly, uses that.
+ * - Otherwise falls back to the first product in POLAR_TIER_MAP or POLAR_DEFAULT_PRODUCT_ID.
  *
  * Response:
  *   { url: string }
@@ -19,6 +20,31 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { getPolarClient } from "@/lib/polar";
 
+/**
+ * Parse POLAR_TIER_MAP and return a { productId -> tierName } map
+ * and a reverse { tierName -> productId } map.
+ */
+function parseTierMap(): {
+  byProduct: Record<string, string>;
+  byTier: Record<string, string>;
+} {
+  const byProduct: Record<string, string> = {};
+  const byTier: Record<string, string> = {};
+  try {
+    const raw = process.env.POLAR_TIER_MAP || "";
+    const parsed = JSON.parse(raw);
+    for (const [productId, tierName] of Object.entries(parsed)) {
+      if (typeof tierName === "string") {
+        byProduct[productId] = tierName;
+        byTier[tierName] = productId;
+      }
+    }
+  } catch {
+    // Invalid JSON — maps will be empty
+  }
+  return { byProduct, byTier };
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -27,41 +53,42 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => ({}));
-    let { productId } = body;
+    let { productId, tier } = body;
 
-    // If no productId provided, try to get one from config
+    const { byProduct, byTier } = parseTierMap();
+
+    // If tier name provided, look up the product ID
+    if (!productId && tier && typeof tier === "string") {
+      productId = byTier[tier];
+    }
+
+    // If still no productId, use the first product from the map
     if (!productId) {
-      // Try POLAR_TIER_MAP first
-      const rawTierMap = process.env.POLAR_TIER_MAP || "";
-      try {
-        const tierMap = JSON.parse(rawTierMap);
-        const productIds = Object.keys(tierMap);
-        if (productIds.length > 0) {
-          productId = productIds[0];
-        }
-      } catch (parseErr) {
-        console.warn(
-          `[billing/checkout] POLAR_TIER_MAP is not valid JSON: "${rawTierMap}". Falling back to POLAR_DEFAULT_PRODUCT_ID.`
-        );
+      const firstProduct = Object.keys(byProduct)[0];
+      if (firstProduct) {
+        productId = firstProduct;
       }
+    }
 
-      // Fallback to dedicated env var
-      if (!productId) {
-        productId = process.env.POLAR_DEFAULT_PRODUCT_ID;
-      }
+    // Final fallback to dedicated env var
+    if (!productId) {
+      productId = process.env.POLAR_DEFAULT_PRODUCT_ID;
     }
 
     if (!productId) {
       return NextResponse.json(
         {
           error:
-            "No product configured. Set POLAR_TIER_MAP (as valid JSON, e.g. {\"product-uuid\":\"tier_1\"}) or POLAR_DEFAULT_PRODUCT_ID in your environment variables.",
+            "No product configured. Set POLAR_TIER_MAP or POLAR_DEFAULT_PRODUCT_ID in your environment variables.",
         },
         { status: 400 }
       );
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      process.env.NEXTAUTH_URL ||
+      "http://localhost:3000";
 
     const polar = getPolarClient();
     const checkout = await polar.checkouts.create({

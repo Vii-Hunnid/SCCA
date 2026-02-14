@@ -122,14 +122,14 @@ export default function BillingPage() {
     }
   }, []);
 
-  const handleUpgrade = async () => {
+  const handleUpgrade = async (tierName?: string) => {
     setCheckingOut(true);
     setError('');
     try {
       const res = await fetch('/api/scca/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify(tierName ? { tier: tierName } : {}),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
@@ -319,7 +319,7 @@ export default function BillingPage() {
                 </div>
               </div>
               <button
-                onClick={handleUpgrade}
+                onClick={() => handleUpgrade('tier_1')}
                 disabled={checkingOut}
                 className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-neon-purple to-neon-cyan text-cyber-black text-xs font-semibold rounded hover:opacity-90 transition-opacity disabled:opacity-50"
               >
@@ -591,7 +591,7 @@ export default function BillingPage() {
                             </span>
                           ) : isUpgradeable ? (
                             <button
-                              onClick={handleUpgrade}
+                              onClick={() => handleUpgrade(tier.name)}
                               disabled={checkingOut}
                               className="text-[9px] text-neon-purple bg-neon-purple/10 hover:bg-neon-purple/20 px-2 py-0.5 rounded transition-colors"
                             >
