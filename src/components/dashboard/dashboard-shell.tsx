@@ -21,6 +21,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { ConversationList } from './conversation-list';
+import Image from 'next/image';
 
 interface DashboardShellProps {
   children: React.ReactNode;
@@ -60,10 +61,14 @@ export function DashboardShell({
             {/* Sidebar Header */}
             <div className="flex items-center justify-between p-4 border-b border-cyber-light/10">
               <Link href="/dashboard" className="flex items-center gap-2">
-                <Shield className="w-4 h-4 text-neon-cyan" />
-                <span className="font-display text-xs tracking-[0.2em] text-neon-cyan uppercase">
-                  SCCA
-                </span>
+                <Image
+                  src="/logo.jpg"
+                  alt="SCCA logo"
+                  width={100}
+                  height={100}
+                  priority
+                  className="object-contain"
+                />
               </Link>
               <button
                 onClick={() => setSidebarOpen(false)}

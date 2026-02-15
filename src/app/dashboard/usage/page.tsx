@@ -27,6 +27,7 @@ import {
   Bar,
   Cell,
 } from 'recharts';
+import Image from 'next/image';
 
 interface UsageData {
   period: string;
@@ -147,13 +148,21 @@ export default function UsagePage() {
       {/* Header */}
       <header className="border-b border-cyber-light/10 bg-cyber-darker/50">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex justify-center items-center gap-4">
             <Link
               href="/dashboard/platform"
               className="text-terminal-dim hover:text-neon-cyan transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
-            </Link>
+           </Link>
+           <Image
+              src="/logo.jpg"
+              alt="SCCA logo"
+              width={100}
+              height={100}
+              priority
+              className="object-contain"
+            /> 
             <div className="flex items-center gap-2">
               <BarChart3 className="w-4 h-4 text-neon-green" />
               <span className="text-sm text-terminal-text font-semibold tracking-wide">

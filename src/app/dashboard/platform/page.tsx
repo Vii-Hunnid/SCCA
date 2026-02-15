@@ -15,6 +15,7 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface QuickStats {
   tier: string;
@@ -107,12 +108,19 @@ export default function PlatformPage() {
               href="/dashboard"
               className="text-terminal-dim hover:text-neon-cyan transition-colors"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-4 h-4" />           
             </Link>
+            <Image
+              src="/logo.jpg"
+              alt="SCCA logo"
+              width={100}
+              height={100}
+              priority
+              className="object-contain"
+            /> 
             <div className="flex items-center gap-2">
-              <Shield className="w-4 h-4 text-neon-cyan" />
               <span className="text-sm text-terminal-text font-semibold tracking-wide">
-                SCCA Platform
+                Platform
               </span>
             </div>
           </div>

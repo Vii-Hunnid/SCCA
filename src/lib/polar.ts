@@ -35,8 +35,8 @@ export function getPolarClient(): Polar {
 export function getPolarApiBase(): string {
   const env = process.env.POLAR_ENVIRONMENT || "sandbox";
   return env === "production"
-    ? "https://api.polar.sh"
-    : "https://sandbox-api.polar.sh";
+    ? "https://sandbox-api.polar.sh"
+    : "https://sandbox-api.polar.sh/v1/checkouts/";
 }
 
 /**

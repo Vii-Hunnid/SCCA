@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
+import Image from 'next/image';
 
 interface ApiKeyInfo {
   id: string;
@@ -128,11 +129,19 @@ export default function ApiKeysPage() {
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link
-              href="/dashboard/platform"
-              className="text-terminal-dim hover:text-neon-cyan transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
+                href="/dashboard/platform"
+                className="text-terminal-dim hover:text-neon-cyan transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
             </Link>
+            <Image
+              src="/logo.jpg"
+              alt="SCCA logo"
+              width={100}
+              height={100}
+              priority
+              className="object-contain"
+            /> 
             <div className="flex items-center gap-2">
               <Key className="w-4 h-4 text-neon-cyan" />
               <span className="text-sm text-terminal-text font-semibold tracking-wide">
