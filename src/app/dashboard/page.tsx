@@ -10,8 +10,16 @@ import { SecurityStatus } from '@/components/dashboard/security-status';
 import { SCCAChatArea } from '@/components/chat/SCCAChatArea';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { SCCAPreviewPanel } from '@/components/chat/SCCAPreviewPanel';
-import { Shield, Plus } from 'lucide-react';
+import { Shield, Plus, Check, X, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import Image from 'next/image';
+
+interface MediaStatsData {
+  count: number;
+  originalBytes: number;
+  encryptedBytes: number;
+  avgCompressionRatio: number;
+  byCategory: Record<string, number>;
+}
 
 export default function DashboardPage() {
   const { data: session } = useSession();
@@ -118,7 +126,8 @@ export default function DashboardPage() {
         setActiveConversationId(id);
       }
 
-      // Upload attachments first if any
+      // Upload attachments first if any — collect IDs for vision
+      const attachmentIds: string[] = [];
       if (attachments && attachments.length > 0) {
         for (const file of attachments) {
           try {
@@ -126,20 +135,28 @@ export default function DashboardPage() {
             formData.append('file', file);
             formData.append('conversationId', convId);
             formData.append('messageSequence', String(messages.length));
-            await fetch('/api/scca/media', { method: 'POST', body: formData });
+            const res = await fetch('/api/scca/media', { method: 'POST', body: formData });
+            if (res.ok) {
+              const data = await res.json();
+              if (data.id) attachmentIds.push(data.id);
+            }
           } catch (err) {
             console.error('Media upload failed:', err);
           }
         }
 
-        // Prepend attachment info to message content
+        // Prepend attachment names so the text record shows what was attached
         const names = attachments.map((f) => f.name).join(', ');
         const prefix = `[Attached: ${names}]\n\n`;
         content = content ? prefix + content : prefix.trim();
       }
 
       if (content) {
-        await sendMessage(convId, content, { systemPrompt, temperature });
+        await sendMessage(convId, content, {
+          systemPrompt,
+          temperature,
+          attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined,
+        });
       }
     },
     [
