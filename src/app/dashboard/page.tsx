@@ -12,15 +12,6 @@ import { ChatInput } from '@/components/chat/ChatInput';
 import { SCCAPreviewPanel } from '@/components/chat/SCCAPreviewPanel';
 import { Shield, Plus, Check, X, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import Image from 'next/image';
-import {
-  Shield,
-  Plus,
-  Pencil,
-  Check,
-  X,
-  Trash2,
-  AlertTriangle,
-} from 'lucide-react';
 
 interface MediaStatsData {
   count: number;
