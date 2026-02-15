@@ -100,6 +100,7 @@ model SCCAConversation {
 
   // Relations
   auditLogs     AuditLog[]
+  mediaAttachments MediaAttachment[]
 
   // Timestamps
   createdAt     DateTime  @default(now()) @map("created_at")
@@ -294,4 +295,40 @@ model Invoice {
   @@index([status])
   @@index([polarOrderId])
   @@map("invoices")
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// MEDIA ATTACHMENT
+// Encrypted media files attached to conversations via the SCCA media pipeline.
+// ═════════════════════════════════════════════════════════════════════════════
+
+model MediaAttachment {
+  id               String   @id @default(cuid())
+  conversationId   String   @map("conversation_id")
+  conversation     SCCAConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId           String   @map("user_id")
+
+  // Original file info
+  originalName     String   @map("original_name")
+  mimeType         String   @map("mime_type")
+  originalSize     Int      @map("original_size")       // bytes
+
+  // SCCA processing results
+  encryptedSize    Int      @map("encrypted_size")      // bytes
+  compressionRatio Float    @map("compression_ratio")   // e.g. 0.75 = 25% savings
+  compressionMethod String  @map("compression_method")  // "none", "zlib-9"
+  checksum         String                               // SHA-256 of original
+  category         String                               // "image", "video", "audio", "document"
+
+  // Encrypted data stored as base64
+  encryptedData    String   @map("encrypted_data") @db.Text
+
+  // Message association (sequence in the conversation)
+  messageSequence  Int?     @map("message_sequence")
+
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@index([conversationId])
+  @@index([userId])
+  @@map("media_attachments")
 }

@@ -9,6 +9,11 @@ import {
   Database,
   Zap,
   Hash,
+  Image,
+  Film,
+  Music,
+  FileText,
+  Paperclip,
 } from 'lucide-react';
 import { formatBytes } from '@/lib/utils';
 
@@ -18,10 +23,19 @@ interface Message {
   content: string;
 }
 
+interface MediaStats {
+  count: number;
+  originalBytes: number;
+  encryptedBytes: number;
+  avgCompressionRatio: number;
+  byCategory: Record<string, number>;
+}
+
 interface SCCAPreviewPanelProps {
   messages: Message[];
   isStreaming: boolean;
   useSCCA: boolean;
+  mediaStats?: MediaStats;
 }
 
 function estimateTokenSize(content: string) {
@@ -38,10 +52,18 @@ function estimateTokenSize(content: string) {
   return { rawBytes, compressedBytes, encryptedBytes, compressionRatio };
 }
 
+const MEDIA_CATEGORY_ICONS: Record<string, React.ElementType> = {
+  image: Image,
+  video: Film,
+  audio: Music,
+  document: FileText,
+};
+
 export function SCCAPreviewPanel({
   messages,
   isStreaming,
   useSCCA,
+  mediaStats,
 }: SCCAPreviewPanelProps) {
   const chatMessages = messages.filter((m) => m.role !== 'system');
 
@@ -181,6 +203,70 @@ export function SCCAPreviewPanel({
             </div>
           </div>
 
+          {/* Media Metrics */}
+          {mediaStats && mediaStats.count > 0 && (
+            <div className="px-3 pb-3">
+              <div className="cyber-card p-3">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Paperclip className="w-3 h-3 text-neon-purple" />
+                  <span className="text-[10px] text-neon-purple tracking-wider uppercase">
+                    Media ({mediaStats.count})
+                  </span>
+                </div>
+
+                {/* Category breakdown */}
+                <div className="space-y-1.5 mb-3">
+                  {Object.entries(mediaStats.byCategory).map(([cat, count]) => {
+                    const CatIcon = MEDIA_CATEGORY_ICONS[cat] || FileText;
+                    return (
+                      <div key={cat} className="flex items-center justify-between text-[10px]">
+                        <div className="flex items-center gap-1.5">
+                          <CatIcon className="w-3 h-3 text-terminal-dim" />
+                          <span className="text-terminal-dim capitalize">{cat}</span>
+                        </div>
+                        <span className="text-terminal-text font-mono">{count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Size stats */}
+                <div className="space-y-1.5 pt-2 border-t border-cyber-light/10">
+                  <div className="flex justify-between text-[10px] font-mono">
+                    <span className="text-terminal-dim">Original</span>
+                    <span className="text-neon-yellow">{formatBytes(mediaStats.originalBytes)}</span>
+                  </div>
+                  <div className="flex justify-between text-[10px] font-mono">
+                    <span className="text-terminal-dim">Encrypted</span>
+                    <span className="text-neon-green">{formatBytes(mediaStats.encryptedBytes)}</span>
+                  </div>
+                  {mediaStats.avgCompressionRatio < 1 && (
+                    <div className="flex justify-between text-[10px] font-mono">
+                      <span className="text-terminal-dim">Saved</span>
+                      <span className="text-neon-green">
+                        {Math.round((1 - mediaStats.avgCompressionRatio) * 100)}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Compression bar */}
+                <div className="mt-2">
+                  <div className="h-1.5 bg-cyber-mid rounded-full overflow-hidden">
+                    <motion.div
+                      className="h-full rounded-full bg-neon-purple/60"
+                      initial={{ width: 0 }}
+                      animate={{
+                        width: `${Math.min(100, Math.max(5, mediaStats.avgCompressionRatio * 100))}%`,
+                      }}
+                      transition={{ duration: 0.5 }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Encryption Details */}
           <div className="px-3 pb-3">
             <div className="cyber-card p-3">
@@ -197,6 +283,7 @@ export function SCCAPreviewPanel({
                   ['Integrity', 'Merkle-HMAC'],
                   ['Header', '10 bytes'],
                   ['Compress', 'zlib deflate'],
+                  ['Media', 'SCCA v2 packet'],
                 ].map(([key, value]) => (
                   <div
                     key={key}
