@@ -18,6 +18,7 @@ import {
   X,
   Code,
   Server,
+  Paperclip,
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -28,6 +29,7 @@ type Section =
   | 'vault'
   | 'integration'
   | 'api'
+  | 'media'
   | 'crypto'
   | 'binary'
   | 'vocabulary';
@@ -38,6 +40,7 @@ const navItems: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: 'vault', label: 'Vault API', icon: Server },
   { id: 'integration', label: 'Chat Integration', icon: Code },
   { id: 'api', label: 'API Reference', icon: FileCode },
+  { id: 'media', label: 'Media Pipeline', icon: Paperclip },
   { id: 'crypto', label: 'Crypto Engine', icon: Key },
   { id: 'binary', label: 'Binary Format', icon: Database },
   { id: 'vocabulary', label: 'Vocabulary', icon: Hash },
@@ -1239,6 +1242,220 @@ data: {"done":true,"messageCount":4,"title":"Quantum Computing"}`}</CodeBlock>
 
 // Response: SSE stream if regenerating, JSON otherwise`}</CodeBlock>
             </Endpoint>
+
+            {/* Media Pipeline */}
+            <SectionTitle id="media">Media Pipeline</SectionTitle>
+            <p className="text-sm text-terminal-dim leading-relaxed mb-4">
+              SCCA v2 extends encryption to media files — images, video, audio, and documents.
+              Each file passes through a format-aware pipeline: type detection, selective compression,
+              AES-256-GCM encryption, and SCCA packet encapsulation with SHA-256 integrity verification.
+            </p>
+
+            <SubTitle>Format Support Matrix</SubTitle>
+            <p className="text-xs text-terminal-dim leading-relaxed mb-3">
+              Already-compressed formats (PNG, JPEG, MP4, MP3) are encrypted directly with no re-compression.
+              Text-based formats (SVG, JSON, Markdown) get zlib level 9 compression before encryption for significant savings.
+            </p>
+            <div className="cyber-card overflow-hidden mb-6">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-cyber-light/20 bg-cyber-darker">
+                    <th className="text-left p-3 text-terminal-dim tracking-wider uppercase">Category</th>
+                    <th className="text-left p-3 text-terminal-dim tracking-wider uppercase">Formats</th>
+                    <th className="text-left p-3 text-terminal-dim tracking-wider uppercase">Strategy</th>
+                    <th className="text-left p-3 text-terminal-dim tracking-wider uppercase">Max Size</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ['Image', 'PNG, JPEG, WebP, HEIC', 'Encrypt only', '25 MB'],
+                    ['Image', 'SVG, GIF', 'zlib + encrypt', '25 MB'],
+                    ['Video', 'MP4, WebM, MOV', 'Encrypt only', '100 MB'],
+                    ['Audio', 'MP3, WAV, OGG, M4A, FLAC', 'Encrypt only', '50 MB'],
+                    ['Document', 'PDF, TXT, Markdown, JSON', 'zlib-9 + encrypt', '10 MB'],
+                  ].map(([cat, formats, strategy, max]) => (
+                    <tr key={`${cat}-${formats}`} className="border-b border-cyber-light/10">
+                      <td className="p-3 text-neon-cyan font-semibold">{cat}</td>
+                      <td className="p-3 text-terminal-text">{formats}</td>
+                      <td className="p-3">
+                        <span className={strategy === 'Encrypt only' ? 'text-neon-yellow' : 'text-neon-green'}>
+                          {strategy}
+                        </span>
+                      </td>
+                      <td className="p-3 text-terminal-dim font-mono">{max}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <SubTitle>SCCA Media Packet Format</SubTitle>
+            <p className="text-xs text-terminal-dim leading-relaxed mb-3">
+              Every media file is wrapped in a 70-byte-header SCCA v2 packet. The header is readable
+              without decryption for routing and verification purposes.
+            </p>
+            <CodeBlock language="text">{`SCCA Media Packet (v2):
+┌──────────────────────────────────────────────────────┐
+│ Magic Bytes (4 bytes)     "SCCA"                     │
+│ Version (1 byte)          0x02                       │
+│ Type Code (1 byte)        e.g. 0x01=PNG, 0x10=MP4   │
+├──────────────────────────────────────────────────────┤
+│ IV / Nonce (16 bytes)     Random, unique per file    │
+│ Auth Tag (16 bytes)       AES-GCM authentication     │
+│ Checksum (32 bytes)       SHA-256 of original data   │
+├──────────────────────────────────────────────────────┤
+│ Encrypted Payload         [compressed?] + encrypted  │
+└──────────────────────────────────────────────────────┘
+
+Type Codes:
+  0x01 PNG   0x02 JPEG  0x03 WebP   0x04 GIF    0x05 SVG
+  0x10 MP4   0x11 WebM  0x12 MOV
+  0x20 MP3   0x21 WAV   0x22 OGG    0x23 M4A    0x24 FLAC
+  0x30 PDF   0x40 TXT   0x41 MD     0x42 JSON`}</CodeBlock>
+
+            <SubTitle>Media Processing Pipeline</SubTitle>
+            <p className="text-xs text-terminal-dim leading-relaxed mb-3">
+              The pipeline detects format, applies selective compression, encrypts with the
+              conversation key, and verifies integrity via SHA-256 checksum.
+            </p>
+            <CodeBlock language="text">{`Input File
+    │
+    ▼
+┌─────────────┐
+│ Type Detect  │  Determine MIME type from extension / magic bytes
+└──────┬──────┘
+       │
+       ▼
+┌─────────────────────────────┐
+│ Already compressed?          │
+│  YES (PNG, JPEG, MP4, MP3)  │──▶ Skip compression
+│  NO  (SVG, JSON, TXT, PDF)  │──▶ zlib level 9 deflate
+└──────────────┬──────────────┘
+               │
+               ▼
+┌──────────────────────┐
+│ SHA-256 Checksum     │  Hash of original data for integrity
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│ AES-256-GCM Encrypt  │  Random 16-byte IV, conversation key
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│ SCCA Packet Build    │  70-byte header + encrypted payload
+└──────────────────────┘`}</CodeBlock>
+
+            <SubTitle>Media API Endpoints</SubTitle>
+            <Endpoint
+              method="POST"
+              path="/api/scca/media"
+              description="Upload a file. The server encrypts it through the SCCA media pipeline and stores the encrypted blob."
+            >
+              <CodeBlock language="bash">{`# Upload a file (uses FormData)
+curl -b cookies.txt \\
+  -X POST https://your-scca-instance.com/api/scca/media \\
+  -F "file=@photo.png" \\
+  -F "conversationId=clx1234..." \\
+  -F "messageSequence=2"
+
+# Response:
+{
+  "id": "att_abc123",
+  "originalName": "photo.png",
+  "mimeType": "image/png",
+  "originalSize": 485000,
+  "encryptedSize": 485070,
+  "compressionRatio": 1.0001,
+  "compressionMethod": "none",
+  "category": "image",
+  "checksum": "a1b2c3..."
+}`}</CodeBlock>
+            </Endpoint>
+
+            <Endpoint
+              method="GET"
+              path="/api/scca/media?conversationId=xxx"
+              description="List all media attachments for a conversation with aggregate statistics."
+            >
+              <CodeBlock language="json">{`// Response: 200 OK
+{
+  "attachments": [
+    {
+      "id": "att_abc123",
+      "originalName": "photo.png",
+      "mimeType": "image/png",
+      "originalSize": 485000,
+      "encryptedSize": 485070,
+      "category": "image",
+      "createdAt": "2026-02-15T12:00:00.000Z"
+    }
+  ],
+  "totals": {
+    "count": 1,
+    "originalBytes": 485000,
+    "encryptedBytes": 485070,
+    "avgCompressionRatio": 1.0001
+  }
+}`}</CodeBlock>
+            </Endpoint>
+
+            <Endpoint
+              method="GET"
+              path="/api/scca/media/[id]"
+              description="Decrypt and return the original file with its original Content-Type."
+            >
+              <CodeBlock language="bash">{`# Download a decrypted file
+curl -b cookies.txt \\
+  https://your-scca-instance.com/api/scca/media/att_abc123 \\
+  --output photo.png`}</CodeBlock>
+            </Endpoint>
+
+            <Endpoint
+              method="DELETE"
+              path="/api/scca/media/[id]"
+              description="Permanently delete an encrypted media attachment."
+            >
+              <CodeBlock language="json">{`// Response: 200 OK
+{ "deleted": true }`}</CodeBlock>
+            </Endpoint>
+
+            <SubTitle>JavaScript: Upload Media</SubTitle>
+            <CodeBlock language="typescript">{`async function uploadMedia(
+  file: File,
+  conversationId: string,
+  messageSequence: number
+) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("conversationId", conversationId);
+  formData.append("messageSequence", String(messageSequence));
+
+  const res = await fetch("/api/scca/media", {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+  return res.json();
+  // { id, originalName, mimeType, compressionRatio, ... }
+}`}</CodeBlock>
+
+            <div className="cyber-card p-5 mb-6 border-neon-purple/20">
+              <div className="flex items-start gap-3">
+                <span className="text-neon-purple text-sm mt-0.5">&#9656;</span>
+                <div>
+                  <span className="text-xs font-semibold text-neon-purple">Compression Strategy</span>
+                  <p className="text-[11px] text-terminal-dim mt-1 leading-relaxed">
+                    Already-compressed formats (PNG, JPEG, MP4, MP3) use <strong className="text-terminal-text">encrypt-only</strong> mode
+                    with ~70 bytes overhead for the SCCA header. Attempting to re-compress these formats
+                    would waste CPU cycles for zero savings. Text-based formats (SVG, JSON, Markdown, PDF)
+                    use <strong className="text-terminal-text">zlib level 9</strong> before encryption, achieving 50-90% compression.
+                    The pipeline automatically selects the right strategy based on MIME type.
+                  </p>
+                </div>
+              </div>
+            </div>
 
             {/* Crypto Engine */}
             <SectionTitle id="crypto">Crypto Engine</SectionTitle>

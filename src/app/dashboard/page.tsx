@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useScca } from '@/hooks/useScca';
@@ -28,6 +28,7 @@ export default function DashboardPage() {
     createConversation,
     loadConversation,
     deleteConversation,
+    updateConversationTitle,
     sendMessage,
     stopStreaming,
     editMessage,
@@ -43,9 +44,50 @@ export default function DashboardPage() {
     temperature,
   } = useChatStore();
 
+  // Title editing state
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
+
+  // Delete confirmation state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Media stats
+  const [mediaStats, setMediaStats] = useState<MediaStatsData | null>(null);
+
   useEffect(() => {
     fetchConversations();
   }, [fetchConversations]);
+
+  // Fetch media stats when conversation changes
+  useEffect(() => {
+    if (!activeConversationId) {
+      setMediaStats(null);
+      return;
+    }
+    const fetchMedia = async () => {
+      try {
+        const res = await fetch(
+          `/api/scca/media?conversationId=${activeConversationId}`
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        const byCategory: Record<string, number> = {};
+        for (const att of data.attachments || []) {
+          byCategory[att.category] = (byCategory[att.category] || 0) + 1;
+        }
+        setMediaStats({
+          count: data.totals?.count || 0,
+          originalBytes: data.totals?.originalBytes || 0,
+          encryptedBytes: data.totals?.encryptedBytes || 0,
+          avgCompressionRatio: data.totals?.avgCompressionRatio || 1,
+          byCategory,
+        });
+      } catch {
+        // Non-critical
+      }
+    };
+    fetchMedia();
+  }, [activeConversationId, messages.length]);
 
   const handleNewChat = useCallback(async () => {
     const id = await createConversation();
@@ -58,24 +100,46 @@ export default function DashboardPage() {
   const handleSelectConversation = useCallback(
     async (id: string) => {
       setActiveConversationId(id);
+      setIsEditingTitle(false);
+      setShowDeleteConfirm(false);
       await loadConversation(id);
     },
     [setActiveConversationId, loadConversation]
   );
 
   const handleSendMessage = useCallback(
-    async (content: string) => {
-      if (!activeConversationId) {
+    async (content: string, attachments?: File[]) => {
+      let convId = activeConversationId;
+
+      if (!convId) {
         const id = await createConversation();
-        if (id) {
-          setActiveConversationId(id);
-          await sendMessage(id, content, { systemPrompt, temperature });
+        if (!id) return;
+        convId = id;
+        setActiveConversationId(id);
+      }
+
+      // Upload attachments first if any
+      if (attachments && attachments.length > 0) {
+        for (const file of attachments) {
+          try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('conversationId', convId);
+            formData.append('messageSequence', String(messages.length));
+            await fetch('/api/scca/media', { method: 'POST', body: formData });
+          } catch (err) {
+            console.error('Media upload failed:', err);
+          }
         }
-      } else {
-        await sendMessage(activeConversationId, content, {
-          systemPrompt,
-          temperature,
-        });
+
+        // Prepend attachment info to message content
+        const names = attachments.map((f) => f.name).join(', ');
+        const prefix = `[Attached: ${names}]\n\n`;
+        content = content ? prefix + content : prefix.trim();
+      }
+
+      if (content) {
+        await sendMessage(convId, content, { systemPrompt, temperature });
       }
     },
     [
@@ -85,6 +149,7 @@ export default function DashboardPage() {
       sendMessage,
       systemPrompt,
       temperature,
+      messages.length,
     ]
   );
 
@@ -99,7 +164,7 @@ export default function DashboardPage() {
     [activeConversationId, editMessage, temperature, systemPrompt]
   );
 
-  const handleDelete = useCallback(
+  const handleDeleteMsg = useCallback(
     async (sequence: number) => {
       if (!activeConversationId) return;
       await deleteMessage(activeConversationId, sequence);
@@ -114,6 +179,31 @@ export default function DashboardPage() {
       systemPrompt,
     });
   }, [activeConversationId, regenerateLastResponse, temperature, systemPrompt]);
+
+  // Title editing
+  const startEditTitle = () => {
+    setTitleDraft(currentConversation?.title || '');
+    setIsEditingTitle(true);
+  };
+
+  const saveTitle = async () => {
+    if (!activeConversationId || !titleDraft.trim()) return;
+    await updateConversationTitle(activeConversationId, titleDraft.trim());
+    setIsEditingTitle(false);
+  };
+
+  const cancelEditTitle = () => {
+    setIsEditingTitle(false);
+    setTitleDraft('');
+  };
+
+  // Delete conversation
+  const handleDeleteConversation = async () => {
+    if (!activeConversationId) return;
+    await deleteConversation(activeConversationId);
+    setActiveConversationId(null);
+    setShowDeleteConfirm(false);
+  };
 
   const conversationList = conversations.map((c) => ({
     id: c.id,
@@ -139,6 +229,86 @@ export default function DashboardPage() {
         <div className="flex h-full overflow-hidden">
           {/* Chat area */}
           <div className="flex-1 flex flex-col min-w-0">
+            {/* Chat header with title editing + delete */}
+            <div className="flex items-center justify-between px-4 py-2 border-b border-cyber-light/10 bg-cyber-darker/30">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                {isEditingTitle ? (
+                  <div className="flex items-center gap-2 flex-1">
+                    <input
+                      type="text"
+                      value={titleDraft}
+                      onChange={(e) => setTitleDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') saveTitle();
+                        if (e.key === 'Escape') cancelEditTitle();
+                      }}
+                      className="flex-1 bg-cyber-mid/50 border border-neon-cyan/30 rounded px-2 py-1 text-xs text-terminal-text outline-none focus:border-neon-cyan"
+                      autoFocus
+                    />
+                    <button
+                      onClick={saveTitle}
+                      className="p-1 text-neon-green hover:bg-neon-green/10 rounded transition-colors"
+                      title="Save"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={cancelEditTitle}
+                      className="p-1 text-terminal-dim hover:bg-cyber-mid rounded transition-colors"
+                      title="Cancel"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <span className="text-xs text-terminal-text font-semibold truncate">
+                      {currentConversation?.title || 'Untitled'}
+                    </span>
+                    <button
+                      onClick={startEditTitle}
+                      className="p-1 text-terminal-dim hover:text-neon-cyan hover:bg-neon-cyan/5 rounded transition-colors flex-shrink-0"
+                      title="Edit title"
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </button>
+                  </>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1 ml-2">
+                <span className="text-[10px] text-terminal-dim mr-2">
+                  {messages.length} msg{messages.length !== 1 ? 's' : ''}
+                </span>
+                {showDeleteConfirm ? (
+                  <div className="flex items-center gap-2 bg-neon-red/5 border border-neon-red/20 rounded px-2 py-1">
+                    <AlertTriangle className="w-3 h-3 text-neon-red" />
+                    <span className="text-[10px] text-neon-red">Delete chat?</span>
+                    <button
+                      onClick={handleDeleteConversation}
+                      className="text-[10px] text-neon-red font-semibold hover:underline"
+                    >
+                      Yes
+                    </button>
+                    <button
+                      onClick={() => setShowDeleteConfirm(false)}
+                      className="text-[10px] text-terminal-dim hover:underline"
+                    >
+                      No
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="p-1 text-terminal-dim hover:text-neon-red hover:bg-neon-red/5 rounded transition-colors"
+                    title="Delete conversation"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+
             {error && (
               <div className="px-4 py-2 bg-neon-red/5 border-b border-neon-red/20">
                 <span className="text-xs text-neon-red">{error}</span>
@@ -150,7 +320,7 @@ export default function DashboardPage() {
               isStreaming={isStreaming}
               streamingContent={streamingContent}
               onEdit={handleEdit}
-              onDelete={handleDelete}
+              onDelete={handleDeleteMsg}
               onRegenerate={handleRegenerate}
             />
 
@@ -167,6 +337,7 @@ export default function DashboardPage() {
             messages={displayMessages}
             isStreaming={isStreaming}
             useSCCA={useSCCA}
+            mediaStats={mediaStats || undefined}
           />
         </div>
       ) : (
