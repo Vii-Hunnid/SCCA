@@ -12,6 +12,15 @@ import { ChatInput } from '@/components/chat/ChatInput';
 import { SCCAPreviewPanel } from '@/components/chat/SCCAPreviewPanel';
 import { Shield, Plus, Check, X, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import Image from 'next/image';
+import {
+  Shield,
+  Plus,
+  Pencil,
+  Check,
+  X,
+  Trash2,
+  AlertTriangle,
+} from 'lucide-react';
 
 interface MediaStatsData {
   count: number;
@@ -361,16 +370,10 @@ export default function DashboardPage() {
         /* Empty state - no conversation selected */
         <div className="flex items-center justify-center h-full">
           <div className="text-center max-w-md">
-            <div className="flex items-center justify-center my-4">
-              <Image
-                src="/full_logo.jpg"
-                alt="SCCA logo"
-                width={200}
-                height={200}
-                priority
-                className="object-contain"
-              />
-            </div>
+            <Shield className="w-12 h-12 text-neon-cyan/20 mx-auto mb-4" />
+            <h2 className="text-lg font-display text-terminal-text mb-2">
+              Secure Compact Chat Architecture
+            </h2>
             <p className="text-sm text-terminal-dim mb-6 leading-relaxed">
               Every message is encrypted with AES-256-GCM, compressed with zlib,
               and stored as a compact binary token. Select or create a conversation
