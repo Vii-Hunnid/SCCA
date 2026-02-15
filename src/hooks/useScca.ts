@@ -38,6 +38,7 @@ interface UseSccaReturn {
       temperature?: number;
       systemPrompt?: string;
       model?: string;
+      attachmentIds?: string[];
     }
   ) => Promise<void>;
   stopStreaming: () => void;
@@ -189,6 +190,7 @@ export function useScca(): UseSccaReturn {
         temperature?: number;
         systemPrompt?: string;
         model?: string;
+        attachmentIds?: string[];
       }
     ) => {
       setError(null);
@@ -219,6 +221,7 @@ export function useScca(): UseSccaReturn {
               temperature: options?.temperature,
               systemPrompt: options?.systemPrompt,
               model: options?.model,
+              attachmentIds: options?.attachmentIds,
             }),
             signal: abortController.signal,
           }

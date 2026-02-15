@@ -3,6 +3,7 @@
  *
  * Provides streaming and non-streaming AI responses.
  * Uses Groq SDK for fast inference with Llama models.
+ * Supports multimodal (vision) messages with image attachments.
  */
 
 import Groq from "groq-sdk";
@@ -19,9 +20,21 @@ interface ChatMessage {
   content: string;
 }
 
+/** Image attachment to include in a vision request */
+export interface ImageAttachment {
+  base64: string; // base64-encoded image data
+  mimeType: string; // e.g. "image/jpeg", "image/png"
+}
+
+// Vision-capable model for multimodal requests
+const VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
+
 /**
  * Stream AI response tokens.
  * Returns an async generator yielding string tokens.
+ *
+ * When `images` is provided, automatically switches to a vision model
+ * and sends the images as base64 data URIs alongside the text.
  */
 export async function* streamAIResponse(
   context: ChatMessage[],
@@ -32,23 +45,50 @@ export async function* streamAIResponse(
     top_p?: number;
     max_tokens?: number;
     systemPrompt?: string;
+    images?: ImageAttachment[];
   } = {}
 ): AsyncGenerator<string> {
-  const messages: ChatMessage[] = [];
+  const hasImages = options.images && options.images.length > 0;
+  const actualModel = hasImages ? VISION_MODEL : model;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const messages: any[] = [];
 
   // Add system prompt if provided
   if (options.systemPrompt) {
     messages.push({ role: "system", content: options.systemPrompt });
   }
 
-  // Add conversation context
+  // Add conversation context (text-only for history)
   messages.push(...context);
 
-  // Add the new user message
-  messages.push({ role: "user", content: userMessage });
+  // Build the user message — multimodal if images present
+  if (hasImages) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const content: any[] = [];
+
+    // Add text content
+    if (userMessage) {
+      content.push({ type: "text", text: userMessage });
+    }
+
+    // Add image(s) as base64 data URIs (max 5 per Groq limit)
+    for (const img of options.images!.slice(0, 5)) {
+      content.push({
+        type: "image_url",
+        image_url: {
+          url: `data:${img.mimeType};base64,${img.base64}`,
+        },
+      });
+    }
+
+    messages.push({ role: "user", content });
+  } else {
+    messages.push({ role: "user", content: userMessage });
+  }
 
   const stream = await getGroqClient().chat.completions.create({
-    model,
+    model: actualModel,
     messages,
     temperature: options.temperature ?? 0.7,
     top_p: options.top_p ?? 1,
