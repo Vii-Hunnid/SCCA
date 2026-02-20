@@ -72,19 +72,30 @@ export function LandingPage() {
             <button
               type="button"
               onClick={toggleTheme}
-              className="text-xs md:text-sm px-3 py-1.5 rounded-full border border-slate-300/60 bg-white/70 text-slate-700 shadow-sm hover:bg-slate-100 dark:border-neon-cyan/40 dark:bg-cyber-dark/80 dark:text-terminal-text dark:hover:bg-cyber-mid transition-colors"
+              className="text-xs md:text-sm px-3 py-1.5 rounded-full border shadow-sm transition-colors"
+              style={{ 
+                borderColor: 'var(--border-color)', 
+                backgroundColor: 'color-mix(in srgb, var(--bg-secondary) 70%, transparent)', 
+                color: 'var(--text-primary)' 
+              }}
             >
               {theme === 'dark' ? 'Day mode' : 'Night mode'}
             </button>
             <Link
               href="/docs"
-              className="text-sm text-terminal-dim hover:text-neon-cyan transition-colors"
+              className="text-sm transition-colors"
+              style={{ color: 'var(--text-secondary)' }}
+              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--neon-cyan)'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
             >
               Docs
             </Link>
             <Link
               href="/auth/login"
-              className="text-sm text-terminal-dim hover:text-neon-cyan transition-colors"
+              className="text-sm transition-colors"
+              style={{ color: 'var(--text-secondary)' }}
+              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--neon-cyan)'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
             >
               Sign In
             </Link>
@@ -112,9 +123,9 @@ export function LandingPage() {
             </div>
 
             <h1 className="text-4xl md:text-5xl font-display font-bold tracking-tight mb-4">
-              <span className="text-terminal-text">Secure Compact</span>
+              <span className="text-[var(--text-primary)]">Secure Compact</span>
               <br />
-              <span className="text-slate-700 dark:neon-text">Chat Architecture</span>
+              <span style={{ color: 'var(--neon-cyan)' }} className="neon-text">Chat Architecture</span>
             </h1>
 
             <div className="flex items-center justify-center my-4">
@@ -128,7 +139,7 @@ export function LandingPage() {
               />
             </div>
 
-            <p className="text-terminal-dim max-w-xl mx-auto leading-relaxed mb-8">
+            <p className="text-[var(--text-secondary)] max-w-xl mx-auto leading-relaxed mb-8">
               Privacy-first AI conversations with AES-256-GCM encryption,
               single-row storage, and cryptographic integrity verification.
               Your messages never exist unencrypted at rest.
@@ -162,10 +173,10 @@ export function LandingPage() {
                 className="cyber-card-hover p-6 group"
               >
                 <feature.icon className="w-5 h-5 text-neon-cyan mb-3 group-hover:text-neon-green transition-colors" />
-                <h3 className="text-sm font-semibold text-terminal-text mb-2 tracking-wide">
+                <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-2 tracking-wide">
                   {feature.title}
                 </h3>
-                <p className="text-xs text-neon-cyan dark:text-terminal-green leading-relaxed">
+                <p className="text-xs leading-relaxed" style={{ color: 'var(--neon-cyan)' }}>
                   {feature.description}
                 </p>
               </motion.div>
@@ -193,8 +204,8 @@ export function LandingPage() {
                 { label: 'Compression', value: 'zlib' },
               ].map((stat) => (
                 <div key={stat.label}>
-                  <div className="text-xs text-lime-400 dark:text-terminal-dim mb-1">{stat.label}</div>
-                  <div className="text-sm neon-text font-semibold">{stat.value}</div>
+                  <div className="text-xs mb-1 text-[var(--text-secondary)]">{stat.label}</div>
+                  <div className="text-sm neon-text font-semibold" style={{ color: 'var(--neon-cyan)' }}>{stat.value}</div>
                 </div>
               ))}
             </div>
@@ -203,10 +214,10 @@ export function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-cyber-light/10 py-4">
-        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between text-xs text-terminal-dim">
+      <footer className="border-t py-4" style={{ borderColor: 'var(--border-color)' }}>
+        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between text-xs text-[var(--text-secondary)]">
           <span>Secure Compact Chat Architecture v1.0</span>
-          <span className="neon-text-green">All systems operational</span>
+          <span style={{ color: 'var(--neon-green)' }}>All systems operational</span>
         </div>
       </footer>
     </div>

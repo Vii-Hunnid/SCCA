@@ -99,14 +99,14 @@ export default function PlatformPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-cyber-black">
+    <div className="min-h-screen bg-[var(--bg-primary)]">
       {/* Header */}
-      <header className="border-b border-cyber-light/10 bg-cyber-darker/50">
+      <header className="border-b border-[var(--border-color)] bg-[var(--bg-secondary)]">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link
               href="/dashboard"
-              className="text-terminal-dim hover:text-neon-cyan transition-colors"
+              className="text-[var(--text-secondary)] hover:text-[var(--neon-cyan)] transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />           
             </Link>
@@ -119,14 +119,14 @@ export default function PlatformPage() {
               className="object-contain"
             /> 
             <div className="flex items-center gap-2">
-              <span className="text-sm text-terminal-text font-semibold tracking-wide">
+              <span className="text-sm text-[var(--text-primary)] font-semibold tracking-wide">
                 Platform
               </span>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <div className="status-dot-active" />
-            <span className="text-xs text-terminal-dim">
+            <span className="text-xs text-[var(--text-secondary)]">
               {stats?.tierDisplay || '...'}
             </span>
           </div>
@@ -136,14 +136,17 @@ export default function PlatformPage() {
       <div className="max-w-5xl mx-auto px-6 py-8">
         {/* Title */}
         <div className="mb-8">
-          <h1 className="text-xl font-display text-terminal-text tracking-wide mb-2">
-            <span className="text-neon-cyan">&gt;</span> API Platform Console
+          <h1 className="text-xl font-display text-[var(--text-primary)] tracking-wide mb-2">
+            <span style={{ color: 'var(--neon-cyan)' }}>&gt;</span> API Platform Console
           </h1>
-          <p className="text-xs text-terminal-dim leading-relaxed max-w-2xl">
+          <p className="text-xs text-[var(--text-secondary)] leading-relaxed max-w-2xl">
             Monitor rate limits, manage API keys, track consumption, and control
             billing for your SCCA Vault API usage.
           </p>
         </div>
+
+        {/* Content wrapper with text colors */}
+        <div className="text-[var(--text-primary)]">
 
         {/* Live Rate Limits Bar */}
         {!loading && stats && (
@@ -218,18 +221,18 @@ export default function PlatformPage() {
               transition={{ delay: i * 0.1 }}
             >
               <Link href={card.href}>
-                <div className="cyber-card p-5 h-full hover:border-neon-cyan/30 transition-colors group cursor-pointer">
+                <div className="cyber-card p-5 h-full hover:border-[var(--neon-cyan)] transition-colors group cursor-pointer">
                   <div className="flex items-start justify-between mb-3">
-                    <card.icon className={`w-5 h-5 text-${card.color}`} />
-                    <ArrowRight className="w-3.5 h-3.5 text-terminal-dim group-hover:text-neon-cyan transition-colors" />
+                    <card.icon className="w-5 h-5" style={{ color: `var(--${card.color})` }} />
+                    <ArrowRight className="w-3.5 h-3.5 text-[var(--text-secondary)] group-hover:text-[var(--neon-cyan)] transition-colors" />
                   </div>
-                  <h3 className="text-sm text-terminal-text font-semibold mb-1">
+                  <h3 className="text-sm text-[var(--text-primary)] font-semibold mb-1">
                     {card.title}
                   </h3>
-                  <p className="text-[10px] text-terminal-dim leading-relaxed mb-3">
+                  <p className="text-[10px] text-[var(--text-secondary)] leading-relaxed mb-3">
                     {card.description}
                   </p>
-                  <div className="text-xs text-neon-cyan">{card.stat}</div>
+                  <div className="text-xs" style={{ color: 'var(--neon-cyan)' }}>{card.stat}</div>
                 </div>
               </Link>
             </motion.div>
@@ -244,19 +247,19 @@ export default function PlatformPage() {
           className="cyber-card p-5"
         >
           <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="w-4 h-4 text-neon-purple" />
-            <span className="text-sm text-terminal-text font-semibold">
+            <TrendingUp className="w-4 h-4" style={{ color: 'var(--neon-purple)' }} />
+            <span className="text-sm text-[var(--text-primary)] font-semibold">
               Rate Limit Tiers
             </span>
           </div>
-          <p className="text-[10px] text-terminal-dim mb-4 leading-relaxed">
+          <p className="text-[10px] text-[var(--text-secondary)] mb-4 leading-relaxed">
             Higher tiers unlock increased rate limits. Tiers upgrade automatically
             based on cumulative spend, similar to OpenAI and Anthropic usage tiers.
           </p>
           <div className="overflow-x-auto">
             <table className="w-full text-[10px]">
               <thead>
-                <tr className="text-terminal-dim border-b border-cyber-light/10">
+                <tr className="text-[var(--text-secondary)] border-b" style={{ borderColor: 'var(--border-color)' }}>
                   <th className="text-left py-2 pr-4">Tier</th>
                   <th className="text-right py-2 px-3">RPM</th>
                   <th className="text-right py-2 px-3">RPD</th>
@@ -276,15 +279,16 @@ export default function PlatformPage() {
                 ].map((row) => (
                   <tr
                     key={row.tier}
-                    className={`border-b border-cyber-light/5 ${
-                      stats?.tier === row.tier
-                        ? 'text-neon-cyan bg-neon-cyan/5'
-                        : 'text-terminal-text'
-                    }`}
+                    className="border-b"
+                    style={{
+                      borderColor: 'var(--border-color)',
+                      color: stats?.tier === row.tier ? 'var(--neon-cyan)' : 'var(--text-primary)',
+                      backgroundColor: stats?.tier === row.tier ? 'color-mix(in srgb, var(--neon-cyan) 5%, transparent)' : 'transparent'
+                    }}
                   >
                     <td className="py-2 pr-4 font-semibold flex items-center gap-1.5">
                       {stats?.tier === row.tier && (
-                        <Zap className="w-2.5 h-2.5 text-neon-cyan" />
+                        <Zap className="w-2.5 h-2.5" style={{ color: 'var(--neon-cyan)' }} />
                       )}
                       {row.name}
                     </td>
@@ -298,13 +302,14 @@ export default function PlatformPage() {
               </tbody>
             </table>
           </div>
-          <div className="mt-3 flex items-center gap-2 text-[10px] text-terminal-dim">
-            <Lock className="w-3 h-3 text-neon-green" />
+          <div className="mt-3 flex items-center gap-2 text-[10px] text-[var(--text-secondary)]">
+            <Lock className="w-3 h-3" style={{ color: 'var(--neon-green)' }} />
             <span>
               RPM = Requests/min | RPD = Requests/day | TPM = Tokens/min | TPD = Tokens/day
             </span>
           </div>
         </motion.div>
+        </div>
       </div>
     </div>
   );

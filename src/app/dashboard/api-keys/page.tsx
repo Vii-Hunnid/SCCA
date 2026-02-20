@@ -17,6 +17,7 @@ import {
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import Image from 'next/image';
+import { useTheme } from '@/components/providers';
 
 interface ApiKeyInfo {
   id: string;
@@ -48,6 +49,7 @@ export default function ApiKeysPage() {
   const [keyName, setKeyName] = useState('');
   const [expiresInDays, setExpiresInDays] = useState<number | ''>('');
   const [revoking, setRevoking] = useState<string | null>(null);
+  const { theme } = useTheme();
 
   const fetchKeys = useCallback(async () => {
     try {
@@ -123,14 +125,14 @@ export default function ApiKeysPage() {
   };
 
   return (
-    <div className="min-h-screen bg-cyber-black">
+    <div className="min-h-screen bg-[var(--bg-primary)]">
       {/* Header */}
-      <header className="border-b border-cyber-light/10 bg-cyber-darker/50">
+      <header className="border-b border-[var(--border-color)] bg-[var(--bg-secondary)]">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link
                 href="/dashboard/platform"
-                className="text-terminal-dim hover:text-neon-cyan transition-colors"
+                className="text-[var(--text-secondary)] hover:text-[var(--neon-cyan)] transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />
             </Link>
@@ -143,15 +145,15 @@ export default function ApiKeysPage() {
               className="object-contain"
             /> 
             <div className="flex items-center gap-2">
-              <Key className="w-4 h-4 text-neon-cyan" />
-              <span className="text-sm text-terminal-text font-semibold tracking-wide">
+              <Key className="w-4 h-4" style={{ color: 'var(--neon-cyan)' }} />
+              <span className="text-sm font-semibold tracking-wide text-[var(--text-primary)]">
                 API Keys
               </span>
             </div>
           </div>
           <Link
             href="/docs#vault"
-            className="flex items-center gap-1.5 text-xs text-terminal-dim hover:text-neon-cyan transition-colors"
+            className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--neon-cyan)] transition-colors"
           >
             <ExternalLink className="w-3 h-3" />
             Vault API Docs
@@ -162,13 +164,13 @@ export default function ApiKeysPage() {
       <div className="max-w-4xl mx-auto px-6 py-8">
         {/* Intro */}
         <div className="mb-8">
-          <h1 className="text-lg font-display text-terminal-text tracking-wide mb-2">
-            <span className="text-neon-cyan">#</span> API Keys
+          <h1 className="text-lg font-display tracking-wide mb-2 text-[var(--text-primary)]">
+            <span style={{ color: 'var(--neon-cyan)' }}>#</span> API Keys
           </h1>
-          <p className="text-xs text-terminal-dim leading-relaxed max-w-2xl">
+          <p className="text-xs leading-relaxed max-w-2xl text-[var(--text-secondary)]">
             Generate API keys to use SCCA&apos;s Vault API from your own applications.
             Authenticate with{' '}
-            <code className="text-neon-cyan bg-cyber-darker px-1.5 py-0.5 rounded">
+            <code className="px-1.5 py-0.5 rounded bg-[var(--bg-tertiary)]" style={{ color: 'var(--neon-cyan)' }}>
               Authorization: Bearer scca_k_...
             </code>{' '}
             to encrypt, decrypt, and verify data programmatically.
@@ -177,12 +179,12 @@ export default function ApiKeysPage() {
 
         {/* Error */}
         {error && (
-          <div className="mb-4 cyber-card p-3 border-neon-red/30 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-neon-red flex-shrink-0" />
-            <span className="text-xs text-neon-red">{error}</span>
+          <div className="mb-4 cyber-card p-3 flex items-center gap-2" style={{ borderColor: 'var(--neon-red)', borderWidth: '1px' }}>
+            <AlertTriangle className="w-4 h-4" style={{ color: 'var(--neon-red)' }} />
+            <span className="text-xs" style={{ color: 'var(--neon-red)' }}>{error}</span>
             <button
               onClick={() => setError('')}
-              className="ml-auto text-terminal-dim hover:text-terminal-text text-xs"
+              className="ml-auto text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             >
               dismiss
             </button>
@@ -196,43 +198,45 @@ export default function ApiKeysPage() {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="mb-6 cyber-card p-5 border-neon-yellow/30"
+              className="mb-6 cyber-card p-5"
+              style={{ borderColor: 'var(--neon-yellow)', borderWidth: '1px' }}
             >
               <div className="flex items-start gap-3 mb-4">
-                <AlertTriangle className="w-5 h-5 text-neon-yellow flex-shrink-0 mt-0.5" />
+                <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--neon-yellow)' }} />
                 <div>
-                  <span className="text-sm font-semibold text-neon-yellow">
+                  <span className="text-sm font-semibold" style={{ color: 'var(--neon-yellow)' }}>
                     Save your API key now
                   </span>
-                  <p className="text-xs text-terminal-dim mt-1">
+                  <p className="text-xs text-[var(--text-secondary)] mt-1">
                     This key will not be shown again. Store it securely.
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 bg-cyber-darker rounded p-3 border border-cyber-light/20">
-                <code className="flex-1 text-sm text-neon-green break-all font-mono">
+              <div className="flex items-center gap-2 rounded p-3 border" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-color)' }}>
+                <code className="flex-1 text-sm break-all font-mono" style={{ color: 'var(--neon-green)' }}>
                   {newKey.key}
                 </code>
                 <button
                   onClick={() => handleCopy(newKey.key)}
-                  className="p-2 rounded bg-cyber-mid/50 text-terminal-dim hover:text-neon-cyan transition-colors flex-shrink-0"
+                  className="p-2 rounded transition-colors flex-shrink-0"
+                  style={{ backgroundColor: 'var(--bg-tertiary)' }}
                 >
                   {copied ? (
-                    <Check className="w-4 h-4 text-neon-green" />
+                    <Check className="w-4 h-4" style={{ color: 'var(--neon-green)' }} />
                   ) : (
-                    <Copy className="w-4 h-4" />
+                    <Copy className="w-4 h-4 text-[var(--text-secondary)]" />
                   )}
                 </button>
               </div>
 
               <div className="mt-3 flex items-center justify-between">
-                <span className="text-[10px] text-terminal-dim">
+                <span className="text-[10px] text-[var(--text-secondary)]">
                   Key: {newKey.name}
                 </span>
                 <button
                   onClick={() => setNewKey(null)}
-                  className="text-xs text-terminal-dim hover:text-terminal-text transition-colors"
+                  className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
                 >
                   I&apos;ve saved it
                 </button>
@@ -243,11 +247,11 @@ export default function ApiKeysPage() {
 
         {/* Quick usage example */}
         <div className="mb-6 cyber-card p-4">
-          <span className="text-[10px] text-terminal-dim tracking-wider uppercase">
+          <span className="text-[10px] tracking-wider uppercase text-[var(--text-secondary)]">
             Quick usage
           </span>
-          <div className="mt-2 bg-cyber-darker rounded p-3 border border-cyber-light/20 overflow-x-auto">
-            <code className="text-xs text-terminal-text whitespace-pre">{`curl -X POST https://your-domain.com/api/scca/vault/encrypt \\
+          <div className="mt-2 rounded p-3 border overflow-x-auto" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-color)' }}>
+            <code className="text-xs whitespace-pre text-[var(--text-primary)]">{`curl -X POST https://your-domain.com/api/scca/vault/encrypt \\
   -H "Authorization: Bearer scca_k_your_key_here" \\
   -H "Content-Type: application/json" \\
   -d '{"data": "encrypt this", "context": "my-project"}'`}</code>
@@ -270,14 +274,14 @@ export default function ApiKeysPage() {
             onSubmit={handleCreate}
             className="mb-6 cyber-card p-5"
           >
-            <h3 className="text-sm text-terminal-text font-semibold mb-4 flex items-center gap-2">
-              <Plus className="w-4 h-4 text-neon-cyan" />
+            <h3 className="text-sm font-semibold mb-4 flex items-center gap-2 text-[var(--text-primary)]">
+              <Plus className="w-4 h-4" style={{ color: 'var(--neon-cyan)' }} />
               Generate New API Key
             </h3>
 
             <div className="space-y-4">
               <div>
-                <label className="text-xs text-terminal-dim block mb-1.5">
+                <label className="text-xs text-[var(--text-secondary)] block mb-1.5">
                   Key Name *
                 </label>
                 <input
@@ -293,7 +297,7 @@ export default function ApiKeysPage() {
               </div>
 
               <div>
-                <label className="text-xs text-terminal-dim block mb-1.5">
+                <label className="text-xs text-[var(--text-secondary)] block mb-1.5">
                   Expires In (days) — optional
                 </label>
                 <input
@@ -324,7 +328,7 @@ export default function ApiKeysPage() {
                     setKeyName('');
                     setExpiresInDays('');
                   }}
-                  className="text-xs text-terminal-dim hover:text-terminal-text transition-colors"
+                  className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
                 >
                   Cancel
                 </button>
@@ -335,19 +339,19 @@ export default function ApiKeysPage() {
 
         {/* Keys list */}
         <div>
-          <h3 className="text-xs text-terminal-dim tracking-wider uppercase mb-3">
+          <h3 className="text-xs text-[var(--text-secondary)] tracking-wider uppercase mb-3">
             Active Keys ({keys.length}/10)
           </h3>
 
           {loading ? (
             <div className="cyber-card p-8 text-center">
-              <Shield className="w-6 h-6 text-neon-cyan/30 mx-auto animate-pulse mb-2" />
-              <span className="text-xs text-terminal-dim">Loading keys...</span>
+              <Shield className="w-6 h-6 mx-auto animate-pulse mb-2" style={{ color: 'var(--neon-cyan)', opacity: 0.3 }} />
+              <span className="text-xs text-[var(--text-secondary)]">Loading keys...</span>
             </div>
           ) : keys.length === 0 ? (
             <div className="cyber-card p-8 text-center">
-              <Key className="w-6 h-6 text-terminal-dim/30 mx-auto mb-2" />
-              <span className="text-xs text-terminal-dim">
+              <Key className="w-6 h-6 mx-auto mb-2" style={{ color: 'var(--text-secondary)', opacity: 0.3 }} />
+              <span className="text-xs text-[var(--text-secondary)]">
                 No API keys yet. Generate one to get started.
               </span>
             </div>
@@ -359,18 +363,18 @@ export default function ApiKeysPage() {
                   layout
                   className="cyber-card p-4 flex items-center gap-4"
                 >
-                  <Key className="w-4 h-4 text-neon-cyan flex-shrink-0" />
+                  <Key className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--neon-cyan)' }} />
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm text-terminal-text font-semibold truncate">
+                      <span className="text-sm font-semibold truncate text-[var(--text-primary)]">
                         {key.name}
                       </span>
-                      <code className="text-[10px] text-terminal-dim bg-cyber-darker px-1.5 py-0.5 rounded">
+                      <code className="text-[10px] px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-secondary)' }}>
                         {key.keyPrefix}
                       </code>
                     </div>
-                    <div className="flex items-center gap-3 text-[10px] text-terminal-dim">
+                    <div className="flex items-center gap-3 text-[10px] text-[var(--text-secondary)]">
                       <span>
                         Created{' '}
                         {formatDistanceToNow(new Date(key.createdAt), {
@@ -390,9 +394,10 @@ export default function ApiKeysPage() {
                         <span
                           className={
                             new Date(key.expiresAt) < new Date()
-                              ? 'text-neon-red'
-                              : 'text-neon-yellow'
+                              ? ''
+                              : ''
                           }
+                          style={{ color: new Date(key.expiresAt) < new Date() ? 'var(--neon-red)' : 'var(--neon-yellow)' }}
                         >
                           {new Date(key.expiresAt) < new Date()
                             ? 'Expired'
@@ -405,7 +410,10 @@ export default function ApiKeysPage() {
                   <button
                     onClick={() => handleRevoke(key.id)}
                     disabled={revoking === key.id}
-                    className="p-2 text-terminal-dim hover:text-neon-red hover:bg-neon-red/5 rounded transition-colors flex-shrink-0"
+                    className="p-2 rounded transition-colors flex-shrink-0"
+                    style={{ color: 'var(--text-secondary)' }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--neon-red)'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
                     title="Revoke key"
                   >
                     <Trash2 className="w-4 h-4" />

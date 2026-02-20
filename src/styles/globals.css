@@ -5,129 +5,252 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap');
 
 @layer base {
+  :root {
+    /* Light mode color variables */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-tertiary: #f1f5f9;
+    --bg-card: #ffffff;
+    --bg-input: #f8fafc;
+    
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-tertiary: #94a3b8;
+    --text-muted: #64748b;
+    
+    --border-color: #e2e8f0;
+    --border-light: #cbd5e1;
+    
+    /* Neon colors (work in both modes) */
+    --neon-cyan: #0891b2;
+    --neon-green: #059669;
+    --neon-purple: #7c3aed;
+    --neon-pink: #db2777;
+    --neon-yellow: #d97706;
+    --neon-red: #dc2626;
+    
+    /* Cyber colors for light mode */
+    --cyber-bg: #f0f9ff;
+    --cyber-border: rgba(8, 145, 178, 0.2);
+    --cyber-glow: rgba(8, 145, 178, 0.1);
+  }
+
+  .dark {
+    /* Dark mode color variables */
+    --bg-primary: #0a0a0f;
+    --bg-secondary: #0d0d14;
+    --bg-tertiary: #12121a;
+    --bg-card: #12121a;
+    --bg-input: #0d0d14;
+    
+    --text-primary: #b3b1ad;
+    --text-secondary: #8b949e;
+    --text-tertiary: #3d4455;
+    --text-muted: #6e7681;
+    
+    --border-color: rgba(0, 240, 255, 0.15);
+    --border-light: rgba(0, 240, 255, 0.1);
+    
+    /* Neon colors for dark mode (brighter) */
+    --neon-cyan: #00f0ff;
+    --neon-green: #00ff9d;
+    --neon-purple: #b000ff;
+    --neon-pink: #ff0080;
+    --neon-yellow: #ffd700;
+    --neon-red: #ff3333;
+    
+    /* Cyber colors for dark mode */
+    --cyber-bg: #0a0a0f;
+    --cyber-border: rgba(0, 240, 255, 0.2);
+    --cyber-glow: rgba(0, 240, 255, 0.15);
+  }
+
   * {
-    @apply border-cyber-light/30;
+    @apply border-[var(--border-color)];
+  }
+
+  html {
+    scroll-behavior: smooth;
   }
 
   body {
-    @apply bg-white text-slate-900 font-mono antialiased;
-  }
-
-  .dark body {
-    @apply bg-cyber-black text-terminal-text;
+    @apply bg-[var(--bg-primary)] text-[var(--text-primary)] font-mono antialiased;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   ::selection {
-    @apply bg-neon-cyan/20 text-neon-cyan;
+    background-color: color-mix(in srgb, var(--neon-cyan) 20%, transparent);
+    color: var(--neon-cyan);
   }
 }
 
 @layer components {
-  /* Cyber card */
+  /* Cyber card - Updated for both themes */
   .cyber-card {
-    @apply bg-cyber-dark/80 border border-cyber-light/20 rounded-lg backdrop-blur-sm;
+    @apply bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg;
+    @apply backdrop-blur-sm;
+    transition: all 0.3s ease;
   }
 
   .cyber-card-hover {
-    @apply cyber-card transition-all duration-300 hover:border-neon-cyan/40 hover:shadow-[0_0_15px_rgba(0,240,255,0.1)];
+    @apply cyber-card;
+  }
+  
+  .cyber-card-hover:hover {
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 15px var(--cyber-glow);
   }
 
-  /* Cyber button */
+  /* Cyber button - Updated for both themes */
   .cyber-btn {
-    @apply relative px-6 py-2.5 bg-transparent border border-neon-cyan/50 text-neon-cyan font-mono text-sm
-           tracking-wider uppercase transition-all duration-300
-           hover:bg-neon-cyan/10 hover:border-neon-cyan hover:shadow-[0_0_15px_rgba(0,240,255,0.2)]
-           active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed;
+    @apply relative px-6 py-2.5 bg-transparent border font-mono text-sm tracking-wider uppercase;
+    @apply transition-all duration-300 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed;
+    border-color: color-mix(in srgb, var(--neon-cyan) 50%, transparent);
+    color: var(--neon-cyan);
+  }
+  
+  .cyber-btn:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--neon-cyan) 10%, transparent);
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 15px var(--cyber-glow);
   }
 
   .cyber-btn-solid {
-    @apply cyber-btn bg-neon-cyan/10 hover:bg-neon-cyan/20;
+    @apply cyber-btn;
+    background-color: color-mix(in srgb, var(--neon-cyan) 10%, transparent);
+  }
+  
+  .cyber-btn-solid:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--neon-cyan) 20%, transparent);
   }
 
   .cyber-btn-danger {
-    @apply cyber-btn border-neon-red/50 text-neon-red
-           hover:bg-neon-red/10 hover:border-neon-red hover:shadow-[0_0_15px_rgba(255,51,51,0.2)];
+    @apply cyber-btn;
+    border-color: color-mix(in srgb, var(--neon-red) 50%, transparent);
+    color: var(--neon-red);
+  }
+  
+  .cyber-btn-danger:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--neon-red) 10%, transparent);
+    border-color: var(--neon-red);
+    box-shadow: 0 0 15px color-mix(in srgb, var(--neon-red) 20%, transparent);
   }
 
-  /* Cyber input */
+  /* Cyber input - Updated for both themes */
   .cyber-input {
-    @apply w-full bg-cyber-darker border border-cyber-light/30 rounded px-4 py-2.5
-           text-terminal-text font-mono text-sm placeholder:text-terminal-dim
-           focus:outline-none focus:border-neon-cyan/50 focus:shadow-[0_0_10px_rgba(0,240,255,0.1)]
-           transition-all duration-300;
+    @apply w-full rounded px-4 py-2.5 font-mono text-sm transition-all duration-300;
+    @apply bg-[var(--bg-input)] border border-[var(--border-light)] text-[var(--text-primary)];
+    @apply placeholder:text-[var(--text-tertiary)];
+    @apply focus:outline-none focus:border-[var(--neon-cyan)];
+  }
+  
+  .cyber-input:focus {
+    box-shadow: 0 0 10px var(--cyber-glow);
   }
 
-  /* Terminal text */
+  /* Terminal text - Updated */
   .terminal-prompt {
-    @apply text-neon-green font-mono text-sm;
+    color: var(--neon-green);
+    @apply font-mono text-sm;
   }
 
   .terminal-output {
-    @apply text-terminal-text font-mono text-sm leading-relaxed;
+    color: var(--text-primary);
+    @apply font-mono text-sm leading-relaxed;
   }
 
-  /* Neon text effects */
+  /* Neon text effects - Updated */
   .neon-text {
-    @apply text-neon-cyan;
-    text-shadow: 0 0 7px rgba(0, 240, 255, 0.3), 0 0 10px rgba(0, 240, 255, 0.2);
+    color: var(--neon-cyan);
+    text-shadow: 0 0 7px color-mix(in srgb, var(--neon-cyan) 30%, transparent), 
+                 0 0 10px color-mix(in srgb, var(--neon-cyan) 20%, transparent);
   }
 
   .neon-text-green {
-    @apply text-neon-green;
-    text-shadow: 0 0 7px rgba(0, 255, 157, 0.3), 0 0 10px rgba(0, 255, 157, 0.2);
+    color: var(--neon-green);
+    text-shadow: 0 0 7px color-mix(in srgb, var(--neon-green) 30%, transparent), 
+                 0 0 10px color-mix(in srgb, var(--neon-green) 20%, transparent);
   }
 
-  /* Scanline overlay */
-  .scanline-overlay::after {
-    content: '';
-    @apply absolute inset-0 pointer-events-none z-50;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0, 240, 255, 0.015) 2px,
-      rgba(0, 240, 255, 0.015) 4px
-    );
-  }
-
-  /* Status indicator */
+  /* Status indicator - Updated */
   .status-dot {
     @apply w-2 h-2 rounded-full;
   }
 
   .status-dot-active {
-    @apply status-dot bg-neon-green shadow-[0_0_6px_rgba(0,255,157,0.5)];
+    @apply status-dot;
+    background-color: var(--neon-green);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--neon-green) 50%, transparent);
   }
 
   .status-dot-warning {
-    @apply status-dot bg-neon-yellow shadow-[0_0_6px_rgba(255,215,0,0.5)];
+    @apply status-dot;
+    background-color: var(--neon-yellow);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--neon-yellow) 50%, transparent);
   }
 
   .status-dot-error {
-    @apply status-dot bg-neon-red shadow-[0_0_6px_rgba(255,51,51,0.5)];
+    @apply status-dot;
+    background-color: var(--neon-red);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--neon-red) 50%, transparent);
+  }
+  
+  /* Theme-aware text colors */
+  .text-terminal-text {
+    color: var(--text-primary);
+  }
+  
+  .text-terminal-dim {
+    color: var(--text-secondary);
+  }
+  
+  /* Theme-aware background colors */
+  .bg-cyber-darker {
+    background-color: var(--bg-secondary);
+  }
+  
+  .bg-cyber-dark {
+    background-color: var(--bg-tertiary);
+  }
+  
+  .bg-cyber-mid {
+    background-color: var(--bg-card);
+  }
+  
+  .bg-cyber-black {
+    background-color: var(--bg-primary);
   }
 }
 
-/* Scrollbar styling */
+/* Scrollbar styling - Theme aware */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0a0a0f;
+  background: var(--bg-secondary);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 240, 255, 0.15);
+  background: color-mix(in srgb, var(--neon-cyan) 15%, var(--bg-tertiary));
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 240, 255, 0.3);
+  background: color-mix(in srgb, var(--neon-cyan) 30%, var(--bg-tertiary));
 }
 
-/* Smooth transitions */
+/* Smooth transitions for theme changes */
 * {
-  scrollbar-color: rgba(0, 240, 255, 0.15) #0a0a0f;
+  scrollbar-color: color-mix(in srgb, var(--neon-cyan) 15%, var(--bg-tertiary)) var(--bg-secondary);
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
 }

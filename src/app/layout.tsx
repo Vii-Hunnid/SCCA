@@ -22,7 +22,7 @@ export default function RootLayout({
       <body className="font-mono">
         <Providers>
           <SecurityOverlay />
-          <div className="relative min-h-screen bg-cyber-black bg-cyber-grid dark:bg-cyber-black dark:bg-cyber-grid bg-white">
+          <div className="relative min-h-screen bg-[var(--bg-primary)]">
             {children}
           </div>
         </Providers>

@@ -104,7 +104,13 @@ export function ChatInput({
   };
 
   return (
-    <div className="border-t border-cyber-light/10 bg-cyber-darker/80 p-4">
+    <div 
+      className="border-t p-4"
+      style={{ 
+        borderColor: 'var(--border-color)', 
+        backgroundColor: 'color-mix(in srgb, var(--bg-secondary) 80%, transparent)' 
+      }}
+    >
       {/* Attachment previews */}
       {attachments.length > 0 && (
         <div className="flex gap-2 mb-3 max-w-3xl mx-auto overflow-x-auto pb-1">
@@ -113,7 +119,10 @@ export function ChatInput({
             return (
               <div key={idx} className="relative flex-shrink-0 group">
                 {att.preview ? (
-                  <div className="w-16 h-16 rounded border border-cyber-light/20 overflow-hidden">
+                  <div 
+                    className="w-16 h-16 rounded overflow-hidden"
+                    style={{ border: '1px solid var(--border-color)' }}
+                  >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={att.preview}
@@ -122,21 +131,28 @@ export function ChatInput({
                     />
                   </div>
                 ) : (
-                  <div className="w-16 h-16 rounded border border-cyber-light/20 flex flex-col items-center justify-center bg-cyber-mid/30">
-                    <Icon className="w-4 h-4 text-neon-cyan mb-1" />
-                    <span className="text-[8px] text-terminal-dim truncate max-w-[56px] px-1">
+                  <div 
+                    className="w-16 h-16 rounded flex flex-col items-center justify-center"
+                    style={{ border: '1px solid var(--border-color)', backgroundColor: 'color-mix(in srgb, var(--bg-tertiary) 30%, transparent)' }}
+                  >
+                    <Icon className="w-4 h-4 mb-1" style={{ color: 'var(--neon-cyan)' }} />
+                    <span className="text-[8px] truncate max-w-[56px] px-1" style={{ color: 'var(--text-secondary)' }}>
                       {att.file.name.split('.').pop()?.toUpperCase()}
                     </span>
                   </div>
                 )}
                 <div className="absolute -bottom-1 left-0 right-0 text-center">
-                  <span className="text-[8px] text-terminal-dim bg-cyber-darker/80 px-1 rounded">
+                  <span 
+                    className="text-[8px] px-1 rounded"
+                    style={{ color: 'var(--text-secondary)', backgroundColor: 'color-mix(in srgb, var(--bg-primary) 80%, transparent)' }}
+                  >
                     {formatSize(att.file.size)}
                   </span>
                 </div>
                 <button
                   onClick={() => removeAttachment(idx)}
-                  className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-neon-red/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  style={{ backgroundColor: 'var(--neon-red)', opacity: 0.8 }}
                 >
                   <X className="w-2.5 h-2.5 text-white" />
                 </button>
@@ -159,8 +175,21 @@ export function ChatInput({
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={disabled || isStreaming}
-          className="flex-shrink-0 p-2.5 rounded border border-cyber-light/20 text-terminal-dim
-                     hover:text-neon-cyan hover:border-neon-cyan/30 transition-all disabled:opacity-50"
+          className="flex-shrink-0 p-2.5 rounded transition-all disabled:opacity-50"
+          style={{ 
+            border: '1px solid var(--border-color)', 
+            color: 'var(--text-secondary)',
+          }}
+          onMouseEnter={(e) => {
+            if (!disabled && !isStreaming) {
+              e.currentTarget.style.borderColor = 'var(--neon-cyan)';
+              e.currentTarget.style.color = 'var(--neon-cyan)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = 'var(--border-color)';
+            e.currentTarget.style.color = 'var(--text-secondary)';
+          }}
           title="Attach media (encrypted with SCCA)"
         >
           <Paperclip className="w-4 h-4" />
@@ -177,13 +206,16 @@ export function ChatInput({
             rows={1}
             className="cyber-input pr-10 resize-none max-h-[200px]"
           />
-          <Lock className="absolute right-3 top-3 w-3.5 h-3.5 text-terminal-dim/40" />
+          <Lock 
+            className="absolute right-3 top-3 w-3.5 h-3.5" 
+            style={{ color: 'color-mix(in srgb, var(--text-secondary) 40%, transparent)' }} 
+          />
         </div>
         {isStreaming ? (
           <button
             onClick={onStop}
-            className="flex-shrink-0 p-2.5 rounded border border-neon-red/50 text-neon-red
-                       hover:bg-neon-red/10 transition-all"
+            className="flex-shrink-0 p-2.5 rounded transition-all hover:opacity-80"
+            style={{ border: '1px solid color-mix(in srgb, var(--neon-red) 50%, transparent)', color: 'var(--neon-red)' }}
             title="Stop generating"
           >
             <Square className="w-4 h-4" />
@@ -192,11 +224,18 @@ export function ChatInput({
           <button
             onClick={handleSend}
             disabled={(!content.trim() && attachments.length === 0) || disabled}
-            className={`flex-shrink-0 p-2.5 rounded border transition-all ${
-              (content.trim() || attachments.length > 0) && !disabled
-                ? 'border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/10 hover:border-neon-cyan'
-                : 'border-cyber-light/20 text-terminal-dim cursor-not-allowed'
-            }`}
+            className="flex-shrink-0 p-2.5 rounded border transition-all disabled:cursor-not-allowed"
+            style={{
+              borderColor: (content.trim() || attachments.length > 0) && !disabled
+                ? 'color-mix(in srgb, var(--neon-cyan) 50%, transparent)'
+                : 'var(--border-color)',
+              color: (content.trim() || attachments.length > 0) && !disabled
+                ? 'var(--neon-cyan)'
+                : 'var(--text-secondary)',
+              backgroundColor: (content.trim() || attachments.length > 0) && !disabled
+                ? 'color-mix(in srgb, var(--neon-cyan) 10%, transparent)'
+                : 'transparent'
+            }}
             title="Send message"
           >
             <Send className="w-4 h-4" />

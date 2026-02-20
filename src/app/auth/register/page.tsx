@@ -125,10 +125,10 @@ export default function RegisterPage() {
               className="object-contain"
             />
           </Link>
-          <h1 className="text-xl font-display font-semibold text-terminal-text mb-2">
+          <h1 className="text-xl font-display font-semibold text-[var(--text-primary)] mb-2">
             Create Identity
           </h1>
-          <p className="text-xs text-terminal-dim">
+          <p className="text-xs text-[var(--text-secondary)]">
             Generate your cryptographic identity
           </p>
         </div>
@@ -138,13 +138,15 @@ export default function RegisterPage() {
           <button
             onClick={() => handleOAuthSignIn('github')}
             disabled={oauthLoading !== null}
-            className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded border border-cyber-light/30
-                       bg-cyber-dark/50 text-terminal-text text-sm
-                       hover:border-terminal-text/40 hover:bg-cyber-mid/30 transition-all
-                       disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded border text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ 
+              borderColor: 'var(--border-color)', 
+              backgroundColor: 'color-mix(in srgb, var(--bg-secondary) 50%, transparent)', 
+              color: 'var(--text-primary)' 
+            }}
           >
             {oauthLoading === 'github' ? (
-              <div className="w-4 h-4 border-2 border-terminal-dim/30 border-t-terminal-text rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--text-secondary)', borderTopColor: 'var(--text-primary)' }} />
             ) : (
               <GitHubIcon className="w-4 h-4" />
             )}
@@ -153,13 +155,15 @@ export default function RegisterPage() {
           <button
             onClick={() => handleOAuthSignIn('google')}
             disabled={oauthLoading !== null}
-            className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded border border-cyber-light/30
-                       bg-cyber-dark/50 text-terminal-text text-sm
-                       hover:border-terminal-text/40 hover:bg-cyber-mid/30 transition-all
-                       disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded border text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ 
+              borderColor: 'var(--border-color)', 
+              backgroundColor: 'color-mix(in srgb, var(--bg-secondary) 50%, transparent)', 
+              color: 'var(--text-primary)' 
+            }}
           >
             {oauthLoading === 'google' ? (
-              <div className="w-4 h-4 border-2 border-terminal-dim/30 border-t-terminal-text rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--text-secondary)', borderTopColor: 'var(--text-primary)' }} />
             ) : (
               <GoogleIcon className="w-4 h-4" />
             )}
@@ -169,11 +173,11 @@ export default function RegisterPage() {
 
         {/* Divider */}
         <div className="flex items-center gap-3 mb-6">
-          <div className="flex-1 h-px bg-cyber-light/20" />
-          <span className="text-[10px] text-terminal-dim tracking-wider uppercase">
+          <div className="flex-1 h-px" style={{ backgroundColor: 'var(--border-color)' }} />
+          <span className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase">
             or use credentials
           </span>
-          <div className="flex-1 h-px bg-cyber-light/20" />
+          <div className="flex-1 h-px" style={{ backgroundColor: 'var(--border-color)' }} />
         </div>
 
         {/* Form */}
@@ -182,15 +186,16 @@ export default function RegisterPage() {
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-2 px-4 py-3 rounded bg-neon-red/10 border border-neon-red/20"
+              className="flex items-center gap-2 px-4 py-3 rounded border"
+              style={{ backgroundColor: 'color-mix(in srgb, var(--neon-red) 10%, transparent)', borderColor: 'color-mix(in srgb, var(--neon-red) 20%, transparent)' }}
             >
-              <AlertCircle className="w-4 h-4 text-neon-red flex-shrink-0" />
-              <span className="text-xs text-neon-red">{error}</span>
+              <AlertCircle className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--neon-red)' }} />
+              <span className="text-xs" style={{ color: 'var(--neon-red)' }}>{error}</span>
             </motion.div>
           )}
 
           <div>
-            <label className="block text-xs text-terminal-dim mb-1.5 tracking-wider uppercase">
+            <label className="block text-xs text-[var(--text-secondary)] mb-1.5 tracking-wider uppercase">
               Callsign
             </label>
             <input
@@ -204,7 +209,7 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-xs text-terminal-dim mb-1.5 tracking-wider uppercase">
+            <label className="block text-xs text-[var(--text-secondary)] mb-1.5 tracking-wider uppercase">
               Email
             </label>
             <input
@@ -218,7 +223,7 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-xs text-terminal-dim mb-1.5 tracking-wider uppercase">
+            <label className="block text-xs text-[var(--text-secondary)] mb-1.5 tracking-wider uppercase">
               Passphrase
             </label>
             <div className="relative">
@@ -233,7 +238,10 @@ export default function RegisterPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-terminal-dim hover:text-neon-cyan transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                style={{ color: 'var(--text-secondary)' }}
+                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--neon-cyan)'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
               >
                 {showPassword ? (
                   <EyeOff className="w-4 h-4" />
@@ -245,7 +253,7 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-xs text-terminal-dim mb-1.5 tracking-wider uppercase">
+            <label className="block text-xs text-[var(--text-secondary)] mb-1.5 tracking-wider uppercase">
               Confirm Passphrase
             </label>
             <input
@@ -265,7 +273,7 @@ export default function RegisterPage() {
           >
             {loading ? (
               <>
-                <div className="w-4 h-4 border-2 border-neon-cyan/30 border-t-neon-cyan rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-[var(--neon-cyan)]/30 border-t-[var(--neon-cyan)] rounded-full animate-spin" />
                 Generating keys...
               </>
             ) : (
@@ -280,11 +288,12 @@ export default function RegisterPage() {
 
         {/* Footer */}
         <div className="mt-6 text-center">
-          <p className="text-xs text-terminal-dim">
+          <p className="text-xs text-[var(--text-secondary)]">
             Already registered?{' '}
             <Link
               href="/auth/login"
-              className="text-neon-cyan hover:text-neon-green transition-colors"
+              className="transition-colors hover:opacity-80"
+              style={{ color: 'var(--neon-cyan)' }}
             >
               Sign In
             </Link>
@@ -294,7 +303,7 @@ export default function RegisterPage() {
         {/* Security Badge */}
         <div className="mt-8 flex items-center justify-center gap-2">
           <div className="status-dot-active" />
-          <span className="text-[10px] text-terminal-dim tracking-wider">
+          <span className="text-[10px] text-[var(--text-secondary)] tracking-wider">
             PBKDF2 KEY DERIVATION ACTIVE
           </span>
         </div>

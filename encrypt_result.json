@@ -1,0 +1,1 @@
+{"tokens":["AQAAAAAAaY7l3AAjRd1LmqFMht0QmhYlfKl0tRdxVM_zvXUzS6hjDxQFS0LPvPMqt-21vXMRNSJAj9rBkE9E"],"merkleRoot":"c613cf7578b35e6df7cf5dabaef8007a1ab89419ea11c7c0ec354297972c0066","context":"test","metadata":{"itemCount":1,"originalBytes":11,"encryptedBytes":1095,"compressionRatio":99.545,"cipher":"AES-256-GCM","kdf":"HKDF-SHA256","integrity":"HMAC-SHA256-chain"}}

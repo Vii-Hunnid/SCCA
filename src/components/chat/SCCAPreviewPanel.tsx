@@ -108,19 +108,25 @@ export function SCCAPreviewPanel({
   }, [chatMessages]);
 
   return (
-    <div className="w-72 border-l border-cyber-light/10 bg-cyber-darker flex flex-col h-full overflow-hidden">
+    <div 
+      className="w-72 border-l flex flex-col h-full overflow-hidden"
+      style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}
+    >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-cyber-light/10">
+      <div 
+        className="flex items-center justify-between px-4 py-3 border-b"
+        style={{ borderColor: 'var(--border-color)' }}
+      >
         <div className="flex items-center gap-2">
-          <Shield className="w-3.5 h-3.5 text-neon-cyan" />
-          <span className="text-xs font-semibold text-neon-cyan tracking-wider uppercase">
+          <Shield className="w-3.5 h-3.5" style={{ color: 'var(--neon-cyan)' }} />
+          <span className="text-xs font-semibold tracking-wider uppercase" style={{ color: 'var(--neon-cyan)' }}>
             Metrics
           </span>
         </div>
         {useSCCA && (
           <div className="flex items-center gap-1.5">
             <div className="status-dot-active" />
-            <span className="text-[10px] text-neon-green">Active</span>
+            <span className="text-[10px]" style={{ color: 'var(--neon-green)' }}>Active</span>
           </div>
         )}
       </div>
@@ -128,8 +134,8 @@ export function SCCAPreviewPanel({
       {!useSCCA ? (
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="text-center">
-            <Lock className="w-6 h-6 text-neon-yellow/50 mx-auto mb-2" />
-            <p className="text-xs text-terminal-dim">SCCA Disabled</p>
+            <Lock className="w-6 h-6 mx-auto mb-2" style={{ color: 'var(--neon-yellow)', opacity: 0.5 }} />
+            <p className="text-xs text-[var(--text-secondary)]">SCCA Disabled</p>
           </div>
         </div>
       ) : (
@@ -141,28 +147,28 @@ export function SCCAPreviewPanel({
               label="Messages"
               value={String(stats.messageCount)}
               sub={`${stats.userCount}u / ${stats.assistantCount}a`}
-              color="text-neon-cyan"
+              color="var(--neon-cyan)"
             />
             <MetricCard
               icon={Database}
               label="Raw Size"
               value={formatBytes(stats.totalRaw)}
               sub="uncompressed"
-              color="text-neon-yellow"
+              color="var(--neon-yellow)"
             />
             <MetricCard
               icon={Lock}
               label="SCCA Size"
               value={formatBytes(stats.totalEncrypted)}
               sub="encrypted"
-              color="text-neon-green"
+              color="var(--neon-green)"
             />
             <MetricCard
               icon={Zap}
               label="Compress"
               value={`${stats.avgCompressionRatio}x`}
               sub="avg ratio"
-              color="text-neon-purple"
+              color="var(--neon-purple)"
             />
           </div>
 
@@ -170,24 +176,30 @@ export function SCCAPreviewPanel({
           <div className="px-3 pb-3">
             <div className="cyber-card p-3">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] text-terminal-dim">
+                <span className="text-[10px] text-[var(--text-secondary)]">
                   vs JSON storage
                 </span>
                 <span
-                  className={`text-xs font-mono font-medium ${
-                    stats.savingsPercent > 0 ? 'text-neon-green' : 'text-neon-yellow'
-                  }`}
+                  className="text-xs font-mono font-medium"
+                  style={{
+                    color: stats.savingsPercent > 0 ? 'var(--neon-green)' : 'var(--neon-yellow)'
+                  }}
                 >
                   {stats.savingsPercent > 0 ? '-' : '+'}
                   {Math.abs(stats.savingsPercent)}%
                 </span>
               </div>
 
-              <div className="h-1.5 bg-cyber-mid rounded-full overflow-hidden">
+              <div 
+                className="h-1.5 rounded-full overflow-hidden"
+                style={{ backgroundColor: 'var(--bg-tertiary)' }}
+              >
                 <motion.div
-                  className={`h-full rounded-full ${
-                    stats.savingsPercent > 0 ? 'bg-neon-green/60' : 'bg-neon-yellow/60'
-                  }`}
+                  className="h-full rounded-full"
+                  style={{
+                    backgroundColor: stats.savingsPercent > 0 ? 'var(--neon-green)' : 'var(--neon-yellow)',
+                    opacity: 0.6
+                  }}
                   initial={{ width: 0 }}
                   animate={{
                     width: `${Math.min(100, Math.max(5, 100 - Math.abs(stats.savingsPercent)))}%`,
@@ -196,7 +208,7 @@ export function SCCAPreviewPanel({
                 />
               </div>
 
-              <div className="flex justify-between mt-1.5 text-[10px] text-terminal-dim">
+              <div className="flex justify-between mt-1.5 text-[10px] text-[var(--text-secondary)]">
                 <span>JSON: {formatBytes(stats.jsonBaseline)}</span>
                 <span>SCCA: {formatBytes(stats.totalEncrypted)}</span>
               </div>
@@ -208,8 +220,8 @@ export function SCCAPreviewPanel({
             <div className="px-3 pb-3">
               <div className="cyber-card p-3">
                 <div className="flex items-center gap-1.5 mb-2">
-                  <Paperclip className="w-3 h-3 text-neon-purple" />
-                  <span className="text-[10px] text-neon-purple tracking-wider uppercase">
+                  <Paperclip className="w-3 h-3" style={{ color: 'var(--neon-purple)' }} />
+                  <span className="text-[10px] tracking-wider uppercase" style={{ color: 'var(--neon-purple)' }}>
                     Media ({mediaStats.count})
                   </span>
                 </div>
@@ -221,29 +233,32 @@ export function SCCAPreviewPanel({
                     return (
                       <div key={cat} className="flex items-center justify-between text-[10px]">
                         <div className="flex items-center gap-1.5">
-                          <CatIcon className="w-3 h-3 text-terminal-dim" />
-                          <span className="text-terminal-dim capitalize">{cat}</span>
+                          <CatIcon className="w-3 h-3" style={{ color: 'var(--text-secondary)' }} />
+                          <span className="text-[var(--text-secondary)] capitalize">{cat}</span>
                         </div>
-                        <span className="text-terminal-text font-mono">{count}</span>
+                        <span className="text-[var(--text-primary)] font-mono">{count}</span>
                       </div>
                     );
                   })}
                 </div>
 
                 {/* Size stats */}
-                <div className="space-y-1.5 pt-2 border-t border-cyber-light/10">
+                <div 
+                  className="space-y-1.5 pt-2 border-t"
+                  style={{ borderColor: 'var(--border-color)' }}
+                >
                   <div className="flex justify-between text-[10px] font-mono">
-                    <span className="text-terminal-dim">Original</span>
-                    <span className="text-neon-yellow">{formatBytes(mediaStats.originalBytes)}</span>
+                    <span className="text-[var(--text-secondary)]">Original</span>
+                    <span style={{ color: 'var(--neon-yellow)' }}>{formatBytes(mediaStats.originalBytes)}</span>
                   </div>
                   <div className="flex justify-between text-[10px] font-mono">
-                    <span className="text-terminal-dim">Encrypted</span>
-                    <span className="text-neon-green">{formatBytes(mediaStats.encryptedBytes)}</span>
+                    <span className="text-[var(--text-secondary)]">Encrypted</span>
+                    <span style={{ color: 'var(--neon-green)' }}>{formatBytes(mediaStats.encryptedBytes)}</span>
                   </div>
                   {mediaStats.avgCompressionRatio < 1 && (
                     <div className="flex justify-between text-[10px] font-mono">
-                      <span className="text-terminal-dim">Saved</span>
-                      <span className="text-neon-green">
+                      <span className="text-[var(--text-secondary)]">Saved</span>
+                      <span style={{ color: 'var(--neon-green)' }}>
                         {Math.round((1 - mediaStats.avgCompressionRatio) * 100)}%
                       </span>
                     </div>
@@ -252,9 +267,13 @@ export function SCCAPreviewPanel({
 
                 {/* Compression bar */}
                 <div className="mt-2">
-                  <div className="h-1.5 bg-cyber-mid rounded-full overflow-hidden">
+                  <div 
+                    className="h-1.5 rounded-full overflow-hidden"
+                    style={{ backgroundColor: 'var(--bg-tertiary)' }}
+                  >
                     <motion.div
-                      className="h-full rounded-full bg-neon-purple/60"
+                      className="h-full rounded-full"
+                      style={{ backgroundColor: 'var(--neon-purple)', opacity: 0.6 }}
                       initial={{ width: 0 }}
                       animate={{
                         width: `${Math.min(100, Math.max(5, mediaStats.avgCompressionRatio * 100))}%`,
@@ -271,8 +290,8 @@ export function SCCAPreviewPanel({
           <div className="px-3 pb-3">
             <div className="cyber-card p-3">
               <div className="flex items-center gap-1.5 mb-2">
-                <Hash className="w-3 h-3 text-terminal-dim" />
-                <span className="text-[10px] text-terminal-dim tracking-wider uppercase">
+                <Hash className="w-3 h-3" style={{ color: 'var(--text-secondary)' }} />
+                <span className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase">
                   Protocol
                 </span>
               </div>
@@ -289,8 +308,8 @@ export function SCCAPreviewPanel({
                     key={key}
                     className="flex justify-between text-[10px] font-mono"
                   >
-                    <span className="text-terminal-dim">{key}</span>
-                    <span className="text-neon-cyan">{value}</span>
+                    <span className="text-[var(--text-secondary)]">{key}</span>
+                    <span style={{ color: 'var(--neon-cyan)' }}>{value}</span>
                   </div>
                 ))}
               </div>
@@ -309,7 +328,7 @@ function MetricCard({
   sub,
   color,
 }: {
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   label: string;
   value: string;
   sub: string;
@@ -318,13 +337,13 @@ function MetricCard({
   return (
     <div className="cyber-card p-2.5">
       <div className="flex items-center gap-1 mb-1">
-        <Icon className={`w-3 h-3 ${color}`} />
-        <span className="text-[10px] text-terminal-dim">{label}</span>
+        <Icon className="w-3 h-3" style={{ color }} />
+        <span className="text-[10px] text-[var(--text-secondary)]">{label}</span>
       </div>
-      <p className="text-sm font-mono font-medium text-terminal-text">
+      <p className="text-sm font-mono font-medium text-[var(--text-primary)]">
         {value}
       </p>
-      <p className="text-[10px] text-terminal-dim">{sub}</p>
+      <p className="text-[10px] text-[var(--text-secondary)]">{sub}</p>
     </div>
   );
 }

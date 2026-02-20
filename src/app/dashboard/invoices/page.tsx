@@ -53,32 +53,32 @@ interface InvoiceSummary {
 const getStatusIcon = (status: string) => {
   switch (status) {
     case 'PAID':
-      return <CheckCircle2 size={14} className="text-neon-green" />;
+      return <CheckCircle2 size={14} style={{ color: 'var(--neon-green)' }} />;
     case 'PENDING':
     case 'DRAFT':
-      return <Clock size={14} className="text-neon-yellow" />;
+      return <Clock size={14} style={{ color: 'var(--neon-yellow)' }} />;
     case 'OVERDUE':
-      return <AlertCircle size={14} className="text-neon-red" />;
+      return <AlertCircle size={14} style={{ color: 'var(--neon-red)' }} />;
     case 'VOID':
-      return <RefreshCw size={14} className="text-terminal-dim" />;
+      return <RefreshCw size={14} style={{ color: 'var(--text-secondary)' }} />;
     default:
-      return <Clock size={14} className="text-terminal-dim" />;
+      return <Clock size={14} style={{ color: 'var(--text-secondary)' }} />;
   }
 };
 
 const getStatusClass = (status: string) => {
   switch (status) {
     case 'PAID':
-      return 'text-neon-green bg-neon-green/10';
+      return { color: 'var(--neon-green)', backgroundColor: 'color-mix(in srgb, var(--neon-green) 10%, transparent)' };
     case 'PENDING':
     case 'DRAFT':
-      return 'text-neon-yellow bg-neon-yellow/10';
+      return { color: 'var(--neon-yellow)', backgroundColor: 'color-mix(in srgb, var(--neon-yellow) 10%, transparent)' };
     case 'OVERDUE':
-      return 'text-neon-red bg-neon-red/10';
+      return { color: 'var(--neon-red)', backgroundColor: 'color-mix(in srgb, var(--neon-red) 10%, transparent)' };
     case 'VOID':
-      return 'text-terminal-dim bg-cyber-mid';
+      return { color: 'var(--text-secondary)', backgroundColor: 'var(--bg-tertiary)' };
     default:
-      return 'text-terminal-dim bg-cyber-mid';
+      return { color: 'var(--text-secondary)', backgroundColor: 'var(--bg-tertiary)' };
   }
 };
 
@@ -470,27 +470,30 @@ export default function InvoicesPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-cyber-black flex items-center justify-center">
-        <FileText className="w-6 h-6 text-neon-cyan/30 animate-pulse" />
+      <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
+        <FileText className="w-6 h-6 animate-pulse" style={{ color: 'var(--neon-cyan)', opacity: 0.3 }} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-cyber-black">
+    <div className="min-h-screen bg-[var(--bg-primary)]">
       {/* Header */}
-      <header className="border-b border-cyber-light/10 bg-cyber-darker/50">
+      <header className="border-b bg-[var(--bg-secondary)]" style={{ borderColor: 'var(--border-color)' }}>
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link
               href="/dashboard/billing"
-              className="text-terminal-dim hover:text-neon-cyan transition-colors"
+              className="transition-colors"
+              style={{ color: 'var(--text-secondary)' }}
+              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--neon-cyan)'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
             >
               <ArrowLeft className="w-4 h-4" />
             </Link>
             <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-neon-cyan" />
-              <span className="text-sm text-terminal-text font-semibold tracking-wide">
+              <FileText className="w-4 h-4" style={{ color: 'var(--neon-cyan)' }} />
+              <span className="text-sm font-semibold tracking-wide text-[var(--text-primary)]">
                 Invoices
               </span>
             </div>
@@ -498,7 +501,10 @@ export default function InvoicesPage() {
           <button
             onClick={fetchInvoices}
             disabled={isLoading}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs text-terminal-dim hover:text-neon-cyan border border-cyber-light/10 rounded-lg transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg transition-colors disabled:opacity-50 border"
+            style={{ color: 'var(--text-secondary)', borderColor: 'var(--border-color)' }}
+            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--neon-cyan)'}
+            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
           >
             <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
             Refresh
@@ -511,13 +517,14 @@ export default function InvoicesPage() {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="cyber-card p-3 border-neon-red/30 flex items-center gap-2"
+            className="cyber-card p-3 flex items-center gap-2"
+            style={{ borderColor: 'var(--neon-red)', borderWidth: '1px' }}
           >
-            <AlertCircle size={16} className="text-neon-red" />
-            <span className="text-xs text-neon-red">{error}</span>
+            <AlertCircle size={16} style={{ color: 'var(--neon-red)' }} />
+            <span className="text-xs" style={{ color: 'var(--neon-red)' }}>{error}</span>
             <button
               onClick={() => setError(null)}
-              className="ml-auto text-xs text-terminal-dim hover:text-terminal-text"
+              className="ml-auto text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             >
               dismiss
             </button>
@@ -532,14 +539,17 @@ export default function InvoicesPage() {
             className="cyber-card p-5"
           >
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 rounded-lg bg-neon-green/10 flex items-center justify-center">
-                <CheckCircle2 size={18} className="text-neon-green" />
+              <div 
+                className="w-9 h-9 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: 'color-mix(in srgb, var(--neon-green) 10%, transparent)' }}
+              >
+                <CheckCircle2 size={18} style={{ color: 'var(--neon-green)' }} />
               </div>
-              <span className="text-[10px] text-terminal-dim tracking-wider uppercase">
+              <span className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase">
                 Total Paid (YTD)
               </span>
             </div>
-            <p className="text-xl font-display text-terminal-text font-mono">
+            <p className="text-xl font-display text-[var(--text-primary)] font-mono">
               ${ytdPaid.toFixed(2)}
             </p>
           </motion.div>
@@ -551,14 +561,17 @@ export default function InvoicesPage() {
             className="cyber-card p-5"
           >
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 rounded-lg bg-neon-yellow/10 flex items-center justify-center">
-                <Clock size={18} className="text-neon-yellow" />
+              <div 
+                className="w-9 h-9 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: 'color-mix(in srgb, var(--neon-yellow) 10%, transparent)' }}
+              >
+                <Clock size={18} style={{ color: 'var(--neon-yellow)' }} />
               </div>
-              <span className="text-[10px] text-terminal-dim tracking-wider uppercase">
+              <span className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase">
                 Pending
               </span>
             </div>
-            <p className="text-xl font-display text-terminal-text font-mono">
+            <p className="text-xl font-display text-[var(--text-primary)] font-mono">
               ${summary.totalPending.toFixed(2)}
             </p>
           </motion.div>
@@ -570,14 +583,17 @@ export default function InvoicesPage() {
             className="cyber-card p-5"
           >
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 rounded-lg bg-neon-purple/10 flex items-center justify-center">
-                <Calendar size={18} className="text-neon-purple" />
+              <div 
+                className="w-9 h-9 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: 'color-mix(in srgb, var(--neon-purple) 10%, transparent)' }}
+              >
+                <Calendar size={18} style={{ color: 'var(--neon-purple)' }} />
               </div>
-              <span className="text-[10px] text-terminal-dim tracking-wider uppercase">
+              <span className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase">
                 Next Invoice
               </span>
             </div>
-            <p className="text-lg font-display text-terminal-text">
+            <p className="text-lg font-display text-[var(--text-primary)]">
               {nextInvoiceDate
                 ? nextInvoiceDate.toLocaleDateString('en-US', {
                     month: 'short',
@@ -592,11 +608,11 @@ export default function InvoicesPage() {
         {/* Invoices List */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm text-terminal-text font-semibold flex items-center gap-2">
-              <FileText className="w-4 h-4 text-terminal-dim" />
+            <h2 className="text-sm font-semibold flex items-center gap-2 text-[var(--text-primary)]">
+              <FileText className="w-4 h-4" style={{ color: 'var(--text-secondary)' }} />
               Invoice History
             </h2>
-            <span className="text-[10px] text-terminal-dim">
+            <span className="text-[10px] text-[var(--text-secondary)]">
               {summary.invoiceCount} invoice{summary.invoiceCount !== 1 ? 's' : ''}
             </span>
           </div>
@@ -609,33 +625,41 @@ export default function InvoicesPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.03 }}
-                  className="cyber-card p-4 hover:border-neon-cyan/30 transition-all group cursor-pointer"
+                  className="cyber-card p-4 transition-all group cursor-pointer"
+                  style={{ borderColor: 'var(--border-color)' }}
                   onClick={() =>
                     setSelectedInvoice(
                       selectedInvoice?.id === invoice.id ? null : invoice
                     )
                   }
+                  onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--neon-cyan)'}
+                  onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border-color)'}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="w-9 h-9 rounded-lg bg-neon-cyan/10 flex items-center justify-center">
-                        <FileText size={18} className="text-neon-cyan" />
+                      <div 
+                        className="w-9 h-9 rounded-lg flex items-center justify-center"
+                        style={{ backgroundColor: 'color-mix(in srgb, var(--neon-cyan) 10%, transparent)' }}
+                      >
+                        <FileText size={18} style={{ color: 'var(--neon-cyan)' }} />
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold text-terminal-text font-mono">
+                          <span className="text-xs font-semibold font-mono text-[var(--text-primary)]">
                             {invoice.invoiceNumber}
                           </span>
                           <span
-                            className={`px-2 py-0.5 rounded-full text-[9px] font-medium flex items-center gap-1 ${getStatusClass(
-                              invoice.status
-                            )}`}
+                            className="px-2 py-0.5 rounded-full text-[9px] font-medium flex items-center gap-1"
+                            style={getStatusClass(invoice.status)}
                           >
                             {getStatusIcon(invoice.status)}
                             {invoice.status.toLowerCase()}
                           </span>
                           {invoice.billingReason && (
-                            <span className="text-[9px] text-terminal-dim bg-cyber-mid px-1.5 py-0.5 rounded">
+                            <span 
+                              className="text-[9px] px-1.5 py-0.5 rounded"
+                              style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--bg-tertiary)' }}
+                            >
                               {invoice.billingReason === 'subscription_cycle'
                                 ? 'Renewal'
                                 : invoice.billingReason === 'subscription_create'
@@ -648,7 +672,7 @@ export default function InvoicesPage() {
                             </span>
                           )}
                         </div>
-                        <p className="text-[10px] text-terminal-dim mt-0.5">
+                        <p className="text-[10px] mt-0.5 text-[var(--text-secondary)]">
                           {invoice.description} &middot;{' '}
                           {formatPeriod(invoice.periodStart, invoice.periodEnd)}
                         </p>
@@ -657,10 +681,10 @@ export default function InvoicesPage() {
 
                     <div className="flex items-center gap-4">
                       <div className="text-right">
-                        <p className="text-sm font-semibold text-terminal-text font-mono">
+                        <p className="text-sm font-semibold font-mono text-[var(--text-primary)]">
                           {invoice.totalDisplay}
                         </p>
-                        <p className="text-[10px] text-terminal-dim">
+                        <p className="text-[10px] text-[var(--text-secondary)]">
                           {formatDate(invoice.createdAt)}
                         </p>
                       </div>
@@ -671,7 +695,10 @@ export default function InvoicesPage() {
                           e.stopPropagation();
                           setPreviewInvoice(invoice);
                         }}
-                        className="p-1.5 text-terminal-dim hover:text-neon-cyan hover:bg-neon-cyan/5 rounded transition-colors opacity-0 group-hover:opacity-100"
+                        className="p-1.5 rounded transition-colors opacity-0 group-hover:opacity-100"
+                        style={{ color: 'var(--text-secondary)' }}
+                        onMouseEnter={(e) => e.currentTarget.style.color = 'var(--neon-cyan)'}
+                        onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
                         title="Preview Invoice"
                       >
                         <Eye size={16} />
@@ -684,7 +711,10 @@ export default function InvoicesPage() {
                             handleDownloadPolar(invoice.id, invoice.polarInvoiceUrl);
                           }}
                           disabled={loadingPolarInvoice === invoice.id}
-                          className="p-1.5 text-terminal-dim hover:text-neon-green hover:bg-neon-green/5 rounded transition-colors opacity-0 group-hover:opacity-100"
+                          className="p-1.5 rounded transition-colors opacity-0 group-hover:opacity-100"
+                          style={{ color: 'var(--text-secondary)' }}
+                          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--neon-green)'}
+                          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
                           title="Download Polar Invoice"
                         >
                           {loadingPolarInvoice === invoice.id ? (
@@ -697,9 +727,11 @@ export default function InvoicesPage() {
 
                       <ChevronRight
                         size={16}
-                        className={`text-terminal-dim transition-transform ${
-                          selectedInvoice?.id === invoice.id ? 'rotate-90' : ''
-                        }`}
+                        className="transition-transform"
+                        style={{ 
+                          color: 'var(--text-secondary)',
+                          transform: selectedInvoice?.id === invoice.id ? 'rotate(90deg)' : 'rotate(0deg)'
+                        }}
                       />
                     </div>
                   </div>
@@ -711,38 +743,39 @@ export default function InvoicesPage() {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="mt-4 pt-4 border-t border-cyber-light/10"
+                        className="mt-4 pt-4"
+                        style={{ borderTop: '1px solid var(--border-color)' }}
                       >
                         <div className="grid md:grid-cols-3 gap-4 text-xs">
                           <div>
-                            <p className="text-terminal-dim mb-1">Total</p>
-                            <p className="font-mono text-terminal-text">
+                            <p className="mb-1 text-[var(--text-secondary)]">Total</p>
+                            <p className="font-mono text-[var(--text-primary)]">
                               {invoice.totalDisplay}
                             </p>
                           </div>
                           <div>
-                            <p className="text-terminal-dim mb-1">Requests</p>
-                            <p className="font-mono text-terminal-text">
+                            <p className="mb-1 text-[var(--text-secondary)]">Requests</p>
+                            <p className="font-mono text-[var(--text-primary)]">
                               {invoice.requestCount.toLocaleString()}
                             </p>
                           </div>
                           <div>
-                            <p className="text-terminal-dim mb-1">Tokens</p>
-                            <p className="font-mono text-terminal-text">
+                            <p className="mb-1 text-[var(--text-secondary)]">Tokens</p>
+                            <p className="font-mono text-[var(--text-primary)]">
                               {formatNumber(invoice.totalTokens)}
                             </p>
                           </div>
                           <div>
-                            <p className="text-terminal-dim mb-1">Due Date</p>
-                            <p className="text-terminal-text">{formatDate(invoice.dueDate)}</p>
+                            <p className="mb-1 text-[var(--text-secondary)]">Due Date</p>
+                            <p className="text-[var(--text-primary)]">{formatDate(invoice.dueDate)}</p>
                           </div>
                           <div>
-                            <p className="text-terminal-dim mb-1">Paid At</p>
-                            <p className="text-terminal-text">{formatDate(invoice.paidAt)}</p>
+                            <p className="mb-1 text-[var(--text-secondary)]">Paid At</p>
+                            <p className="text-[var(--text-primary)]">{formatDate(invoice.paidAt)}</p>
                           </div>
                           <div>
-                            <p className="text-terminal-dim mb-1">Currency</p>
-                            <p className="font-mono text-terminal-text uppercase">
+                            <p className="mb-1 text-[var(--text-secondary)]">Currency</p>
+                            <p className="font-mono text-[var(--text-primary)] uppercase">
                               {invoice.currency}
                             </p>
                           </div>
@@ -754,7 +787,10 @@ export default function InvoicesPage() {
                               e.stopPropagation();
                               setPreviewInvoice(invoice);
                             }}
-                            className="flex items-center gap-2 px-3 py-1.5 text-xs text-neon-cyan hover:bg-neon-cyan/10 rounded-lg transition-colors border border-neon-cyan/20"
+                            className="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg transition-colors border"
+                            style={{ color: 'var(--neon-cyan)', borderColor: 'color-mix(in srgb, var(--neon-cyan) 20%, transparent)' }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--neon-cyan) 10%, transparent)'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                           >
                             <Eye size={14} />
                             Preview
@@ -766,7 +802,10 @@ export default function InvoicesPage() {
                                 handleDownloadPolar(invoice.id, invoice.polarInvoiceUrl);
                               }}
                               disabled={loadingPolarInvoice === invoice.id}
-                              className="flex items-center gap-2 px-3 py-1.5 text-xs text-neon-green hover:bg-neon-green/10 rounded-lg transition-colors border border-neon-green/20"
+                              className="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg transition-colors border disabled:opacity-50"
+                              style={{ color: 'var(--neon-green)', borderColor: 'color-mix(in srgb, var(--neon-green) 20%, transparent)' }}
+                              onMouseEnter={(e) => !loadingPolarInvoice && (e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--neon-green) 10%, transparent)')}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                             >
                               {loadingPolarInvoice === invoice.id ? (
                                 <Loader2 size={14} className="animate-spin" />
@@ -786,17 +825,21 @@ export default function InvoicesPage() {
             </div>
           ) : (
             <div className="text-center py-16">
-              <div className="w-14 h-14 rounded-full bg-cyber-mid flex items-center justify-center mx-auto mb-4">
-                <FileText size={28} className="text-terminal-dim/40" />
+              <div 
+                className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
+                style={{ backgroundColor: 'var(--bg-tertiary)' }}
+              >
+                <FileText size={28} style={{ color: 'var(--text-secondary)', opacity: 0.4 }} />
               </div>
-              <h3 className="text-sm font-semibold text-terminal-text mb-2">No invoices yet</h3>
-              <p className="text-xs text-terminal-dim mb-4 max-w-sm mx-auto">
+              <h3 className="text-sm font-semibold mb-2 text-[var(--text-primary)]">No invoices yet</h3>
+              <p className="text-xs mb-4 max-w-sm mx-auto text-[var(--text-secondary)]">
                 Your billing history will appear here once you subscribe to a paid
                 plan. Invoices are created automatically when payments are processed through Polar.
               </p>
               <Link
                 href="/dashboard/billing"
-                className="inline-flex items-center gap-2 px-4 py-2 text-xs bg-neon-purple text-cyber-black rounded-lg hover:bg-neon-purple/90 transition-colors font-semibold"
+                className="inline-flex items-center gap-2 px-4 py-2 text-xs rounded-lg transition-colors font-semibold"
+                style={{ backgroundColor: 'var(--neon-purple)', color: 'var(--cyber-black)' }}
               >
                 View Plans
                 <ChevronRight size={14} />
@@ -810,9 +853,10 @@ export default function InvoicesPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
-          className="cyber-card p-4 border-neon-cyan/10"
+          className="cyber-card p-4"
+          style={{ borderColor: 'color-mix(in srgb, var(--neon-cyan) 10%, transparent)' }}
         >
-          <div className="flex items-center gap-2 text-[10px] text-terminal-dim">
+          <div className="flex items-center gap-2 text-[10px] text-[var(--text-secondary)]">
             <ExternalLink className="w-3 h-3" />
             <span>
               Payments processed by{' '}
@@ -820,7 +864,8 @@ export default function InvoicesPage() {
                 href="https://polar.sh"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-neon-cyan hover:underline"
+                className="hover:underline"
+                style={{ color: 'var(--neon-cyan)' }}
               >
                 Polar.sh
               </a>

@@ -144,14 +144,14 @@ export default function UsagePage() {
     })) || [];
 
   return (
-    <div className="min-h-screen bg-cyber-black">
+    <div className="min-h-screen bg-[var(--bg-primary)]">
       {/* Header */}
-      <header className="border-b border-cyber-light/10 bg-cyber-darker/50">
+      <header className="border-b border-[var(--border-color)] bg-[var(--bg-secondary)]">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex justify-center items-center gap-4">
             <Link
               href="/dashboard/platform"
-              className="text-terminal-dim hover:text-neon-cyan transition-colors"
+              className="text-[var(--text-secondary)] hover:text-[var(--neon-cyan)] transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
            </Link>
@@ -164,23 +164,23 @@ export default function UsagePage() {
               className="object-contain"
             /> 
             <div className="flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-neon-green" />
-              <span className="text-sm text-terminal-text font-semibold tracking-wide">
+              <BarChart3 className="w-4 h-4" style={{ color: 'var(--neon-green)' }} />
+              <span className="text-sm text-[var(--text-primary)] font-semibold tracking-wide">
                 Usage
               </span>
             </div>
           </div>
           <div className="flex items-center gap-3">
             {/* Period selector */}
-            <div className="flex gap-1 bg-cyber-darker rounded p-0.5">
+            <div className="flex gap-1 rounded p-0.5" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
               {PERIOD_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
                   onClick={() => setPeriod(opt.value)}
                   className={`px-2.5 py-1 text-[10px] rounded transition-colors ${
                     period === opt.value
-                      ? 'bg-neon-cyan/10 text-neon-cyan'
-                      : 'text-terminal-dim hover:text-terminal-text'
+                      ? 'bg-[var(--neon-cyan)]/10 text-[var(--neon-cyan)]'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                   }`}
                 >
                   {opt.label}
@@ -189,7 +189,7 @@ export default function UsagePage() {
             </div>
             <button
               onClick={fetchUsage}
-              className="p-1.5 text-terminal-dim hover:text-neon-cyan transition-colors"
+              className="p-1.5 text-[var(--text-secondary)] hover:text-[var(--neon-cyan)] transition-colors"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             </button>
@@ -199,9 +199,9 @@ export default function UsagePage() {
 
       <div className="max-w-5xl mx-auto px-6 py-8">
         {error && (
-          <div className="mb-4 cyber-card p-3 border-neon-red/30 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-neon-red" />
-            <span className="text-xs text-neon-red">{error}</span>
+          <div className="mb-4 cyber-card p-3 flex items-center gap-2" style={{ borderColor: 'var(--neon-red)', borderWidth: '1px' }}>
+            <AlertTriangle className="w-4 h-4" style={{ color: 'var(--neon-red)' }} />
+            <span className="text-xs" style={{ color: 'var(--neon-red)' }}>{error}</span>
           </div>
         )}
 
@@ -212,25 +212,25 @@ export default function UsagePage() {
               label: 'Total Requests',
               value: data?.summary.totalRequests ?? '—',
               icon: Activity,
-              color: 'text-neon-cyan',
+              color: 'var(--neon-cyan)',
             },
             {
               label: 'Total Tokens',
               value: data ? formatTokens(data.summary.totalTokens) : '—',
               icon: Zap,
-              color: 'text-neon-green',
+              color: 'var(--neon-green)',
             },
             {
               label: 'Avg Latency',
               value: data ? `${data.summary.avgLatencyMs}ms` : '—',
               icon: Clock,
-              color: 'text-neon-yellow',
+              color: 'var(--neon-yellow)',
             },
             {
               label: 'Total Cost',
               value: data ? formatCost(data.summary.totalCostMicro) : '—',
               icon: TrendingUp,
-              color: 'text-neon-purple',
+              color: 'var(--neon-purple)',
             },
           ].map((card) => (
             <motion.div
@@ -240,12 +240,12 @@ export default function UsagePage() {
               className="cyber-card p-4"
             >
               <div className="flex items-center gap-1.5 mb-2">
-                <card.icon className={`w-3 h-3 ${card.color}`} />
-                <span className="text-[10px] text-terminal-dim tracking-wider uppercase">
+                <card.icon className="w-3 h-3" style={{ color: card.color }} />
+                <span className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase">
                   {card.label}
                 </span>
               </div>
-              <span className="text-lg font-display text-terminal-text">
+              <span className="text-lg font-display text-[var(--text-primary)]">
                 {card.value}
               </span>
             </motion.div>
@@ -260,8 +260,8 @@ export default function UsagePage() {
             className="mb-6 cyber-card p-4"
           >
             <div className="flex items-center gap-2 mb-3">
-              <Activity className="w-3.5 h-3.5 text-neon-cyan" />
-              <span className="text-[10px] text-terminal-dim tracking-wider uppercase">
+              <Activity className="w-3.5 h-3.5" style={{ color: 'var(--neon-cyan)' }} />
+              <span className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase">
                 Current Rate Limits — {data.rateLimits.tierDisplay}
               </span>
             </div>
@@ -279,23 +279,20 @@ export default function UsagePage() {
                 const pct = limit > 0 ? Math.round((used / limit) * 100) : 0;
                 return (
                   <div key={key}>
-                    <div className="flex justify-between text-[10px] text-terminal-dim mb-1">
+                    <div className="flex justify-between text-[10px] text-[var(--text-secondary)] mb-1">
                       <span>{label}</span>
                       <span>
                         {key.startsWith('t') ? formatTokens(used) : used}/
                         {key.startsWith('t') ? formatTokens(limit) : limit}
                       </span>
                     </div>
-                    <div className="h-2 bg-cyber-darker rounded-full overflow-hidden">
+                    <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
                       <div
-                        className={`h-full rounded-full transition-all ${
-                          pct > 80
-                            ? 'bg-neon-red'
-                            : pct > 50
-                            ? 'bg-neon-yellow'
-                            : 'bg-neon-cyan'
-                        }`}
-                        style={{ width: `${Math.min(100, pct)}%` }}
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${Math.min(100, pct)}%`,
+                          backgroundColor: pct > 80 ? 'var(--neon-red)' : pct > 50 ? 'var(--neon-yellow)' : 'var(--neon-cyan)'
+                        }}
                       />
                     </div>
                   </div>
@@ -321,22 +318,23 @@ export default function UsagePage() {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`mb-6 cyber-card p-4 ${
-                anyNearLimit
-                  ? 'border-neon-red/30 bg-neon-red/5'
-                  : 'border-neon-purple/20 bg-neon-purple/5'
-              }`}
+              className="mb-6 cyber-card p-4"
+              style={{
+                borderColor: anyNearLimit ? 'var(--neon-red)' : 'var(--neon-purple)',
+                borderWidth: '1px',
+                backgroundColor: anyNearLimit ? 'color-mix(in srgb, var(--neon-red) 5%, transparent)' : 'color-mix(in srgb, var(--neon-purple) 5%, transparent)'
+              }}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Rocket className={`w-4 h-4 ${anyNearLimit ? 'text-neon-red' : 'text-neon-purple'}`} />
+                  <Rocket className="w-4 h-4" style={{ color: anyNearLimit ? 'var(--neon-red)' : 'var(--neon-purple)' }} />
                   <div>
-                    <p className="text-xs text-terminal-text font-semibold">
+                    <p className="text-xs text-[var(--text-primary)] font-semibold">
                       {anyNearLimit
                         ? 'Rate limits nearly exceeded'
                         : 'Free tier — limited to 10 RPM, 200 RPD'}
                     </p>
-                    <p className="text-[10px] text-terminal-dim mt-0.5">
+                    <p className="text-[10px] text-[var(--text-secondary)] mt-0.5">
                       {anyNearLimit
                         ? 'Upgrade your plan to get higher rate limits and avoid interruptions.'
                         : 'Upgrade for 6x more requests per minute and 25x more per day.'}
@@ -345,7 +343,8 @@ export default function UsagePage() {
                 </div>
                 <Link
                   href="/dashboard/billing"
-                  className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-neon-purple to-neon-cyan text-cyber-black text-[10px] font-semibold rounded hover:opacity-90 transition-opacity whitespace-nowrap"
+                  className="flex items-center gap-1.5 px-4 py-2 text-cyber-black text-[10px] font-semibold rounded hover:opacity-90 transition-opacity whitespace-nowrap"
+                  style={{ background: 'linear-gradient(to right, var(--neon-purple), var(--neon-cyan))' }}
                 >
                   <ArrowUpRight className="w-3 h-3" />
                   Upgrade Plan
@@ -363,7 +362,7 @@ export default function UsagePage() {
             transition={{ delay: 0.1 }}
             className="mb-6 cyber-card p-4"
           >
-            <span className="text-[10px] text-terminal-dim tracking-wider uppercase">
+            <span className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase">
               Request Timeline
             </span>
             <div className="mt-3 h-48">
@@ -371,33 +370,33 @@ export default function UsagePage() {
                 <AreaChart data={chartData}>
                   <defs>
                     <linearGradient id="colorReqs" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#00f0ff" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#00f0ff" stopOpacity={0} />
+                      <stop offset="5%" stopColor="var(--neon-cyan)" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="var(--neon-cyan)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#242440" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
                   <XAxis
                     dataKey="time"
-                    tick={{ fontSize: 10, fill: '#3d4455' }}
-                    axisLine={{ stroke: '#242440' }}
+                    tick={{ fontSize: 10, fill: 'var(--text-secondary)' }}
+                    axisLine={{ stroke: 'var(--border-color)' }}
                   />
                   <YAxis
-                    tick={{ fontSize: 10, fill: '#3d4455' }}
-                    axisLine={{ stroke: '#242440' }}
+                    tick={{ fontSize: 10, fill: 'var(--text-secondary)' }}
+                    axisLine={{ stroke: 'var(--border-color)' }}
                   />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#0d0d14',
-                      border: '1px solid #242440',
+                      backgroundColor: 'var(--bg-secondary)',
+                      border: '1px solid var(--border-color)',
                       borderRadius: '4px',
                       fontSize: '11px',
-                      color: '#b3b1ad',
+                      color: 'var(--text-primary)',
                     }}
                   />
                   <Area
                     type="monotone"
                     dataKey="requests"
-                    stroke="#00f0ff"
+                    stroke="var(--neon-cyan)"
                     fillOpacity={1}
                     fill="url(#colorReqs)"
                     strokeWidth={2}
@@ -405,9 +404,9 @@ export default function UsagePage() {
                   <Area
                     type="monotone"
                     dataKey="errors"
-                    stroke="#ff3333"
+                    stroke="var(--neon-red)"
                     fillOpacity={0.1}
-                    fill="#ff3333"
+                    fill="var(--neon-red)"
                     strokeWidth={1}
                   />
                 </AreaChart>
@@ -424,35 +423,35 @@ export default function UsagePage() {
             transition={{ delay: 0.15 }}
             className="mb-6 cyber-card p-4"
           >
-            <span className="text-[10px] text-terminal-dim tracking-wider uppercase">
+            <span className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase">
               Token Consumption
             </span>
             <div className="mt-3 h-48">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#242440" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
                   <XAxis
                     dataKey="time"
-                    tick={{ fontSize: 10, fill: '#3d4455' }}
-                    axisLine={{ stroke: '#242440' }}
+                    tick={{ fontSize: 10, fill: 'var(--text-secondary)' }}
+                    axisLine={{ stroke: 'var(--border-color)' }}
                   />
                   <YAxis
-                    tick={{ fontSize: 10, fill: '#3d4455' }}
-                    axisLine={{ stroke: '#242440' }}
+                    tick={{ fontSize: 10, fill: 'var(--text-secondary)' }}
+                    axisLine={{ stroke: 'var(--border-color)' }}
                   />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#0d0d14',
-                      border: '1px solid #242440',
+                      backgroundColor: 'var(--bg-secondary)',
+                      border: '1px solid var(--border-color)',
                       borderRadius: '4px',
                       fontSize: '11px',
-                      color: '#b3b1ad',
+                      color: 'var(--text-primary)',
                     }}
                     formatter={(value: number) => [formatTokens(value), 'Tokens']}
                   />
                   <Bar dataKey="tokens" radius={[2, 2, 0, 0]}>
                     {chartData.map((_, index) => (
-                      <Cell key={index} fill="#00ff9d" fillOpacity={0.6} />
+                      <Cell key={index} fill="var(--neon-green)" fillOpacity={0.6} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -470,13 +469,13 @@ export default function UsagePage() {
             transition={{ delay: 0.2 }}
             className="cyber-card p-4"
           >
-            <span className="text-[10px] text-terminal-dim tracking-wider uppercase mb-3 block">
+            <span className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase mb-3 block">
               By Endpoint
             </span>
             {data?.byEndpoint.length ? (
               <table className="w-full text-[10px]">
                 <thead>
-                  <tr className="text-terminal-dim border-b border-cyber-light/10">
+                  <tr className="text-[var(--text-secondary)] border-b" style={{ borderColor: 'var(--border-color)' }}>
                     <th className="text-left py-1.5">Endpoint</th>
                     <th className="text-right py-1.5">Requests</th>
                     <th className="text-right py-1.5">Tokens</th>
@@ -487,9 +486,10 @@ export default function UsagePage() {
                   {data.byEndpoint.map((e) => (
                     <tr
                       key={e.endpoint}
-                      className="border-b border-cyber-light/5 text-terminal-text"
+                      className="border-b"
+                      style={{ borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
                     >
-                      <td className="py-1.5 text-neon-cyan">{e.endpoint}</td>
+                      <td className="py-1.5" style={{ color: 'var(--neon-cyan)' }}>{e.endpoint}</td>
                       <td className="text-right py-1.5">{e.requests}</td>
                       <td className="text-right py-1.5">{formatTokens(e.tokens)}</td>
                       <td className="text-right py-1.5">{e.avgLatencyMs}ms</td>
@@ -498,7 +498,7 @@ export default function UsagePage() {
                 </tbody>
               </table>
             ) : (
-              <p className="text-xs text-terminal-dim">No data for this period</p>
+              <p className="text-xs text-[var(--text-secondary)]">No data for this period</p>
             )}
           </motion.div>
 
@@ -509,13 +509,13 @@ export default function UsagePage() {
             transition={{ delay: 0.25 }}
             className="cyber-card p-4"
           >
-            <span className="text-[10px] text-terminal-dim tracking-wider uppercase mb-3 block">
+            <span className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase mb-3 block">
               By API Key
             </span>
             {data?.byApiKey.length ? (
               <table className="w-full text-[10px]">
                 <thead>
-                  <tr className="text-terminal-dim border-b border-cyber-light/10">
+                  <tr className="text-[var(--text-secondary)] border-b" style={{ borderColor: 'var(--border-color)' }}>
                     <th className="text-left py-1.5">Key</th>
                     <th className="text-right py-1.5">Requests</th>
                     <th className="text-right py-1.5">Tokens</th>
@@ -526,11 +526,12 @@ export default function UsagePage() {
                   {data.byApiKey.map((k) => (
                     <tr
                       key={k.keyId}
-                      className="border-b border-cyber-light/5 text-terminal-text"
+                      className="border-b"
+                      style={{ borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
                     >
                       <td className="py-1.5">
-                        <div className="text-neon-cyan">{k.keyName}</div>
-                        <div className="text-terminal-dim">{k.keyPrefix}</div>
+                        <div style={{ color: 'var(--neon-cyan)' }}>{k.keyName}</div>
+                        <div className="text-[var(--text-secondary)]">{k.keyPrefix}</div>
                       </td>
                       <td className="text-right py-1.5">{k.requests}</td>
                       <td className="text-right py-1.5">{formatTokens(k.tokens)}</td>
@@ -540,7 +541,7 @@ export default function UsagePage() {
                 </tbody>
               </table>
             ) : (
-              <p className="text-xs text-terminal-dim">No data for this period</p>
+              <p className="text-xs text-[var(--text-secondary)]">No data for this period</p>
             )}
           </motion.div>
         </div>
@@ -553,27 +554,27 @@ export default function UsagePage() {
             transition={{ delay: 0.3 }}
             className="mt-4 cyber-card p-4"
           >
-            <span className="text-[10px] text-terminal-dim tracking-wider uppercase mb-3 block">
+            <span className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase mb-3 block">
               Transfer Summary
             </span>
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
-                <div className="text-lg font-display text-terminal-text">
+                <div className="text-lg font-display text-[var(--text-primary)]">
                   {formatBytes(data.summary.totalBytesIn)}
                 </div>
-                <div className="text-[10px] text-terminal-dim">Data In</div>
+                <div className="text-[10px] text-[var(--text-secondary)]">Data In</div>
               </div>
               <div>
-                <div className="text-lg font-display text-terminal-text">
+                <div className="text-lg font-display text-[var(--text-primary)]">
                   {formatBytes(data.summary.totalBytesOut)}
                 </div>
-                <div className="text-[10px] text-terminal-dim">Data Out</div>
+                <div className="text-[10px] text-[var(--text-secondary)]">Data Out</div>
               </div>
               <div>
-                <div className="text-lg font-display text-terminal-text">
+                <div className="text-lg font-display text-[var(--text-primary)]">
                   {data.summary.successRate}%
                 </div>
-                <div className="text-[10px] text-terminal-dim">Success Rate</div>
+                <div className="text-[10px] text-[var(--text-secondary)]">Success Rate</div>
               </div>
             </div>
           </motion.div>

@@ -92,11 +92,11 @@ function formatCostPer(micro: number): string {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  draft: 'text-terminal-dim',
-  pending: 'text-neon-yellow',
-  paid: 'text-neon-green',
-  overdue: 'text-neon-red',
-  void: 'text-terminal-dim',
+  draft: 'var(--text-secondary)',
+  pending: 'var(--neon-yellow)',
+  paid: 'var(--neon-green)',
+  overdue: 'var(--neon-red)',
+  void: 'var(--text-secondary)',
 };
 
 export default function BillingPage() {
@@ -117,7 +117,6 @@ export default function BillingPage() {
       const params = new URLSearchParams(window.location.search);
       if (params.get('checkout') === 'success') {
         setCheckoutSuccess(true);
-        // Clean up URL
         window.history.replaceState({}, '', window.location.pathname);
       }
     }
@@ -191,7 +190,6 @@ export default function BillingPage() {
   };
 
   const handleViewInvoice = async (invoiceId: string, cachedUrl: string | null) => {
-    // If we have a cached URL, open it directly
     if (cachedUrl) {
       window.open(cachedUrl, '_blank');
       return;
@@ -204,7 +202,6 @@ export default function BillingPage() {
       if (!res.ok) throw new Error(json.error);
       if (json.url) {
         window.open(json.url, '_blank');
-        // Update local state so subsequent clicks use cache
         if (data) {
           setData({
             ...data,
@@ -223,21 +220,21 @@ export default function BillingPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-cyber-black flex items-center justify-center">
-        <CreditCard className="w-6 h-6 text-neon-purple/30 animate-pulse" />
+      <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
+        <CreditCard className="w-6 h-6 animate-pulse" style={{ color: 'var(--neon-purple)', opacity: 0.3 }} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-cyber-black">
+    <div className="min-h-screen bg-[var(--bg-primary)]">
       {/* Header */}
-      <header className="border-b border-cyber-light/10 bg-cyber-darker/50">
+      <header className="border-b border-[var(--border-color)] bg-[var(--bg-secondary)]">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link
                 href="/dashboard/platform"
-                className="text-terminal-dim hover:text-neon-cyan transition-colors"
+                className="text-[var(--text-secondary)] hover:text-[var(--neon-cyan)] transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />
             </Link>
@@ -250,15 +247,15 @@ export default function BillingPage() {
               className="object-contain"
             /> 
             <div className="flex items-center gap-2">
-              <CreditCard className="w-4 h-4 text-neon-purple" />
-              <span className="text-sm text-terminal-text font-semibold tracking-wide">
+              <CreditCard className="w-4 h-4" style={{ color: 'var(--neon-purple)' }} />
+              <span className="text-sm text-[var(--text-primary)] font-semibold tracking-wide">
                 Billing
               </span>
             </div>
           </div>
           <button
             onClick={() => setShowSettings(!showSettings)}
-            className="flex items-center gap-1.5 text-xs text-terminal-dim hover:text-neon-cyan transition-colors"
+            className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--neon-cyan)] transition-colors"
           >
             <Settings className="w-3.5 h-3.5" />
             Settings
@@ -268,12 +265,12 @@ export default function BillingPage() {
 
       <div className="max-w-5xl mx-auto px-6 py-8">
         {error && (
-          <div className="mb-4 cyber-card p-3 border-neon-red/30 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-neon-red" />
-            <span className="text-xs text-neon-red">{error}</span>
+          <div className="mb-4 cyber-card p-3 flex items-center gap-2" style={{ borderColor: 'var(--neon-red)', borderWidth: '1px' }}>
+            <AlertTriangle className="w-4 h-4" style={{ color: 'var(--neon-red)' }} />
+            <span className="text-xs" style={{ color: 'var(--neon-red)' }}>{error}</span>
             <button
               onClick={() => setError('')}
-              className="ml-auto text-xs text-terminal-dim hover:text-terminal-text"
+              className="ml-auto text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             >
               dismiss
             </button>
@@ -285,16 +282,17 @@ export default function BillingPage() {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-4 cyber-card p-4 border-neon-green/30 bg-neon-green/5"
+            className="mb-4 cyber-card p-4"
+            style={{ borderColor: 'var(--neon-green)', borderWidth: '1px', backgroundColor: 'color-mix(in srgb, var(--neon-green) 5%, transparent)' }}
           >
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-neon-green" />
-              <span className="text-xs text-neon-green font-semibold">
+              <CheckCircle2 className="w-4 h-4" style={{ color: 'var(--neon-green)' }} />
+              <span className="text-xs font-semibold" style={{ color: 'var(--neon-green)' }}>
                 Payment successful! Your tier will be upgraded shortly once the payment is confirmed.
               </span>
               <button
                 onClick={() => setCheckoutSuccess(false)}
-                className="ml-auto text-xs text-terminal-dim hover:text-terminal-text"
+                className="ml-auto text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               >
                 dismiss
               </button>
@@ -307,30 +305,32 @@ export default function BillingPage() {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 cyber-card p-6 border-neon-purple/30 bg-gradient-to-r from-neon-purple/5 to-neon-cyan/5"
+            className="mb-6 cyber-card p-6"
+            style={{ borderColor: 'var(--neon-purple)', borderWidth: '1px', background: 'linear-gradient(to right, color-mix(in srgb, var(--neon-purple) 5%, transparent), color-mix(in srgb, var(--neon-cyan) 5%, transparent))' }}
           >
             <div className="flex items-start justify-between">
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <Rocket className="w-5 h-5 text-neon-purple" />
-                  <h3 className="text-sm font-semibold text-terminal-text">
+                  <Rocket className="w-5 h-5" style={{ color: 'var(--neon-purple)' }} />
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">
                     Upgrade Your Plan
                   </h3>
                 </div>
-                <p className="text-xs text-terminal-dim max-w-md">
+                <p className="text-xs text-[var(--text-secondary)] max-w-md">
                   You&apos;re on the free tier (10 RPM, 200 RPD). Upgrade to unlock higher
                   rate limits, faster throughput, and priority support.
                 </p>
-                <div className="flex gap-2 mt-3 text-[10px] text-terminal-dim">
-                  <span className="bg-cyber-mid px-2 py-0.5 rounded">60+ RPM</span>
-                  <span className="bg-cyber-mid px-2 py-0.5 rounded">5,000+ RPD</span>
-                  <span className="bg-cyber-mid px-2 py-0.5 rounded">100K+ TPM</span>
+                <div className="flex gap-2 mt-3 text-[10px] text-[var(--text-secondary)]">
+                  <span className="px-2 py-0.5 rounded" style={{ backgroundColor: 'var(--bg-tertiary)' }}>60+ RPM</span>
+                  <span className="px-2 py-0.5 rounded" style={{ backgroundColor: 'var(--bg-tertiary)' }}>5,000+ RPD</span>
+                  <span className="px-2 py-0.5 rounded" style={{ backgroundColor: 'var(--bg-tertiary)' }}>100K+ TPM</span>
                 </div>
               </div>
               <button
                 onClick={() => handleUpgrade('tier_1')}
                 disabled={checkingOut}
-                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-neon-purple to-neon-cyan text-cyber-black text-xs font-semibold rounded hover:opacity-90 transition-opacity disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-2.5 text-cyber-black text-xs font-semibold rounded hover:opacity-90 transition-opacity disabled:opacity-50"
+                style={{ background: 'linear-gradient(to right, var(--neon-purple), var(--neon-cyan))' }}
               >
                 {checkingOut ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -349,29 +349,31 @@ export default function BillingPage() {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="cyber-card p-5 border-neon-purple/20"
+              className="cyber-card p-5"
+              style={{ borderColor: 'var(--neon-purple)', borderWidth: '1px' }}
             >
               <div className="flex items-center gap-2 mb-3">
-                <Zap className="w-4 h-4 text-neon-purple" />
-                <span className="text-[10px] text-terminal-dim tracking-wider uppercase">
+                <Zap className="w-4 h-4" style={{ color: 'var(--neon-purple)' }} />
+                <span className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase">
                   Current Tier
                 </span>
               </div>
-              <div className="text-xl font-display text-neon-purple">
+              <div className="text-xl font-display" style={{ color: 'var(--neon-purple)' }}>
                 {data.account.tierDisplay}
               </div>
               {data.account.subscriptionStatus && (
                 <div className="mt-2 flex items-center gap-1.5">
                   <div
-                    className={`w-1.5 h-1.5 rounded-full ${
-                      data.account.subscriptionStatus === 'active'
-                        ? 'bg-neon-green'
+                    className="w-1.5 h-1.5 rounded-full"
+                    style={{
+                      backgroundColor: data.account.subscriptionStatus === 'active'
+                        ? 'var(--neon-green)'
                         : data.account.subscriptionStatus === 'canceled'
-                        ? 'bg-neon-yellow'
-                        : 'bg-terminal-dim'
-                    }`}
+                        ? 'var(--neon-yellow)'
+                        : 'var(--text-secondary)'
+                    }}
                   />
-                  <span className="text-[10px] text-terminal-dim capitalize">
+                  <span className="text-[10px] text-[var(--text-secondary)] capitalize">
                     {data.account.subscriptionStatus === 'active'
                       ? 'Subscription Active'
                       : data.account.subscriptionStatus === 'canceled'
@@ -389,15 +391,15 @@ export default function BillingPage() {
               className="cyber-card p-5"
             >
               <div className="flex items-center gap-2 mb-3">
-                <TrendingUp className="w-4 h-4 text-neon-green" />
-                <span className="text-[10px] text-terminal-dim tracking-wider uppercase">
+                <TrendingUp className="w-4 h-4" style={{ color: 'var(--neon-green)' }} />
+                <span className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase">
                   Monthly Spend
                 </span>
               </div>
-              <div className="text-xl font-display text-terminal-text">
+              <div className="text-xl font-display text-[var(--text-primary)]">
                 {data.account.monthlySpendDisplay}
               </div>
-              <div className="text-[10px] text-terminal-dim mt-1">
+              <div className="text-[10px] text-[var(--text-secondary)] mt-1">
                 Budget: {data.account.monthlyBudgetDisplay}
               </div>
             </motion.div>
@@ -409,15 +411,15 @@ export default function BillingPage() {
               className="cyber-card p-5"
             >
               <div className="flex items-center gap-2 mb-3">
-                <CreditCard className="w-4 h-4 text-neon-cyan" />
-                <span className="text-[10px] text-terminal-dim tracking-wider uppercase">
+                <CreditCard className="w-4 h-4" style={{ color: 'var(--neon-cyan)' }} />
+                <span className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase">
                   Lifetime Spend
                 </span>
               </div>
-              <div className="text-xl font-display text-terminal-text">
+              <div className="text-xl font-display text-[var(--text-primary)]">
                 {data.account.totalSpendDisplay}
               </div>
-              <div className="text-[10px] text-terminal-dim mt-1">
+              <div className="text-[10px] text-[var(--text-secondary)] mt-1">
                 Since{' '}
                 {new Date(data.account.billingCycleStart).toLocaleDateString()}
               </div>
@@ -434,22 +436,23 @@ export default function BillingPage() {
             className="mb-6 cyber-card p-5"
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-terminal-text font-semibold">
+              <span className="text-xs text-[var(--text-primary)] font-semibold">
                 Progress to {data.upgrade.nextTierDisplay}
               </span>
-              <span className="text-[10px] text-terminal-dim">
+              <span className="text-[10px] text-[var(--text-secondary)]">
                 {data.account.totalSpendDisplay} / {data.upgrade.spendRequired}
               </span>
             </div>
-            <div className="h-3 bg-cyber-darker rounded-full overflow-hidden">
+            <div className="h-3 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${data.upgrade.progressPercent}%` }}
                 transition={{ duration: 0.8, ease: 'easeOut' }}
-                className="h-full rounded-full bg-gradient-to-r from-neon-purple to-neon-cyan"
+                className="h-full rounded-full"
+                style={{ background: 'linear-gradient(to right, var(--neon-purple), var(--neon-cyan))' }}
               />
             </div>
-            <p className="text-[10px] text-terminal-dim mt-2">
+            <p className="text-[10px] text-[var(--text-secondary)] mt-2">
               Spend {data.upgrade.spendRequired} total to auto-upgrade. Higher
               tiers unlock increased rate limits (RPM, RPD, TPM, TPD).
             </p>
@@ -463,13 +466,13 @@ export default function BillingPage() {
             animate={{ opacity: 1, height: 'auto' }}
             className="mb-6 cyber-card p-5"
           >
-            <h3 className="text-sm text-terminal-text font-semibold mb-4 flex items-center gap-2">
-              <Settings className="w-4 h-4 text-neon-cyan" />
+            <h3 className="text-sm text-[var(--text-primary)] font-semibold mb-4 flex items-center gap-2">
+              <Settings className="w-4 h-4" style={{ color: 'var(--neon-cyan)' }} />
               Billing Settings
             </h3>
             <div className="space-y-4">
               <div>
-                <label className="text-xs text-terminal-dim block mb-1.5">
+                <label className="text-xs text-[var(--text-secondary)] block mb-1.5">
                   Monthly Budget Cap ($) — 0 or empty = no limit
                 </label>
                 <input
@@ -485,19 +488,18 @@ export default function BillingPage() {
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setAutoUpgrade(!autoUpgrade)}
-                  className={`w-10 h-5 rounded-full transition-colors relative ${
-                    autoUpgrade ? 'bg-neon-cyan/30' : 'bg-cyber-mid'
-                  }`}
+                  className="w-10 h-5 rounded-full transition-colors relative"
+                  style={{ backgroundColor: autoUpgrade ? 'color-mix(in srgb, var(--neon-cyan) 30%, var(--bg-tertiary))' : 'var(--bg-tertiary)' }}
                 >
                   <div
-                    className={`w-4 h-4 rounded-full transition-transform absolute top-0.5 ${
-                      autoUpgrade
-                        ? 'translate-x-5 bg-neon-cyan'
-                        : 'translate-x-0.5 bg-terminal-dim'
-                    }`}
+                    className="w-4 h-4 rounded-full transition-transform absolute top-0.5"
+                    style={{
+                      transform: autoUpgrade ? 'translateX(20px)' : 'translateX(2px)',
+                      backgroundColor: autoUpgrade ? 'var(--neon-cyan)' : 'var(--text-secondary)'
+                    }}
                   />
                 </button>
-                <span className="text-xs text-terminal-dim">
+                <span className="text-xs text-[var(--text-secondary)]">
                   Auto-upgrade tier when spend threshold is met
                 </span>
               </div>
@@ -511,7 +513,7 @@ export default function BillingPage() {
                 </button>
                 <button
                   onClick={() => setShowSettings(false)}
-                  className="text-xs text-terminal-dim hover:text-terminal-text"
+                  className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                 >
                   Cancel
                 </button>
@@ -529,15 +531,15 @@ export default function BillingPage() {
             className="mb-6 cyber-card p-5"
           >
             <div className="flex items-center gap-2 mb-4">
-              <Zap className="w-4 h-4 text-neon-purple" />
-              <span className="text-sm text-terminal-text font-semibold">
+              <Zap className="w-4 h-4" style={{ color: 'var(--neon-purple)' }} />
+              <span className="text-sm text-[var(--text-primary)] font-semibold">
                 Tier Comparison
               </span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-[10px]">
                 <thead>
-                  <tr className="text-terminal-dim border-b border-cyber-light/10">
+                  <tr className="text-[var(--text-secondary)] border-b" style={{ borderColor: 'var(--border-color)' }}>
                     <th className="text-left py-2 pr-3">Tier</th>
                     <th className="text-right py-2 px-2">RPM</th>
                     <th className="text-right py-2 px-2">RPD</th>
@@ -556,15 +558,16 @@ export default function BillingPage() {
                     return (
                       <tr
                         key={tier.name}
-                        className={`border-b border-cyber-light/5 ${
-                          tier.isCurrent
-                            ? 'text-neon-cyan bg-neon-cyan/5'
-                            : 'text-terminal-text'
-                        }`}
+                        className="border-b"
+                        style={{
+                          borderColor: 'var(--border-color)',
+                          color: tier.isCurrent ? 'var(--neon-cyan)' : 'var(--text-primary)',
+                          backgroundColor: tier.isCurrent ? 'color-mix(in srgb, var(--neon-cyan) 5%, transparent)' : 'transparent'
+                        }}
                       >
                         <td className="py-2 pr-3 font-semibold flex items-center gap-1">
                           {tier.isCurrent && (
-                            <Check className="w-2.5 h-2.5 text-neon-green" />
+                            <Check className="w-2.5 h-2.5" style={{ color: 'var(--neon-green)' }} />
                           )}
                           {tier.displayName}
                         </td>
@@ -595,14 +598,15 @@ export default function BillingPage() {
                         </td>
                         <td className="text-right py-2 pl-2">
                           {tier.isCurrent ? (
-                            <span className="text-[9px] text-neon-green bg-neon-green/10 px-2 py-0.5 rounded">
+                            <span className="text-[9px] px-2 py-0.5 rounded" style={{ color: 'var(--neon-green)', backgroundColor: 'color-mix(in srgb, var(--neon-green) 10%, transparent)' }}>
                               Current
                             </span>
                           ) : isUpgradeable ? (
                             <button
                               onClick={() => handleUpgrade(tier.name)}
                               disabled={checkingOut}
-                              className="text-[9px] text-neon-purple bg-neon-purple/10 hover:bg-neon-purple/20 px-2 py-0.5 rounded transition-colors"
+                              className="text-[9px] px-2 py-0.5 rounded transition-colors hover:opacity-80"
+                              style={{ color: 'var(--neon-purple)', backgroundColor: 'color-mix(in srgb, var(--neon-purple) 10%, transparent)' }}
                             >
                               Upgrade
                             </button>
@@ -626,14 +630,15 @@ export default function BillingPage() {
         >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-terminal-dim" />
-              <span className="text-sm text-terminal-text font-semibold">
+              <FileText className="w-4 h-4 text-[var(--text-secondary)]" />
+              <span className="text-sm text-[var(--text-primary)] font-semibold">
                 Invoice History
               </span>
             </div>
             <Link
               href="/dashboard/invoices"
-              className="text-[10px] text-neon-cyan hover:text-neon-cyan/80 transition-colors flex items-center gap-1"
+              className="text-[10px] hover:opacity-80 transition-colors flex items-center gap-1"
+              style={{ color: 'var(--neon-cyan)' }}
             >
               View All
               <ExternalLink className="w-3 h-3" />
@@ -644,17 +649,18 @@ export default function BillingPage() {
               {data.invoices.map((inv) => (
                 <div
                   key={inv.id}
-                  className="p-4 rounded bg-cyber-darker/50 border border-cyber-light/5"
+                  className="p-4 rounded border"
+                  style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-terminal-text font-semibold">
+                        <span className="text-xs text-[var(--text-primary)] font-semibold">
                           {new Date(inv.periodStart).toLocaleDateString()} —{' '}
                           {new Date(inv.periodEnd).toLocaleDateString()}
                         </span>
                         {inv.billingReason && (
-                          <span className="text-[9px] text-terminal-dim bg-cyber-mid px-1.5 py-0.5 rounded">
+                          <span className="text-[9px] px-1.5 py-0.5 rounded" style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--bg-tertiary)' }}>
                             {inv.billingReason === 'subscription_cycle'
                               ? 'Renewal'
                               : inv.billingReason === 'subscription_create'
@@ -667,7 +673,7 @@ export default function BillingPage() {
                           </span>
                         )}
                       </div>
-                      <div className="text-[10px] text-terminal-dim mt-1">
+                      <div className="text-[10px] text-[var(--text-secondary)] mt-1">
                         {inv.requestCount.toLocaleString()} requests |{' '}
                         {formatNumber(Number(inv.totalTokens))} tokens |{' '}
                         {inv.currency.toUpperCase()}
@@ -675,13 +681,12 @@ export default function BillingPage() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-semibold text-terminal-text">
+                      <span className="text-sm font-semibold text-[var(--text-primary)]">
                         {inv.totalDisplay}
                       </span>
                       <span
-                        className={`text-[10px] uppercase tracking-wider ${
-                          STATUS_COLORS[inv.status] || 'text-terminal-dim'
-                        }`}
+                        className="text-[10px] uppercase tracking-wider"
+                        style={{ color: STATUS_COLORS[inv.status] || 'var(--text-secondary)' }}
                       >
                         {inv.status}
                       </span>
@@ -694,7 +699,10 @@ export default function BillingPage() {
                               handleViewInvoice(inv.id, inv.polarInvoiceUrl)
                             }
                             disabled={loadingInvoice === inv.id}
-                            className="p-1.5 text-terminal-dim hover:text-neon-cyan hover:bg-neon-cyan/5 rounded transition-colors"
+                            className="p-1.5 rounded transition-colors"
+                            style={{ color: 'var(--text-secondary)' }}
+                            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--neon-cyan)'}
+                            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
                             title="Preview invoice"
                           >
                             {loadingInvoice === inv.id ? (
@@ -708,7 +716,10 @@ export default function BillingPage() {
                               href={inv.polarInvoiceUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="p-1.5 text-terminal-dim hover:text-neon-green hover:bg-neon-green/5 rounded transition-colors"
+                              className="p-1.5 rounded transition-colors"
+                              style={{ color: 'var(--text-secondary)' }}
+                              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--neon-green)'}
+                              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
                               title="Download invoice"
                             >
                               <Download className="w-3.5 h-3.5" />
@@ -723,8 +734,8 @@ export default function BillingPage() {
             </div>
           ) : (
             <div className="text-center py-6">
-              <FileText className="w-6 h-6 text-terminal-dim/30 mx-auto mb-2" />
-              <p className="text-xs text-terminal-dim">
+              <FileText className="w-6 h-6 mx-auto mb-2" style={{ color: 'var(--text-secondary)', opacity: 0.3 }} />
+              <p className="text-xs text-[var(--text-secondary)]">
                 No invoices yet. Invoices are created when payments are processed
                 through Polar.
               </p>
@@ -738,9 +749,10 @@ export default function BillingPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="mt-4 cyber-card p-4 border-neon-cyan/10"
+            className="mt-4 cyber-card p-4"
+            style={{ borderColor: 'var(--neon-cyan)', borderWidth: '1px' }}
           >
-            <div className="flex items-center gap-2 text-[10px] text-terminal-dim">
+            <div className="flex items-center gap-2 text-[10px] text-[var(--text-secondary)]">
               <ExternalLink className="w-3 h-3" />
               <span>
                 Payments processed by{' '}
@@ -748,7 +760,8 @@ export default function BillingPage() {
                   href="https://polar.sh"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-neon-cyan hover:underline"
+                  style={{ color: 'var(--neon-cyan)' }}
+                  className="hover:underline"
                 >
                   Polar.sh
                 </a>
