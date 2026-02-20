@@ -354,19 +354,30 @@ export default function BillingPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.05 }}
-              className="cyber-card p-5"
+              onClick={() => setShowSettings(!showSettings)}
+              className="cyber-card p-5 cursor-pointer hover:border-[var(--neon-cyan)] transition-colors group"
+              style={{ borderColor: showSettings ? 'var(--neon-cyan)' : 'var(--border-color)' }}
             >
-              <div className="flex items-center gap-2 mb-3">
-                <TrendingUp className="w-4 h-4" style={{ color: 'var(--neon-green)' }} />
-                <span className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase">
-                  Monthly Spend
-                </span>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4" style={{ color: 'var(--neon-green)' }} />
+                  <span className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase">
+                    Monthly Spend
+                  </span>
+                </div>
+                <Settings 
+                  className={`w-3.5 h-3.5 transition-all duration-300 ${showSettings ? 'rotate-90 text-[var(--neon-cyan)]' : 'text-[var(--text-secondary)] group-hover:text-[var(--neon-cyan)]'}`} 
+                />
               </div>
               <div className="text-xl font-display text-[var(--text-primary)]">
                 {data.account.monthlySpendDisplay}
               </div>
-              <div className="text-[10px] text-[var(--text-secondary)] mt-1">
+              <div 
+                className="text-[10px] mt-1 flex items-center gap-1"
+                style={{ color: data.account.monthlyBudgetMicro > 0 ? 'var(--neon-green)' : 'var(--text-secondary)' }}
+              >
                 Budget: {data.account.monthlyBudgetDisplay}
+                <span className="text-[9px] opacity-50">(click to edit)</span>
               </div>
             </motion.div>
 

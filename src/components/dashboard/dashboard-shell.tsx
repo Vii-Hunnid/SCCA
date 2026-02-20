@@ -17,6 +17,7 @@ import {
   Gauge,
   Sun,
   Moon,
+  User,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -176,6 +177,17 @@ export function DashboardShell({
               >
                 <FileCode className="w-3.5 h-3.5" />
                 Invoices
+              </Link>
+              <Link
+                href="/dashboard/account"
+                className={`w-full flex items-center gap-2 px-3 py-2 text-xs rounded transition-colors ${
+                  pathname === '/dashboard/account'
+                    ? 'text-[var(--neon-cyan)] bg-[var(--neon-cyan)]/5'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--neon-cyan)] hover:bg-[var(--bg-tertiary)]'
+                }`}
+              >
+                <User className="w-3.5 h-3.5" />
+                Account
               </Link>
               <Link
                 href="/docs"
