@@ -16,10 +16,10 @@ import {
   Eye,
   X,
   Printer,
-  ArrowLeft,
   Shield,
 } from 'lucide-react';
 import Link from 'next/link';
+import { DashboardPageShell } from '@/components/dashboard/dashboard-page-shell';
 
 interface Invoice {
   id: string;
@@ -173,7 +173,7 @@ function InvoicePreviewModal({
           <div class="invoice-header">
             <div>
               <div class="logo">SCCA</div>
-              <p style="color: #666; font-size: 14px;">Secure Cloud Cryptographic Architecture</p>
+              <p style="color: #666; font-size: 14px;">Secure Compact Chat Architecture</p>
             </div>
             <div class="invoice-title">
               <h1>INVOICE</h1>
@@ -185,7 +185,7 @@ function InvoicePreviewModal({
             <div class="company-info">
               <h3>From</h3>
               <p><strong>SCCA Connect</strong></p>
-              <p>Secure Cloud Cryptographic Architecture</p>
+              <p>Secure Compact Chat Architecture</p>
               <p>Powered by Polar.sh</p>
             </div>
             <div class="bill-to">
@@ -298,7 +298,7 @@ function InvoicePreviewModal({
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 tracking-wider">SCCA</h1>
-                <p className="text-sm text-gray-500">Secure Cloud Crypto</p>
+                <p className="text-sm text-gray-500">Secure Compact Chat Architecture</p>
               </div>
             </div>
             <div className="text-right">
@@ -312,7 +312,7 @@ function InvoicePreviewModal({
             <div>
               <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2">From</h3>
               <p className="font-semibold">SCCA Connect</p>
-              <p className="text-gray-600 text-sm">Secure Cloud Cryptographic Architecture</p>
+              <p className="text-gray-600 text-sm">Secure Compact Chat Architecture</p>
               <p className="text-gray-600 text-sm">Powered by Polar.sh</p>
             </div>
             <div className="text-right">
@@ -470,33 +470,24 @@ export default function InvoicesPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
-        <FileText className="w-6 h-6 animate-pulse" style={{ color: 'var(--neon-cyan)', opacity: 0.3 }} />
-      </div>
+      <DashboardPageShell>
+        <div className="min-h-[calc(100vh-60px)] flex items-center justify-center">
+          <FileText className="w-6 h-6 animate-pulse" style={{ color: 'var(--neon-cyan)', opacity: 0.3 }} />
+        </div>
+      </DashboardPageShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)]">
-      {/* Header */}
-      <header className="border-b bg-[var(--bg-secondary)]" style={{ borderColor: 'var(--border-color)' }}>
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/dashboard/billing"
-              className="transition-colors"
-              style={{ color: 'var(--text-secondary)' }}
-              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--neon-cyan)'}
-              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </Link>
-            <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4" style={{ color: 'var(--neon-cyan)' }} />
-              <span className="text-sm font-semibold tracking-wide text-[var(--text-primary)]">
-                Invoices
-              </span>
-            </div>
+    <DashboardPageShell>
+      <div className="max-w-5xl mx-auto px-6 py-4">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <FileText className="w-4 h-4" style={{ color: 'var(--neon-cyan)' }} />
+            <span className="text-sm font-semibold tracking-wide text-[var(--text-primary)]">
+              Invoices
+            </span>
           </div>
           <button
             onClick={fetchInvoices}
@@ -510,7 +501,7 @@ export default function InvoicesPage() {
             Refresh
           </button>
         </div>
-      </header>
+      </div>
 
       <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
         {error && (
@@ -886,6 +877,6 @@ export default function InvoicesPage() {
           />
         )}
       </AnimatePresence>
-    </div>
+    </DashboardPageShell>
   );
 }

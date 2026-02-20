@@ -12,10 +12,9 @@ import {
   Activity,
   TrendingUp,
   Lock,
-  ArrowLeft,
 } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
+import { DashboardPageShell } from '@/components/dashboard/dashboard-page-shell';
 
 interface QuickStats {
   tier: string;
@@ -99,30 +98,14 @@ export default function PlatformPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)]">
-      {/* Header */}
-      <header className="border-b border-[var(--border-color)] bg-[var(--bg-secondary)]">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/dashboard"
-              className="text-[var(--text-secondary)] hover:text-[var(--neon-cyan)] transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />           
-            </Link>
-            <Image
-              src="/logo.jpg"
-              alt="SCCA logo"
-              width={100}
-              height={100}
-              priority
-              className="object-contain"
-            /> 
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-[var(--text-primary)] font-semibold tracking-wide">
-                Platform
-              </span>
-            </div>
+    <DashboardPageShell>
+      <div className="max-w-5xl mx-auto px-6 py-4">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-[var(--text-primary)] font-semibold tracking-wide">
+              Platform
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <div className="status-dot-active" />
@@ -131,9 +114,6 @@ export default function PlatformPage() {
             </span>
           </div>
         </div>
-      </header>
-
-      <div className="max-w-5xl mx-auto px-6 py-8">
         {/* Title */}
         <div className="mb-8">
           <h1 className="text-xl font-display text-[var(--text-primary)] tracking-wide mb-2">
@@ -311,6 +291,6 @@ export default function PlatformPage() {
         </motion.div>
         </div>
       </div>
-    </div>
+    </DashboardPageShell>
   );
 }

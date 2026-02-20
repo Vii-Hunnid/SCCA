@@ -9,15 +9,13 @@ import {
   Copy,
   Check,
   Trash2,
-  ArrowLeft,
   AlertTriangle,
   Clock,
   ExternalLink,
 } from 'lucide-react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
-import Image from 'next/image';
-import { useTheme } from '@/components/providers';
+import { DashboardPageShell } from '@/components/dashboard/dashboard-page-shell';
 
 interface ApiKeyInfo {
   id: string;
@@ -49,7 +47,6 @@ export default function ApiKeysPage() {
   const [keyName, setKeyName] = useState('');
   const [expiresInDays, setExpiresInDays] = useState<number | ''>('');
   const [revoking, setRevoking] = useState<string | null>(null);
-  const { theme } = useTheme();
 
   const fetchKeys = useCallback(async () => {
     try {
@@ -125,31 +122,15 @@ export default function ApiKeysPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)]">
-      {/* Header */}
-      <header className="border-b border-[var(--border-color)] bg-[var(--bg-secondary)]">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link
-                href="/dashboard/platform"
-                className="text-[var(--text-secondary)] hover:text-[var(--neon-cyan)] transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4" />
-            </Link>
-            <Image
-              src="/logo.jpg"
-              alt="SCCA logo"
-              width={100}
-              height={100}
-              priority
-              className="object-contain"
-            /> 
-            <div className="flex items-center gap-2">
-              <Key className="w-4 h-4" style={{ color: 'var(--neon-cyan)' }} />
-              <span className="text-sm font-semibold tracking-wide text-[var(--text-primary)]">
-                API Keys
-              </span>
-            </div>
+    <DashboardPageShell>
+      <div className="max-w-4xl mx-auto px-6 py-4">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <Key className="w-4 h-4" style={{ color: 'var(--neon-cyan)' }} />
+            <span className="text-sm font-semibold tracking-wide text-[var(--text-primary)]">
+              API Keys
+            </span>
           </div>
           <Link
             href="/docs#vault"
@@ -159,9 +140,6 @@ export default function ApiKeysPage() {
             Vault API Docs
           </Link>
         </div>
-      </header>
-
-      <div className="max-w-4xl mx-auto px-6 py-8">
         {/* Intro */}
         <div className="mb-8">
           <h1 className="text-lg font-display tracking-wide mb-2 text-[var(--text-primary)]">
@@ -424,6 +402,6 @@ export default function ApiKeysPage() {
           )}
         </div>
       </div>
-    </div>
+    </DashboardPageShell>
   );
 }

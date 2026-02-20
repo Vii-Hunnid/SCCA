@@ -1,0 +1,175 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 500" width="900" height="500">
+  <defs>
+    <linearGradient id="featBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0a0a"/>
+      <stop offset="100%" style="stop-color:#111827"/>
+    </linearGradient>
+    <filter id="featGlow">
+      <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="900" height="500" fill="url(#featBg)" rx="12"/>
+  
+  <!-- Grid Pattern -->
+  <pattern id="featGrid" width="50" height="50" patternUnits="userSpaceOnUse">
+    <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#1f2937" stroke-width="0.5"/>
+  </pattern>
+  <rect width="900" height="500" fill="url(#featGrid)" rx="12" opacity="0.5"/>
+  
+  <!-- Title -->
+  <text x="450" y="45" fill="#10b981" font-family="system-ui, sans-serif" font-size="22" 
+        font-weight="bold" text-anchor="middle" letter-spacing="3">FEATURES</text>
+  
+  <!-- Feature 1: Encryption -->
+  <g transform="translate(50, 90)">
+    <rect x="0" y="0" width="260" height="110" rx="8" fill="#1f2937" stroke="#10b981" stroke-width="1.5"/>
+    <!-- Icon -->
+    <g transform="translate(20, 25)">
+      <rect x="0" y="15" width="30" height="22" rx="3" fill="#10b981"/>
+      <path d="M5 15 L5 8 Q15 2 25 8 L25 15" fill="none" stroke="#10b981" stroke-width="3"/>
+      <circle cx="15" cy="26" r="3" fill="#0a0a0a"/>
+    </g>
+    <text x="65" y="35" fill="#10b981" font-family="system-ui, sans-serif" font-size="13" 
+          font-weight="bold">AES-256-GCM Encryption</text>
+    <text x="20" y="60" fill="#6b7280" font-family="system-ui, sans-serif" font-size="11">Per-conversation keys via HKDF-SHA256.</text>
+    <text x="20" y="78" fill="#6b7280" font-family="system-ui, sans-serif" font-size="11">Every message individually encrypted.</text>
+    <text x="20" y="96" fill="#059669" font-family="monospace" font-size="9">Military-grade security</text>
+  </g>
+  
+  <!-- Feature 2: Single-Row -->
+  <g transform="translate(320, 90)">
+    <rect x="0" y="0" width="260" height="110" rx="8" fill="#1f2937" stroke="#10b981" stroke-width="1.5"/>
+    <!-- Icon -->
+    <g transform="translate(20, 25)">
+      <rect x="0" y="5" width="35" height="40" rx="3" fill="none" stroke="#10b981" stroke-width="2"/>
+      <line x1="5" y1="12" x2="30" y2="12" stroke="#10b981" stroke-width="1.5"/>
+      <line x1="5" y1="20" x2="30" y2="20" stroke="#10b981" stroke-width="1.5"/>
+      <line x1="5" y1="28" x2="30" y2="28" stroke="#10b981" stroke-width="1.5"/>
+      <line x1="5" y1="36" x2="20" y2="36" stroke="#10b981" stroke-width="1.5"/>
+    </g>
+    <text x="65" y="35" fill="#10b981" font-family="system-ui, sans-serif" font-size="13" 
+          font-weight="bold">Single-Row Storage</text>
+    <text x="20" y="60" fill="#6b7280" font-family="system-ui, sans-serif" font-size="11">Entire conversations stored as encrypted</text>
+    <text x="20" y="78" fill="#6b7280" font-family="system-ui, sans-serif" font-size="11">token arrays in one database row.</text>
+    <text x="20" y="96" fill="#059669" font-family="monospace" font-size="9">1,000 messages in ~85KB</text>
+  </g>
+  
+  <!-- Feature 3: Merkle -->
+  <g transform="translate(590, 90)">
+    <rect x="0" y="0" width="260" height="110" rx="8" fill="#1f2937" stroke="#10b981" stroke-width="1.5"/>
+    <!-- Icon -->
+    <g transform="translate(20, 25)">
+      <circle cx="17" cy="10" r="6" fill="#10b981"/>
+      <line x1="8" y1="20" x2="17" y2="16" stroke="#10b981" stroke-width="1.5"/>
+      <line x1="26" y1="20" x2="17" y2="16" stroke="#10b981" stroke-width="1.5"/>
+      <circle cx="8" cy="25" r="4" fill="#10b981"/>
+      <circle cx="26" cy="25" r="4" fill="#10b981"/>
+      <line x1="4" y1="32" x2="8" y2="29" stroke="#10b981" stroke-width="1"/>
+      <line x1="12" y1="32" x2="8" y2="29" stroke="#10b981" stroke-width="1"/>
+      <circle cx="4" cy="36" r="2" fill="#10b981"/>
+      <circle cx="12" cy="36" r="2" fill="#10b981"/>
+    </g>
+    <text x="65" y="35" fill="#10b981" font-family="system-ui, sans-serif" font-size="13" 
+          font-weight="bold">Merkle Integrity</text>
+    <text x="20" y="60" fill="#6b7280" font-family="system-ui, sans-serif" font-size="11">HMAC-SHA256 chain across all tokens.</text>
+    <text x="20" y="78" fill="#6b7280" font-family="system-ui, sans-serif" font-size="11">Any modification invalidates the root.</text>
+    <text x="20" y="96" fill="#059669" font-family="monospace" font-size="9">Tamper-proof verification</text>
+  </g>
+  
+  <!-- Feature 4: Destructive Edit -->
+  <g transform="translate(50, 220)">
+    <rect x="0" y="0" width="260" height="110" rx="8" fill="#1f2937" stroke="#10b981" stroke-width="1.5"/>
+    <!-- Icon -->
+    <g transform="translate(20, 25)">
+      <rect x="0" y="5" width="30" height="35" rx="2" fill="none" stroke="#10b981" stroke-width="2"/>
+      <line x1="5" y1="12" x2="25" y2="12" stroke="#10b981" stroke-width="1.5"/>
+      <line x1="5" y1="18" x2="25" y2="18" stroke="#10b981" stroke-width="1.5"/>
+      <line x1="5" y1="24" x2="25" y2="24" stroke="#10b981" stroke-width="1.5"/>
+      <line x1="10" y1="0" x2="20" y2="0" stroke="#ef4444" stroke-width="2"/>
+      <line x1="15" y1="0" x2="15" y2="8" stroke="#ef4444" stroke-width="2"/>
+    </g>
+    <text x="65" y="35" fill="#10b981" font-family="system-ui, sans-serif" font-size="13" 
+          font-weight="bold">Destructive Editing</text>
+    <text x="20" y="60" fill="#6b7280" font-family="system-ui, sans-serif" font-size="11">Irreversible edits — all subsequent</text>
+    <text x="20" y="78" fill="#6b7280" font-family="system-ui, sans-serif" font-size="11">messages permanently deleted.</text>
+    <text x="20" y="96" fill="#059669" font-family="monospace" font-size="9">Linear timeline only</text>
+  </g>
+  
+  <!-- Feature 5: Vault API -->
+  <g transform="translate(320, 220)">
+    <rect x="0" y="0" width="260" height="110" rx="8" fill="#1f2937" stroke="#10b981" stroke-width="1.5"/>
+    <!-- Icon -->
+    <g transform="translate(20, 25)">
+      <rect x="0" y="10" width="30" height="28" rx="2" fill="#10b981"/>
+      <rect x="5" y="0" width="20" height="15" rx="2" fill="none" stroke="#10b981" stroke-width="2"/>
+      <circle cx="15" cy="24" r="4" fill="#0a0a0a"/>
+    </g>
+    <text x="65" y="35" fill="#10b981" font-family="system-ui, sans-serif" font-size="13" 
+          font-weight="bold">Vault API</text>
+    <text x="20" y="60" fill="#6b7280" font-family="system-ui, sans-serif" font-size="11">Standalone encryption service.</text>
+    <text x="20" y="78" fill="#6b7280" font-family="system-ui, sans-serif" font-size="11">Encrypt, decrypt, verify via REST.</text>
+    <text x="20" y="96" fill="#059669" font-family="monospace" font-size="9">No chat required</text>
+  </g>
+  
+  <!-- Feature 6: Zero Knowledge -->
+  <g transform="translate(590, 220)">
+    <rect x="0" y="0" width="260" height="110" rx="8" fill="#1f2937" stroke="#10b981" stroke-width="1.5"/>
+    <!-- Icon -->
+    <g transform="translate(20, 25)">
+      <circle cx="15" cy="20" r="18" fill="none" stroke="#10b981" stroke-width="2"/>
+      <line x1="5" y1="20" x2="25" y2="20" stroke="#10b981" stroke-width="2"/>
+      <circle cx="15" cy="20" r="5" fill="#10b981"/>
+      <line x1="15" y1="5" x2="15" y2="12" stroke="#10b981" stroke-width="2"/>
+      <line x1="15" y1="28" x2="15" y2="35" stroke="#10b981" stroke-width="2"/>
+    </g>
+    <text x="65" y="35" fill="#10b981" font-family="system-ui, sans-serif" font-size="13" 
+          font-weight="bold">Zero-Knowledge Server</text>
+    <text x="20" y="60" fill="#6b7280" font-family="system-ui, sans-serif" font-size="11">Server cannot read message content.</text>
+    <text x="20" y="78" fill="#6b7280" font-family="system-ui, sans-serif" font-size="11">Database breach yields only encrypted blobs.</text>
+    <text x="20" y="96" fill="#059669" font-family="monospace" font-size="9">Privacy-first design</text>
+  </g>
+  
+  <!-- Bottom Stats -->
+  <g transform="translate(50, 360)">
+    <rect x="0" y="0" width="800" height="120" rx="8" fill="#1f2937" stroke="#10b981" stroke-width="1" opacity="0.5"/>
+    
+    <!-- Stat 1 -->
+    <text x="100" y="45" fill="#10b981" font-family="monospace" font-size="28" 
+          font-weight="bold" text-anchor="middle">256-bit</text>
+    <text x="100" y="70" fill="#6b7280" font-family="system-ui, sans-serif" font-size="11" 
+          text-anchor="middle">AES Encryption</text>
+    
+    <!-- Divider -->
+    <line x1="200" y1="20" x2="200" y2="100" stroke="#10b981" stroke-width="1" opacity="0.3"/>
+    
+    <!-- Stat 2 -->
+    <text x="300" y="45" fill="#10b981" font-family="monospace" font-size="28" 
+          font-weight="bold" text-anchor="middle">~24B</text>
+    <text x="300" y="70" fill="#6b7280" font-family="system-ui, sans-serif" font-size="11" 
+          text-anchor="middle">Overhead Per Message</text>
+    
+    <!-- Divider -->
+    <line x1="400" y1="20" x2="400" y2="100" stroke="#10b981" stroke-width="1" opacity="0.3"/>
+    
+    <!-- Stat 3 -->
+    <text x="500" y="45" fill="#10b981" font-family="monospace" font-size="28" 
+          font-weight="bold" text-anchor="middle">100K</text>
+    <text x="500" y="70" fill="#6b7280" font-family="system-ui, sans-serif" font-size="11" 
+          text-anchor="middle">PBKDF2 Iterations</text>
+    
+    <!-- Divider -->
+    <line x1="600" y1="20" x2="600" y2="100" stroke="#10b981" stroke-width="1" opacity="0.3"/>
+    
+    <!-- Stat 4 -->
+    <text x="700" y="45" fill="#10b981" font-family="monospace" font-size="28" 
+          font-weight="bold" text-anchor="middle">6</text>
+    <text x="700" y="70" fill="#6b7280" font-family="system-ui, sans-serif" font-size="11" 
+          text-anchor="middle">Rate Limit Tiers</text>
+  </g>
+</svg>

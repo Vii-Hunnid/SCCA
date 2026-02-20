@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   CreditCard,
-  ArrowLeft,
   Zap,
   Check,
   AlertTriangle,
@@ -20,7 +19,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
+import { DashboardPageShell } from '@/components/dashboard/dashboard-page-shell';
 
 interface BillingData {
   account: {
@@ -220,49 +219,16 @@ export default function BillingPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
-        <CreditCard className="w-6 h-6 animate-pulse" style={{ color: 'var(--neon-purple)', opacity: 0.3 }} />
-      </div>
+      <DashboardPageShell>
+        <div className="min-h-[calc(100vh-60px)] flex items-center justify-center">
+          <CreditCard className="w-6 h-6 animate-pulse" style={{ color: 'var(--neon-purple)', opacity: 0.3 }} />
+        </div>
+      </DashboardPageShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)]">
-      {/* Header */}
-      <header className="border-b border-[var(--border-color)] bg-[var(--bg-secondary)]">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link
-                href="/dashboard/platform"
-                className="text-[var(--text-secondary)] hover:text-[var(--neon-cyan)] transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4" />
-            </Link>
-            <Image
-              src="/logo.jpg"
-              alt="SCCA logo"
-              width={100}
-              height={100}
-              priority
-              className="object-contain"
-            /> 
-            <div className="flex items-center gap-2">
-              <CreditCard className="w-4 h-4" style={{ color: 'var(--neon-purple)' }} />
-              <span className="text-sm text-[var(--text-primary)] font-semibold tracking-wide">
-                Billing
-              </span>
-            </div>
-          </div>
-          <button
-            onClick={() => setShowSettings(!showSettings)}
-            className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--neon-cyan)] transition-colors"
-          >
-            <Settings className="w-3.5 h-3.5" />
-            Settings
-          </button>
-        </div>
-      </header>
-
+    <DashboardPageShell>
       <div className="max-w-5xl mx-auto px-6 py-8">
         {error && (
           <div className="mb-4 cyber-card p-3 flex items-center gap-2" style={{ borderColor: 'var(--neon-red)', borderWidth: '1px' }}>
@@ -772,6 +738,6 @@ export default function BillingPage() {
           </motion.div>
         )}
       </div>
-    </div>
+    </DashboardPageShell>
   );
 }

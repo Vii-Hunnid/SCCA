@@ -1,6 +1,8 @@
 # SCCA — Secure Compact Chat Architecture
 
-> Privacy-first, storage-efficient AI chat platform with AES-256-GCM encryption, single-row conversations, and Merkle integrity verification.
+Privacy-first, storage-efficient AI chat platform with AES-256-GCM encryption, single-row conversations, and Merkle integrity verification.
+
+![SCCA Hero](public/images/scca-hero.svg)
 
 SCCA is an open-source protocol and full-stack application for building privacy-first AI chat systems. Every message is encrypted with per-conversation keys derived via HKDF-SHA256, stored as a compact binary token array in a single database row, and verified by a Merkle-HMAC integrity chain. The server cannot read message content without the master key.
 
@@ -34,33 +36,36 @@ Article on X: https://x.com/Viihunnid/status/2021224979421888587
 
 ## Core Architecture
 
+![Key Hierarchy](public/images/scca-architecture.svg)
+
 ```
 MASTER_KEY_SECRET (env, 32 bytes)
-    │
-    ├── HKDF("user-key", masterKey + userSalt) → User Key
-    │       │
-    │       ├── HKDF("conv-key", userKey + conversationId) → Conversation Key
-    │       │       └── AES-256-GCM encrypt/decrypt messages
-    │       │
-    │       └── HKDF("integrity", userKey + conversationId) → Integrity Key
-    │               └── Merkle tree HMAC verification
-    │
-    └── Keys derived on-demand, never stored
+    |
+    |-- HKDF("user-key", masterKey + userSalt) -> User Key
+    |       |
+    |       |-- HKDF("conv-key", userKey + conversationId) -> Conversation Key
+    |       |       
+    |       |-- HKDF("integrity", userKey + conversationId) -> Integrity Key
+    |               
+    |
+    
 ```
 
 **Design principles:**
 
 - **Single-row storage** — An entire conversation (messages, metadata, integrity hash) lives in one PostgreSQL row as an encrypted token array. 1,000 messages in ~85 KB.
-- **Destructive editing** — Editing message #5 permanently deletes messages 6–N. No versioning, no branches, no ghost data. Linear timeline only.
+- **Destructive editing** — Editing message #5 permanently deletes messages 6-N. No versioning, no branches, no ghost data. Linear timeline only.
 - **Zero-knowledge server** — The server cannot read message content. A database breach yields only encrypted blobs.
-- **Compact binary format** — 10-byte header + zlib compression + AES-256-GCM ciphertext. ~24 bytes overhead per message vs 200–300 bytes for traditional JSON storage.
+- **Compact binary format** — 10-byte header + zlib compression + AES-256-GCM ciphertext. ~24 bytes overhead per message vs 200-300 bytes for traditional JSON storage.
 
 ---
 
 ## Features
 
+![SCCA Features](public/images/scca-features.svg)
+
 | Feature | Description |
-|---|---|
+|---------|-------------|
 | **AES-256-GCM Encryption** | Per-conversation keys via HKDF-SHA256. Every message individually encrypted. |
 | **Single-Row Conversations** | Entire conversations stored as encrypted token arrays in one database row. |
 | **Merkle Integrity** | HMAC-SHA256 chain across all tokens. Any modification invalidates the root. |
@@ -69,7 +74,7 @@ MASTER_KEY_SECRET (env, 32 bytes)
 | **Media Pipeline** | Encrypted media attachments (images, video, audio, documents) with selective compression. |
 | **AI Chat** | Groq-powered chat with Llama models, SSE streaming, message regeneration. |
 | **API Keys** | Bearer token auth (`scca_k_` prefix) for programmatic access. SHA-256 hashed storage. |
-| **Rate Limiting** | 6-tier system (free → enterprise) with RPM/RPD/TPM/TPD enforcement. |
+| **Rate Limiting** | 6-tier system (free -> enterprise) with RPM/RPD/TPM/TPD enforcement. |
 | **Billing** | Polar.sh integration with tier subscriptions, invoices, usage metering, budget caps. |
 | **Multi-Auth** | Email/password (PBKDF2), GitHub OAuth, Google OAuth via NextAuth.js. |
 | **Audit Logging** | Immutable action logs with IP/user agent tracking for compliance. |
@@ -81,19 +86,19 @@ MASTER_KEY_SECRET (env, 32 bytes)
 ## Tech Stack
 
 | Layer | Technology |
-|---|---|
-| Framework | Next.js 15 (App Router, React 19) |
-| Language | TypeScript 5.7 |
-| Database | PostgreSQL (via Prisma ORM) |
-| Auth | NextAuth.js 4 (JWT sessions, OAuth) |
-| AI | Groq SDK (Llama 3.3 70B, Llama 3.1 8B) |
-| Encryption | Node.js `crypto` (AES-256-GCM, HKDF-SHA256, PBKDF2) |
-| Payments | Polar.sh (subscriptions, invoices) |
-| State | Zustand 5 |
-| Styling | Tailwind CSS 3 (cyberpunk theme) |
-| Animations | Framer Motion 11 |
-| Charts | Recharts 2 |
-| Icons | Lucide React |
+|-------|------------|
+| **Framework** | Next.js 15 (App Router, React 19) |
+| **Language** | TypeScript 5.7 |
+| **Database** | PostgreSQL (via Prisma ORM) |
+| **Auth** | NextAuth.js 4 (JWT sessions, OAuth) |
+| **AI** | Groq SDK (Llama 3.3 70B, Llama 3.1 8B) |
+| **Encryption** | Node.js `crypto` (AES-256-GCM, HKDF-SHA256, PBKDF2) |
+| **Payments** | Polar.sh (subscriptions, invoices) |
+| **State** | Zustand 5 |
+| **Styling** | Tailwind CSS 3 (cyberpunk theme) |
+| **Animations** | Framer Motion 11 |
+| **Charts** | Recharts 2 |
+| **Icons** | Lucide React |
 
 ---
 
@@ -128,30 +133,30 @@ Open `http://localhost:3000` and register an account.
 Create a `.env` file with the following:
 
 ```env
-# ── Database ──
+# -- Database --
 DATABASE_URL="postgresql://user:pass@host:5432/scca?schema=public"
 DIRECT_URL="postgresql://user:pass@host:5432/scca?sslmode=require"
 
-# ── Authentication ──
+# -- Authentication --
 NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="your-nextauth-secret-min-32-characters"
 
-# ── Encryption ──
+# -- Encryption --
 # 32 bytes, base64 encoded. Generate with:
 # node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 MASTER_KEY_SECRET="your-base64-encoded-32-byte-master-secret="
 
-# ── AI Provider (Groq) ──
+# -- AI Provider (Groq) --
 GROQ_API_KEY="gsk_your-groq-api-key"
 DEFAULT_MODEL="llama-3.3-70b-versatile"
 
-# ── OAuth (optional) ──
+# -- OAuth (optional) --
 GITHUB_CLIENT_ID="..."
 GITHUB_CLIENT_SECRET="..."
 GOOGLE_CLIENT_ID="..."
 GOOGLE_CLIENT_SECRET="..."
 
-# ── Billing (Polar.sh, optional) ──
+# -- Billing (Polar.sh, optional) --
 POLAR_ACCESS_TOKEN="polar_at_your-token"
 POLAR_WEBHOOK_SECRET="your-webhook-secret"
 POLAR_ENVIRONMENT="sandbox"  # or "production"
@@ -165,7 +170,7 @@ POLAR_ENVIRONMENT="sandbox"  # or "production"
 SCCA uses PostgreSQL with Prisma ORM. The schema includes 9 models:
 
 | Model | Purpose |
-|---|---|
+|-------|---------|
 | `User` | Accounts with email, password hash (PBKDF2), master key salt, OAuth info |
 | `Session` | NextAuth session tracking with IP/user agent |
 | `SCCAConversation` | **Core model** — single row per conversation with encrypted `messageTokens[]` array, Merkle root |
@@ -260,49 +265,55 @@ src/
 
 Located at `src/lib/crypto/engine.ts`. All cryptographic operations are server-side.
 
+![Key Hierarchy](public/images/scca-architecture.svg)
+
 ### Key Hierarchy
 
 ```
 MASTER_KEY_SECRET (32 bytes, env var)
-    ↓ HKDF-SHA256("user-key", masterKey, userSalt)
+    | HKDF-SHA256("user-key", masterKey, userSalt)
 User Key (32 bytes, per user)
-    ↓ HKDF-SHA256("conv-key", userKey, conversationId)
-Conversation Key (32 bytes)     → AES-256-GCM encrypt/decrypt
-    ↓ HKDF-SHA256("integrity", userKey, conversationId)
-Integrity Key (32 bytes)        → Merkle-HMAC chain
+    | HKDF-SHA256("conv-key", userKey, conversationId)
+Conversation Key (32 bytes)     -> AES-256-GCM encrypt/decrypt
+    | HKDF-SHA256("integrity", userKey, conversationId)
+Integrity Key (32 bytes)        -> Merkle-HMAC chain
 ```
 
 ### Binary Message Format
 
+![Binary Format](public/images/scca-binary-format.svg)
+
 ```
-┌────────────────────────────────────────────────┐
-│ Header (10 bytes)                              │
-│  [version:1][role:1][sequence:2][timestamp:4]  │
-│  [flags:2]                                     │
-├────────────────────────────────────────────────┤
-│ Nonce (12 bytes) — random, never reused        │
-├────────────────────────────────────────────────┤
-│ Ciphertext (variable)                          │
-│  AES-256-GCM(key, nonce, zlib.deflate(content))│
-├────────────────────────────────────────────────┤
-│ Auth Tag (16 bytes) — GCM authentication       │
-└────────────────────────────────────────────────┘
++------------------------------------------------+
+| Header (10 bytes)                              |
+|  [version:1][role:1][sequence:2][timestamp:4]  |
+|  [flags:2]                                     |
++------------------------------------------------+
+| Nonce (12 bytes) — random, never reused        |
++------------------------------------------------+
+| Ciphertext (variable)                          |
+|  AES-256-GCM(key, nonce, zlib.deflate(content))|
++------------------------------------------------+
+| Auth Tag (16 bytes) — GCM authentication       |
++------------------------------------------------+
 ```
 
 ### Operations
 
 | Operation | Description |
-|---|---|
-| `packMessage` | Plaintext → binary header + zlib compress + AES encrypt → base64 token |
-| `unpackMessage` | Base64 token → AES decrypt + decompress → plaintext + metadata |
+|-----------|-------------|
+| `packMessage` | Plaintext -> binary header + zlib compress + AES encrypt -> base64 token |
+| `unpackMessage` | Base64 token -> AES decrypt + decompress -> plaintext + metadata |
 | `appendMessage` | Pack and add to conversation token array |
 | `destructiveEdit` | Replace message at sequence N, permanently delete all messages after N |
 | `destructiveDelete` | Remove message and all subsequent messages |
-| `computeMerkleRoot` | HMAC-SHA256 chain across all tokens → single integrity hash |
+| `computeMerkleRoot` | HMAC-SHA256 chain across all tokens -> single integrity hash |
 | `verifyConversation` | Recompute Merkle root and compare to stored value |
 | `peekMessageHeader` | Read 10-byte header without decrypting content |
 
 ### Merkle Integrity Chain
+
+![Merkle Chain](public/images/scca-merkle.svg)
 
 ```
 hash[0] = HMAC(integrityKey, token[0])
@@ -317,6 +328,8 @@ If any token is modified, inserted, or removed, the entire Merkle root changes.
 ---
 
 ## Vault API
+
+![Vault API](public/images/scca-vault.svg)
 
 Use SCCA's encryption engine as a standalone service. Encrypt, decrypt, and verify any data through the REST API — no chat required. Supports both session cookies and API key auth (`scca_k_` Bearer tokens).
 
@@ -390,14 +403,14 @@ SCCA v2 extends encryption to media files. Each file passes through a format-awa
 ### Supported Formats
 
 | Category | Formats | Strategy | Max Size |
-|---|---|---|---|
-| Image | PNG, JPEG, WebP, HEIC | Encrypt only | 25 MB |
-| Image | SVG, GIF | zlib-9 + encrypt | 25 MB |
-| Video | MP4, WebM, MOV | Encrypt only | 100 MB |
-| Audio | MP3, WAV, OGG, M4A, FLAC | Encrypt only | 50 MB |
-| Document | PDF, TXT, Markdown, JSON | zlib-9 + encrypt | 10 MB |
+|----------|---------|----------|----------|
+| **Image** | PNG, JPEG, WebP, HEIC | Encrypt only | 25 MB |
+| **Image** | SVG, GIF | zlib-9 + encrypt | 25 MB |
+| **Video** | MP4, WebM, MOV | Encrypt only | 100 MB |
+| **Audio** | MP3, WAV, OGG, M4A, FLAC | Encrypt only | 50 MB |
+| **Document** | PDF, TXT, Markdown, JSON | zlib-9 + encrypt | 10 MB |
 
-Already-compressed formats (PNG, JPEG, MP4, MP3) skip compression — re-compressing would waste CPU for zero savings. Text-based formats get zlib level 9 before encryption for 50–90% compression.
+Already-compressed formats (PNG, JPEG, MP4, MP3) skip compression — re-compressing would waste CPU for zero savings. Text-based formats get zlib level 9 before encryption for 50-90% compression.
 
 ### SCCA Media Packet Format (v2)
 
@@ -442,21 +455,21 @@ The chat interface supports real-time encrypted conversations with AI.
 
 ```
 User types message
-    ↓
-ChatInput → handleSendMessage()
-    ↓ (upload attachments if any)
+    |
+ChatInput -> handleSendMessage()
+    | (upload attachments if any)
 POST /api/scca/media (per file)
-    ↓
+    |
 POST /api/scca/conversations/[id]/messages
-    ↓
-Server: encrypt message → append to token array → update Merkle root
-    ↓
-Server: send to Groq API → stream response
-    ↓
+    |
+Server: encrypt message -> append to token array -> update Merkle root
+    |
+Server: send to Groq API -> stream response
+    |
 SSE: data: {"token":"..."} ... data: {"done":true}
-    ↓
-Server: encrypt AI response → append to token array → update Merkle root
-    ↓
+    |
+Server: encrypt AI response -> append to token array -> update Merkle root
+    |
 Client: display streamed message + update metrics
 ```
 
@@ -491,7 +504,7 @@ curl -X POST https://your-instance.com/api/scca/vault/encrypt \
 SCCA uses a 6-tier rate limiting system with sliding window enforcement:
 
 | Tier | RPM | RPD | TPM | TPD | Cost/1M Tokens |
-|---|---|---|---|---|---|
+|------|-----|-----|-----|-----|----------------|
 | Free | 10 | 200 | 10K | 200K | — |
 | Tier 1 | 60 | 5K | 100K | 5M | $0.15 |
 | Tier 2 | 300 | 20K | 500K | 20M | $0.12 |
@@ -530,7 +543,7 @@ The Polar.sh webhook handler (`/api/webhooks/polar`) processes:
 ### Methods
 
 | Method | Description |
-|---|---|
+|--------|-------------|
 | **Email/Password** | PBKDF2-SHA512 (100K iterations, 16-byte salt) |
 | **GitHub OAuth** | Auto-provision with account linking by email |
 | **Google OAuth** | Auto-provision with account linking by email |
@@ -552,7 +565,7 @@ All endpoints require authentication (session cookie or API key Bearer token).
 ### Conversations
 
 | Method | Path | Description |
-|---|---|---|
+|--------|------|-------------|
 | `GET` | `/api/scca/conversations` | List all conversations |
 | `POST` | `/api/scca/conversations` | Create new conversation |
 | `GET` | `/api/scca/conversations/[id]` | Get conversation with decrypted messages |
@@ -564,7 +577,7 @@ All endpoints require authentication (session cookie or API key Bearer token).
 ### Vault
 
 | Method | Path | Description |
-|---|---|---|
+|--------|------|-------------|
 | `POST` | `/api/scca/vault/encrypt` | Encrypt data (string or array) |
 | `POST` | `/api/scca/vault/decrypt` | Decrypt tokens to plaintext |
 | `POST` | `/api/scca/vault/verify` | Verify token integrity via Merkle root |
@@ -572,7 +585,7 @@ All endpoints require authentication (session cookie or API key Bearer token).
 ### Media
 
 | Method | Path | Description |
-|---|---|---|
+|--------|------|-------------|
 | `POST` | `/api/scca/media` | Upload and encrypt media file |
 | `GET` | `/api/scca/media?conversationId=xxx` | List media with aggregate stats |
 | `GET` | `/api/scca/media/[id]` | Decrypt and download original file |
@@ -581,7 +594,7 @@ All endpoints require authentication (session cookie or API key Bearer token).
 ### API Keys
 
 | Method | Path | Description |
-|---|---|---|
+|--------|------|-------------|
 | `GET` | `/api/scca/keys` | List active API keys |
 | `POST` | `/api/scca/keys` | Create new API key |
 | `PUT` | `/api/scca/keys/[id]` | Update key name/expiry |
@@ -590,7 +603,7 @@ All endpoints require authentication (session cookie or API key Bearer token).
 ### Billing
 
 | Method | Path | Description |
-|---|---|---|
+|--------|------|-------------|
 | `GET` | `/api/scca/billing` | Get billing account, tier, invoices |
 | `POST` | `/api/scca/billing` | Update budget/auto-upgrade settings |
 | `POST` | `/api/scca/billing/checkout` | Generate Polar.sh checkout link |
@@ -600,14 +613,14 @@ All endpoints require authentication (session cookie or API key Bearer token).
 ### Usage & Limits
 
 | Method | Path | Description |
-|---|---|---|
+|--------|------|-------------|
 | `GET` | `/api/scca/usage` | Usage metrics (requests, tokens, bytes) |
 | `GET` | `/api/scca/rate-limits` | Current rate limit status by tier |
 
 ### Webhooks
 
 | Method | Path | Description |
-|---|---|---|
+|--------|------|-------------|
 | `POST` | `/api/webhooks/polar` | Polar.sh payment event handler |
 
 ---
@@ -615,7 +628,7 @@ All endpoints require authentication (session cookie or API key Bearer token).
 ## Security
 
 | Property | Implementation |
-|---|---|
+|----------|----------------|
 | **Encryption** | AES-256-GCM — computationally infeasible without key |
 | **Key Derivation** | HKDF-SHA256 — per-user, per-conversation key isolation |
 | **Password Hashing** | PBKDF2-SHA512 — 100,000 iterations |
@@ -653,3 +666,7 @@ npm run db:studio        # Open Prisma Studio
 ## License
 
 MIT
+
+---
+
+*Built with precision. Secured by design.*

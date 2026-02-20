@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 450" width="700" height="450">
+  <defs>
+    <linearGradient id="merkleBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0a0a"/>
+      <stop offset="100%" style="stop-color:#111827"/>
+    </linearGradient>
+    <marker id="merkleArrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#10b981"/>
+    </marker>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="700" height="450" fill="url(#merkleBg)" rx="8"/>
+  
+  <!-- Title -->
+  <text x="350" y="35" fill="#10b981" font-family="monospace" font-size="14" 
+        font-weight="bold" text-anchor="middle">MERKLE INTEGRITY CHAIN</text>
+  
+  <!-- Root Hash -->
+  <g transform="translate(300, 70)">
+    <rect x="0" y="0" width="100" height="40" rx="6" fill="#064e3b" stroke="#10b981" stroke-width="2"/>
+    <text x="50" y="16" fill="#10b981" font-family="monospace" font-size="9" 
+          text-anchor="middle" font-weight="bold">merkleRoot</text>
+    <text x="50" y="30" fill="#6b7280" font-family="monospace" font-size="7" 
+          text-anchor="middle">hash[N-1]</text>
+  </g>
+  
+  <!-- Arrows from level 2 -->
+  <line x1="320" y1="130" x2="320" y2="150" stroke="#10b981" stroke-width="1.5" marker-end="url(#merkleArrow)"/>
+  <line x1="380" y1="130" x2="380" y2="150" stroke="#10b981" stroke-width="1.5" marker-end="url(#merkleArrow)"/>
+  
+  <!-- Level 2 -->
+  <g transform="translate(250, 160)">
+    <rect x="0" y="0" width="80" height="35" rx="4" fill="#1f2937" stroke="#10b981" stroke-width="1.5"/>
+    <text x="40" y="14" fill="#10b981" font-family="monospace" font-size="8" text-anchor="middle">hash[2]</text>
+    <text x="40" y="26" fill="#6b7280" font-family="monospace" font-size="6" text-anchor="middle">HMAC(...)</text>
+  </g>
+  
+  <g transform="translate(370, 160)">
+    <rect x="0" y="0" width="80" height="35" rx="4" fill="#1f2937" stroke="#10b981" stroke-width="1.5"/>
+    <text x="40" y="14" fill="#10b981" font-family="monospace" font-size="8" text-anchor="middle">...</text>
+    <text x="40" y="26" fill="#6b7280" font-family="monospace" font-size="6" text-anchor="middle">...</text>
+  </g>
+  
+  <!-- Arrows from level 1 -->
+  <line x1="200" y1="210" x2="270" y2="235" stroke="#10b981" stroke-width="1.5" marker-end="url(#merkleArrow)"/>
+  <line x1="290" y1="210" x2="290" y2="235" stroke="#10b981" stroke-width="1.5" marker-end="url(#merkleArrow)"/>
+  
+  <!-- Level 1 -->
+  <g transform="translate(150, 210)">
+    <rect x="0" y="0" width="70" height="35" rx="4" fill="#1f2937" stroke="#10b981" stroke-width="1.5"/>
+    <text x="35" y="14" fill="#10b981" font-family="monospace" font-size="8" text-anchor="middle">hash[1]</text>
+    <text x="35" y="26" fill="#6b7280" font-family="monospace" font-size="6" text-anchor="middle">...</text>
+  </g>
+  
+  <g transform="translate(255, 210)">
+    <rect x="0" y="0" width="70" height="35" rx="4" fill="#1f2937" stroke="#10b981" stroke-width="1.5"/>
+    <text x="35" y="14" fill="#10b981" font-family="monospace" font-size="8" text-anchor="middle">hash[0]</text>
+    <text x="35" y="26" fill="#6b7280" font-family="monospace" font-size="6" text-anchor="middle">...</text>
+  </g>
+  
+  <!-- Leaf Nodes (Tokens) -->
+  <g transform="translate(30, 280)">
+    <rect x="0" y="0" width="60" height="40" rx="4" fill="#064e3b" stroke="#10b981" stroke-width="1.5"/>
+    <text x="30" y="16" fill="#10b981" font-family="monospace" font-size="7" text-anchor="middle">token[0]</text>
+    <text x="30" y="30" fill="#6b7280" font-family="monospace" font-size="6" text-anchor="middle">Msg #1</text>
+  </g>
+  
+  <g transform="translate(100, 280)">
+    <rect x="0" y="0" width="60" height="40" rx="4" fill="#1f2937" stroke="#10b981" stroke-width="1.5"/>
+    <text x="30" y="16" fill="#10b981" font-family="monospace" font-size="7" text-anchor="middle">token[1]</text>
+    <text x="30" y="30" fill="#6b7280" font-family="monospace" font-size="6" text-anchor="middle">Msg #2</text>
+  </g>
+  
+  <g transform="translate(170, 280)">
+    <rect x="0" y="0" width="60" height="40" rx="4" fill="#1f2937" stroke="#10b981" stroke-width="1.5"/>
+    <text x="30" y="16" fill="#10b981" font-family="monospace" font-size="7" text-anchor="middle">token[2]</text>
+    <text x="30" y="30" fill="#6b7280" font-family="monospace" font-size="6" text-anchor="middle">Msg #3</text>
+  </g>
+  
+  <g transform="translate(240, 280)">
+    <rect x="0" y="0" width="60" height="40" rx="4" fill="#1f2937" stroke="#10b981" stroke-width="1.5"/>
+    <text x="30" y="16" fill="#10b981" font-family="monospace" font-size="7" text-anchor="middle">...</text>
+    <text x="30" y="30" fill="#6b7280" font-family="monospace" font-size="6" text-anchor="middle">...</text>
+  </g>
+  
+  <!-- Formula Box -->
+  <g transform="translate(380, 270)">
+    <rect x="0" y="0" width="290" height="140" rx="6" fill="#1f2937" stroke="#10b981" stroke-width="1" opacity="0.5"/>
+    <text x="145" y="25" fill="#10b981" font-family="monospace" font-size="10" 
+          text-anchor="middle" font-weight="bold">Chain Formula</text>
+    <text x="15" y="50" fill="#6b7280" font-family="monospace" font-size="9">hash[0] = HMAC(integrityKey, token[0])</text>
+    <text x="15" y="75" fill="#6b7280" font-family="monospace" font-size="9">hash[1] = HMAC(integrityKey, hash[0] + token[1])</text>
+    <text x="15" y="100" fill="#6b7280" font-family="monospace" font-size="9">hash[2] = HMAC(integrityKey, hash[1] + token[2])</text>
+    <text x="15" y="125" fill="#059669" font-family="monospace" font-size="9">...</text>
+  </g>
+  
+  <!-- Connection Lines for tokens -->
+  <g stroke="#10b981" stroke-width="1" fill="none" opacity="0.4">
+    <line x1="60" y1="280" x2="185" y2="245"/>
+    <line x1="130" y1="280" x2="200" y2="245"/>
+    <line x1="200" y1="280" x2="290" y2="245"/>
+  </g>
+  
+  <!-- Verification Note -->
+  <g transform="translate(50, 420)">
+    <rect x="0" y="0" width="600" height="25" rx="4" fill="#064e3b" stroke="#10b981" stroke-width="1" opacity="0.3"/>
+    <text x="300" y="17" fill="#10b981" font-family="monospace" font-size="9" 
+          text-anchor="middle">Any modification invalidates the entire Merkle root</text>
+  </g>
+</svg>

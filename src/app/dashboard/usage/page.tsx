@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   BarChart3,
-  ArrowLeft,
   Activity,
   Zap,
   Clock,
@@ -27,7 +26,7 @@ import {
   Bar,
   Cell,
 } from 'recharts';
-import Image from 'next/image';
+import { DashboardPageShell } from '@/components/dashboard/dashboard-page-shell';
 
 interface UsageData {
   period: string;
@@ -144,31 +143,15 @@ export default function UsagePage() {
     })) || [];
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)]">
-      {/* Header */}
-      <header className="border-b border-[var(--border-color)] bg-[var(--bg-secondary)]">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex justify-center items-center gap-4">
-            <Link
-              href="/dashboard/platform"
-              className="text-[var(--text-secondary)] hover:text-[var(--neon-cyan)] transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-           </Link>
-           <Image
-              src="/logo.jpg"
-              alt="SCCA logo"
-              width={100}
-              height={100}
-              priority
-              className="object-contain"
-            /> 
-            <div className="flex items-center gap-2">
-              <BarChart3 className="w-4 h-4" style={{ color: 'var(--neon-green)' }} />
-              <span className="text-sm text-[var(--text-primary)] font-semibold tracking-wide">
-                Usage
-              </span>
-            </div>
+    <DashboardPageShell>
+      <div className="max-w-5xl mx-auto px-6 py-4">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="w-4 h-4" style={{ color: 'var(--neon-green)' }} />
+            <span className="text-sm text-[var(--text-primary)] font-semibold tracking-wide">
+              Usage
+            </span>
           </div>
           <div className="flex items-center gap-3">
             {/* Period selector */}
@@ -195,7 +178,7 @@ export default function UsagePage() {
             </button>
           </div>
         </div>
-      </header>
+      </div>
 
       <div className="max-w-5xl mx-auto px-6 py-8">
         {error && (
@@ -580,6 +563,6 @@ export default function UsagePage() {
           </motion.div>
         )}
       </div>
-    </div>
+    </DashboardPageShell>
   );
 }
