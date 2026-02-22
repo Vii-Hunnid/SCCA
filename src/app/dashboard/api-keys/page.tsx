@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   Clock,
   ExternalLink,
+  FlaskConical,
 } from 'lucide-react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
@@ -132,13 +133,22 @@ export default function ApiKeysPage() {
               API Keys
             </span>
           </div>
-          <Link
-            href="/docs#vault"
-            className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--neon-cyan)] transition-colors"
-          >
-            <ExternalLink className="w-3 h-3" />
-            Vault API Docs
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/scca/test"
+              className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--neon-green)] transition-colors"
+            >
+              <FlaskConical className="w-3 h-3" />
+              Test API
+            </Link>
+            <Link
+              href="/docs#vault"
+              className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--neon-cyan)] transition-colors"
+            >
+              <ExternalLink className="w-3 h-3" />
+              Vault API Docs
+            </Link>
+          </div>
         </div>
         {/* Intro */}
         <div className="mb-8">
@@ -225,9 +235,18 @@ export default function ApiKeysPage() {
 
         {/* Quick usage example */}
         <div className="mb-6 cyber-card p-4">
-          <span className="text-[10px] tracking-wider uppercase text-[var(--text-secondary)]">
-            Quick usage
-          </span>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] tracking-wider uppercase text-[var(--text-secondary)]">
+              Quick usage
+            </span>
+            <Link
+              href="/scca/test"
+              className="flex items-center gap-1.5 text-[10px] text-[var(--neon-green)] hover:opacity-80 transition-opacity"
+            >
+              <FlaskConical className="w-3 h-3" />
+              Open API Tester →
+            </Link>
+          </div>
           <div className="mt-2 rounded p-3 border overflow-x-auto" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-color)' }}>
             <code className="text-xs whitespace-pre text-[var(--text-primary)]">{`curl -X POST https://your-domain.com/api/scca/vault/encrypt \\
   -H "Authorization: Bearer scca_k_your_key_here" \\
