@@ -1,0 +1,1644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SCCA API Tester</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-primary: #030712;
+      --bg-secondary: #111827;
+      --bg-tertiary: #1f2937;
+      --border-color: #374151;
+      --text-primary: #f9fafb;
+      --text-secondary: #9ca3af;
+      --text-muted: #6b7280;
+      --accent: #10b981;
+      --accent-hover: #059669;
+      --method-get: #3b82f6;
+      --method-post: #22c55e;
+      --method-patch: #eab308;
+      --method-delete: #ef4444;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    /* Header */
+    .header {
+      border-bottom: 1px solid var(--border-color);
+      background-color: rgba(17, 24, 39, 0.8);
+      backdrop-filter: blur(8px);
+      padding: 1rem 0;
+    }
+
+    .header-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header-title h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .header-title p {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-top: 0.25rem;
+    }
+
+    .header-info {
+      text-align: right;
+    }
+
+    .header-info .label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .header-info .value {
+      font-family: monospace;
+      font-size: 0.875rem;
+      color: var(--accent);
+    }
+
+    /* Container */
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem;
+    }
+
+    /* API Key Section */
+    .api-key-section {
+      background-color: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .api-key-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    .api-key-header h2 {
+      font-size: 1.125rem;
+      font-weight: 600;
+    }
+
+    .api-key-input-wrapper {
+      display: flex;
+      gap: 0.75rem;
+      position: relative;
+    }
+
+    .api-key-input {
+      flex: 1;
+      padding: 0.5rem 1rem;
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      color: var(--text-primary);
+      font-family: monospace;
+      font-size: 0.875rem;
+    }
+
+    .api-key-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .toggle-visibility {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    .toggle-visibility:hover {
+      color: var(--text-primary);
+    }
+
+    .btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 0.5rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.875rem;
+    }
+
+    .btn-primary {
+      background-color: var(--accent);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--accent-hover);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background-color: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-secondary:hover {
+      background-color: var(--border-color);
+    }
+
+    .api-key-note {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+    }
+
+    /* Layout Grid */
+    .layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 1024px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Sidebar */
+    .sidebar h3 {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 1rem;
+    }
+
+    .category {
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      overflow: hidden;
+      margin-bottom: 0.5rem;
+    }
+
+    .category-header {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      background-color: var(--bg-secondary);
+      border: none;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      font-size: 0.875rem;
+    }
+
+    .category-header:hover {
+      background-color: var(--bg-tertiary);
+    }
+
+    .category-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .category-dot {
+      width: 0.5rem;
+      height: 0.5rem;
+      border-radius: 50%;
+    }
+
+    .category-dot.vault { background-color: #059669; }
+    .category-dot.conversations { background-color: #2563eb; }
+    .category-dot.account { background-color: #9333ea; }
+    .category-dot.keys { background-color: #ca8a04; }
+    .category-dot.usage { background-color: #0891b2; }
+    .category-dot.billing { background-color: #db2777; }
+    .category-dot.media { background-color: #ea580c; }
+    .category-dot.system { background-color: #4b5563; }
+
+    .category-toggle {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+    }
+
+    .endpoint-list {
+      display: none;
+    }
+
+    .endpoint-list.expanded {
+      display: block;
+    }
+
+    .endpoint-item {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      background-color: var(--bg-primary);
+      border: none;
+      color: var(--text-secondary);
+      text-align: left;
+      cursor: pointer;
+      font-size: 0.8125rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .endpoint-item:hover {
+      background-color: var(--bg-secondary);
+      color: var(--text-primary);
+    }
+
+    .endpoint-item.active {
+      background-color: rgba(16, 185, 129, 0.1);
+      color: var(--accent);
+    }
+
+    .endpoint-method {
+      font-family: monospace;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      min-width: 2.5rem;
+    }
+
+    .endpoint-method.GET { color: var(--method-get); }
+    .endpoint-method.POST { color: var(--method-post); }
+    .endpoint-method.PATCH { color: var(--method-patch); }
+    .endpoint-method.DELETE { color: var(--method-delete); }
+
+    /* Main Content */
+    .main {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* Card */
+    .card {
+      background-color: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .endpoint-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .method-badge {
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .method-badge.GET { background-color: var(--method-get); }
+    .method-badge.POST { background-color: var(--method-post); }
+    .method-badge.PATCH { background-color: var(--method-patch); }
+    .method-badge.DELETE { background-color: var(--method-delete); }
+
+    .endpoint-path {
+      font-family: monospace;
+      color: var(--accent);
+      font-size: 0.875rem;
+    }
+
+    .endpoint-name {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    .endpoint-description {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .tab {
+      padding: 0.625rem 1rem;
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .tab:hover {
+      color: var(--text-primary);
+    }
+
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+      background-color: var(--bg-tertiary);
+    }
+
+    .tab-content {
+      padding: 1rem;
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    /* Form Elements */
+    .form-label {
+      display: block;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.5rem;
+    }
+
+    .form-textarea {
+      width: 100%;
+      min-height: 12rem;
+      padding: 0.75rem 1rem;
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      color: var(--text-primary);
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 0.8125rem;
+      resize: vertical;
+    }
+
+    .form-textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .form-textarea:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 0.375rem;
+      color: var(--text-primary);
+      font-size: 0.875rem;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-hint {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    .required {
+      color: var(--method-delete);
+    }
+
+    /* Card Footer */
+    .card-footer {
+      padding: 0.75rem 1rem;
+      background-color: var(--bg-primary);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .response-meta {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    .status-success { color: var(--method-post); }
+    .status-error { color: var(--method-delete); }
+
+    /* Batch Testing */
+    .batch-controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .batch-input {
+      width: 5rem;
+      padding: 0.5rem;
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 0.375rem;
+      color: var(--text-primary);
+      text-align: center;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    @media (max-width: 768px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .stat-box {
+      background-color: var(--bg-primary);
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .stat-value.success { color: var(--method-post); }
+    .stat-value.error { color: var(--method-delete); }
+    .stat-value.info { color: var(--method-get); }
+    .stat-value.warning { color: var(--method-patch); }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    .progress-bar {
+      height: 0.5rem;
+      background-color: var(--bg-primary);
+      border-radius: 9999px;
+      overflow: hidden;
+      margin-bottom: 1rem;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--method-post), var(--accent));
+      transition: width 0.3s ease;
+    }
+
+    .batch-grid {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 0.25rem;
+      max-height: 10rem;
+      overflow-y: auto;
+      background-color: var(--bg-primary);
+      border-radius: 0.5rem;
+      padding: 0.5rem;
+    }
+
+    @media (max-width: 768px) {
+      .batch-grid {
+        grid-template-columns: repeat(5, 1fr);
+      }
+    }
+
+    .batch-item {
+      height: 1.5rem;
+      border-radius: 0.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.625rem;
+      cursor: help;
+    }
+
+    .batch-item.success {
+      background-color: rgba(34, 197, 94, 0.2);
+      color: #4ade80;
+    }
+
+    .batch-item.error {
+      background-color: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+    }
+
+    /* Response Section */
+    .response-section {
+      margin-top: 1.5rem;
+    }
+
+    .response-header {
+      padding: 0.5rem 1rem;
+      background-color: var(--bg-primary);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .response-header h3 {
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .response-body {
+      padding: 1rem;
+    }
+
+    .error-message {
+      background-color: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      color: #f87171;
+    }
+
+    .json-response {
+      background-color: var(--bg-primary);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      overflow-x: auto;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* History Table */
+    .history-section {
+      margin-top: 1.5rem;
+    }
+
+    .history-header {
+      padding: 0.5rem 1rem;
+      background-color: var(--bg-primary);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .history-header h3 {
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .history-table-wrapper {
+      max-height: 15rem;
+      overflow-y: auto;
+    }
+
+    .history-table {
+      width: 100%;
+      font-size: 0.8125rem;
+      border-collapse: collapse;
+    }
+
+    .history-table th {
+      background-color: var(--bg-primary);
+      color: var(--text-muted);
+      text-align: left;
+      padding: 0.5rem 1rem;
+      font-weight: 500;
+    }
+
+    .history-table td {
+      padding: 0.5rem 1rem;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .history-table tr:hover td {
+      background-color: rgba(31, 41, 55, 0.5);
+    }
+
+    .text-truncate {
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .link-btn {
+      background: none;
+      border: none;
+      color: #f87171;
+      cursor: pointer;
+      font-size: 0.75rem;
+    }
+
+    .link-btn:hover {
+      text-decoration: underline;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-muted);
+    }
+
+    /* Utility */
+    .hidden {
+      display: none;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-primary);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-content">
+      <div class="header-title">
+        <h1>🔧 SCCA API Tester</h1>
+        <p>Test all SCCA API endpoints interactively</p>
+      </div>
+      <div class="header-info">
+        <div class="label">API Base URL</div>
+        <div class="value">/api/scca</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- API Key Section -->
+    <div class="api-key-section">
+      <div class="api-key-header">
+        <h2>API Authentication</h2>
+        <button class="btn btn-primary" id="testConnection">Test Connection</button>
+      </div>
+      <div class="api-key-input-wrapper">
+        <input 
+          type="password" 
+          class="api-key-input" 
+          id="apiKey" 
+          placeholder="Paste your SCCA API key (scca_...) or use session auth"
+        >
+        <button class="toggle-visibility" id="toggleKey">👁️</button>
+      </div>
+      <p class="api-key-note">API key is stored in localStorage only and sent directly to SCCA API</p>
+    </div>
+
+    <div class="layout">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <h3>Endpoints</h3>
+        <div id="endpointList"></div>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="main">
+        <!-- Endpoint Info -->
+        <div class="card">
+          <div class="card-header">
+            <div class="endpoint-badge">
+              <span class="method-badge" id="methodBadge">POST</span>
+              <code class="endpoint-path" id="endpointPath">/api/scca/vault/encrypt</code>
+            </div>
+            <h2 class="endpoint-name" id="endpointName">Encrypt Data</h2>
+            <p class="endpoint-description" id="endpointDescription">Encrypt data with AES-256-GCM</p>
+          </div>
+        </div>
+
+        <!-- Request Builder -->
+        <div class="card">
+          <div class="tabs">
+            <button class="tab active" data-tab="body">Body</button>
+            <button class="tab" data-tab="params">Parameters</button>
+            <button class="tab" data-tab="headers">Headers</button>
+          </div>
+
+          <div class="tab-content">
+            <!-- Body Tab -->
+            <div class="tab-panel active" id="bodyPanel">
+              <label class="form-label">Request Body (JSON)</label>
+              <textarea class="form-textarea" id="requestBody" placeholder="{}"></textarea>
+              <p class="form-hint" id="bodyHint"></p>
+            </div>
+
+            <!-- Params Tab -->
+            <div class="tab-panel" id="paramsPanel">
+              <div id="paramsContainer"></div>
+            </div>
+
+            <!-- Headers Tab -->
+            <div class="tab-panel" id="headersPanel">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                <span class="form-label" style="margin: 0;">Custom Headers</span>
+                <button class="link-btn" id="addHeader" style="color: var(--accent);">+ Add Header</button>
+              </div>
+              <div id="headersContainer"></div>
+            </div>
+          </div>
+
+          <div class="card-footer">
+            <div class="response-meta">
+              <span id="latencyDisplay"></span>
+              <span id="statusDisplay"></span>
+            </div>
+            <button class="btn btn-primary" id="sendRequest">Send Request</button>
+          </div>
+        </div>
+
+        <!-- Batch Testing -->
+        <div class="card">
+          <div class="card-header">
+            <h2 style="font-size: 1.125rem; font-weight: 600;">Batch Testing</h2>
+          </div>
+          <div class="tab-content">
+            <div class="batch-controls">
+              <div>
+                <label class="form-label">Requests:</label>
+                <input type="number" class="batch-input" id="batchCount" min="1" max="100" value="10">
+              </div>
+              <button class="btn btn-secondary" id="runBatch" style="background-color: #2563eb;">Run Batch Test</button>
+            </div>
+
+            <div id="batchResults" class="hidden">
+              <div class="stats-grid">
+                <div class="stat-box">
+                  <div class="stat-value success" id="batchSuccess">0</div>
+                  <div class="stat-label">Success</div>
+                </div>
+                <div class="stat-box">
+                  <div class="stat-value error" id="batchFailed">0</div>
+                  <div class="stat-label">Failed</div>
+                </div>
+                <div class="stat-box">
+                  <div class="stat-value info" id="batchLatency">0ms</div>
+                  <div class="stat-label">Avg Latency</div>
+                </div>
+                <div class="stat-box">
+                  <div class="stat-value warning" id="batchRate">0%</div>
+                  <div class="stat-label">Success Rate</div>
+                </div>
+              </div>
+
+              <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+              </div>
+
+              <div class="batch-grid" id="batchGrid"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Response Section -->
+        <div class="card response-section hidden" id="responseSection">
+          <div class="response-header">
+            <h3>Response</h3>
+            <span id="responseStatus"></span>
+          </div>
+          <div class="response-body">
+            <div id="errorContainer" class="hidden">
+              <div class="error-message" id="errorMessage"></div>
+            </div>
+            <pre class="json-response hidden" id="jsonResponse"></pre>
+          </div>
+        </div>
+
+        <!-- History Section -->
+        <div class="card history-section hidden" id="historySection">
+          <div class="history-header">
+            <h3>Request History (Last 50)</h3>
+            <button class="link-btn" id="clearHistory">Clear</button>
+          </div>
+          <div class="history-table-wrapper">
+            <table class="history-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Method</th>
+                  <th>Path</th>
+                  <th>Status</th>
+                  <th>Latency</th>
+                </tr>
+              </thead>
+              <tbody id="historyTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    // ============================================
+    // SCCA API Tester - Standalone Version
+    // ============================================
+
+    const ENDPOINTS = [
+      // Vault Endpoints
+      {
+        id: "vault-encrypt",
+        name: "Encrypt Data",
+        method: "POST",
+        path: "/api/scca/vault/encrypt",
+        description: "Encrypt data with AES-256-GCM",
+        category: "vault",
+        body: { data: ["Hello, World!"], context: "test-context" },
+      },
+      {
+        id: "vault-decrypt",
+        name: "Decrypt Data",
+        method: "POST",
+        path: "/api/scca/vault/decrypt",
+        description: "Decrypt SCCA tokens back to plaintext",
+        category: "vault",
+        body: { tokens: ["paste_token_here"], context: "test-context" },
+      },
+      {
+        id: "vault-verify",
+        name: "Verify Integrity",
+        method: "POST",
+        path: "/api/scca/vault/verify",
+        description: "Verify Merkle-HMAC integrity of encrypted data",
+        category: "vault",
+        body: { tokens: ["token1", "token2"], merkleRoot: "root_hash", context: "test-context" },
+      },
+
+      // Conversation Endpoints
+      {
+        id: "conv-list",
+        name: "List Conversations",
+        method: "GET",
+        path: "/api/scca/conversations",
+        description: "Get all conversations for the authenticated user",
+        category: "conversations",
+      },
+      {
+        id: "conv-create",
+        name: "Create Conversation",
+        method: "POST",
+        path: "/api/scca/conversations",
+        description: "Create a new conversation",
+        category: "conversations",
+        body: { title: "New Chat", model: "gpt-4o-mini" },
+      },
+      {
+        id: "conv-get",
+        name: "Get Conversation",
+        method: "GET",
+        path: "/api/scca/conversations/{id}",
+        description: "Get a specific conversation by ID",
+        category: "conversations",
+        params: [{ name: "id", type: "string", required: true, description: "Conversation ID" }],
+      },
+      {
+        id: "conv-update",
+        name: "Update Conversation",
+        method: "PATCH",
+        path: "/api/scca/conversations/{id}",
+        description: "Update conversation title",
+        category: "conversations",
+        body: { title: "Updated Title" },
+        params: [{ name: "id", type: "string", required: true, description: "Conversation ID" }],
+      },
+      {
+        id: "conv-delete",
+        name: "Delete Conversation",
+        method: "DELETE",
+        path: "/api/scca/conversations/{id}",
+        description: "Delete a conversation",
+        category: "conversations",
+        params: [{ name: "id", type: "string", required: true, description: "Conversation ID" }],
+      },
+      {
+        id: "conv-messages",
+        name: "Send Message",
+        method: "POST",
+        path: "/api/scca/conversations/{id}/messages",
+        description: "Send a message in a conversation",
+        category: "conversations",
+        body: { content: "Hello, how are you?" },
+        params: [{ name: "id", type: "string", required: true, description: "Conversation ID" }],
+      },
+      {
+        id: "conv-edit",
+        name: "Edit Message",
+        method: "PATCH",
+        path: "/api/scca/conversations/{id}/edit",
+        description: "Edit a message in a conversation",
+        category: "conversations",
+        body: { sequence: 1, newContent: "Updated message content" },
+        params: [{ name: "id", type: "string", required: true, description: "Conversation ID" }],
+      },
+
+      // Account Endpoints
+      {
+        id: "account-get",
+        name: "Get Account",
+        method: "GET",
+        path: "/api/scca/account",
+        description: "Get current user profile and sessions",
+        category: "account",
+      },
+      {
+        id: "account-update",
+        name: "Update Account",
+        method: "PATCH",
+        path: "/api/scca/account",
+        description: "Update user profile (name only)",
+        category: "account",
+        body: { name: "New Name" },
+      },
+      {
+        id: "account-delete",
+        name: "Delete Account",
+        method: "DELETE",
+        path: "/api/scca/account",
+        description: "Delete user account and all data",
+        category: "account",
+      },
+      {
+        id: "account-password",
+        name: "Change Password",
+        method: "POST",
+        path: "/api/scca/account/password",
+        description: "Change account password",
+        category: "account",
+        body: { currentPassword: "old_pass", newPassword: "new_pass" },
+      },
+      {
+        id: "account-sessions",
+        name: "Delete Session",
+        method: "DELETE",
+        path: "/api/scca/account/sessions/{id}",
+        description: "Delete a specific session",
+        category: "account",
+        params: [{ name: "id", type: "string", required: true, description: "Session ID" }],
+      },
+
+      // API Keys Endpoints
+      {
+        id: "keys-list",
+        name: "List API Keys",
+        method: "GET",
+        path: "/api/scca/keys",
+        description: "List all API keys (without secrets)",
+        category: "keys",
+      },
+      {
+        id: "keys-create",
+        name: "Create API Key",
+        method: "POST",
+        path: "/api/scca/keys",
+        description: "Generate a new API key (shown once)",
+        category: "keys",
+        body: { name: "My API Key", expiresInDays: 30 },
+      },
+      {
+        id: "keys-delete",
+        name: "Revoke API Key",
+        method: "DELETE",
+        path: "/api/scca/keys/{id}",
+        description: "Revoke an API key",
+        category: "keys",
+        params: [{ name: "id", type: "string", required: true, description: "Key ID" }],
+      },
+
+      // Usage Endpoints
+      {
+        id: "usage-get",
+        name: "Get Usage Stats",
+        method: "GET",
+        path: "/api/scca/usage",
+        description: "Get usage analytics (1h, 24h, 7d, 30d)",
+        category: "usage",
+        params: [{ name: "period", type: "query", required: false, description: "1h, 24h, 7d, or 30d" }],
+      },
+      {
+        id: "rate-limits",
+        name: "Get Rate Limits",
+        method: "GET",
+        path: "/api/scca/rate-limits",
+        description: "Get current rate limit status",
+        category: "usage",
+      },
+
+      // Billing Endpoints
+      {
+        id: "billing-get",
+        name: "Get Billing Info",
+        method: "GET",
+        path: "/api/scca/billing",
+        description: "Get billing account, tier, and invoices",
+        category: "billing",
+      },
+      {
+        id: "billing-update",
+        name: "Update Billing",
+        method: "POST",
+        path: "/api/scca/billing",
+        description: "Update billing settings",
+        category: "billing",
+        body: { monthlyBudgetMicro: 10000000, autoUpgrade: false },
+      },
+      {
+        id: "billing-invoices",
+        name: "List Invoices",
+        method: "GET",
+        path: "/api/scca/billing/invoices",
+        description: "Get all invoices",
+        category: "billing",
+      },
+      {
+        id: "billing-checkout",
+        name: "Create Checkout",
+        method: "POST",
+        path: "/api/scca/billing/checkout",
+        description: "Create a checkout session for upgrading",
+        category: "billing",
+        body: { tier: "pro" },
+      },
+
+      // Media Endpoints
+      {
+        id: "media-list",
+        name: "List Media",
+        method: "GET",
+        path: "/api/scca/media",
+        description: "List media for a conversation",
+        category: "media",
+        params: [{ name: "conversationId", type: "query", required: true, description: "Conversation ID" }],
+      },
+
+      // System
+      {
+        id: "health",
+        name: "Health Check",
+        method: "GET",
+        path: "/api/health",
+        description: "Check API health status",
+        category: "system",
+      },
+    ];
+
+    const CATEGORIES = {
+      vault: { label: "🔐 Vault", color: "vault" },
+      conversations: { label: "💬 Conversations", color: "conversations" },
+      account: { label: "👤 Account", color: "account" },
+      keys: { label: "🔑 API Keys", color: "keys" },
+      usage: { label: "📊 Usage", color: "usage" },
+      billing: { label: "💳 Billing", color: "billing" },
+      media: { label: "🖼️ Media", color: "media" },
+      system: { label: "⚙️ System", color: "system" },
+    };
+
+    // State
+    let selectedEndpoint = ENDPOINTS[0];
+    let pathParams = {};
+    let queryParams = {};
+    let customHeaders = {};
+    let requestHistory = [];
+    let expandedCategories = { vault: true };
+    let batchRunning = false;
+
+    // DOM Elements
+    const apiKeyInput = document.getElementById('apiKey');
+    const toggleKeyBtn = document.getElementById('toggleKey');
+    const endpointList = document.getElementById('endpointList');
+    const methodBadge = document.getElementById('methodBadge');
+    const endpointPath = document.getElementById('endpointPath');
+    const endpointName = document.getElementById('endpointName');
+    const endpointDescription = document.getElementById('endpointDescription');
+    const requestBody = document.getElementById('requestBody');
+    const bodyHint = document.getElementById('bodyHint');
+    const paramsContainer = document.getElementById('paramsContainer');
+    const headersContainer = document.getElementById('headersContainer');
+    const tabs = document.querySelectorAll('.tab');
+    const tabPanels = document.querySelectorAll('.tab-panel');
+    const sendBtn = document.getElementById('sendRequest');
+    const testConnectionBtn = document.getElementById('testConnection');
+    const responseSection = document.getElementById('responseSection');
+    const errorContainer = document.getElementById('errorContainer');
+    const errorMessage = document.getElementById('errorMessage');
+    const jsonResponse = document.getElementById('jsonResponse');
+    const responseStatus = document.getElementById('responseStatus');
+    const latencyDisplay = document.getElementById('latencyDisplay');
+    const statusDisplay = document.getElementById('statusDisplay');
+    const historySection = document.getElementById('historySection');
+    const historyTable = document.getElementById('historyTable');
+    const clearHistoryBtn = document.getElementById('clearHistory');
+    const addHeaderBtn = document.getElementById('addHeader');
+    const batchCountInput = document.getElementById('batchCount');
+    const runBatchBtn = document.getElementById('runBatch');
+    const batchResults = document.getElementById('batchResults');
+
+    // Load from localStorage
+    const savedKey = localStorage.getItem('scca_test_api_key');
+    if (savedKey) apiKeyInput.value = savedKey;
+
+    const savedHistory = localStorage.getItem('scca_test_history');
+    if (savedHistory) {
+      requestHistory = JSON.parse(savedHistory);
+      renderHistory();
+    }
+
+    // Toggle API Key visibility
+    toggleKeyBtn.addEventListener('click', () => {
+      apiKeyInput.type = apiKeyInput.type === 'password' ? 'text' : 'password';
+      toggleKeyBtn.textContent = apiKeyInput.type === 'password' ? '👁️' : '🙈';
+    });
+
+    // Save API key on change
+    apiKeyInput.addEventListener('change', () => {
+      localStorage.setItem('scca_test_api_key', apiKeyInput.value);
+    });
+
+    // Render endpoint list
+    function renderEndpointList() {
+      endpointList.innerHTML = '';
+      
+      Object.entries(CATEGORIES).forEach(([key, { label, color }]) => {
+        const categoryEndpoints = ENDPOINTS.filter(e => e.category === key);
+        if (categoryEndpoints.length === 0) return;
+
+        const isExpanded = expandedCategories[key];
+
+        const categoryDiv = document.createElement('div');
+        categoryDiv.className = 'category';
+        categoryDiv.innerHTML = `
+          <button class="category-header" data-category="${key}">
+            <span class="category-label">
+              <span class="category-dot ${color}"></span>
+              <span>${label}</span>
+            </span>
+            <span class="category-toggle">${isExpanded ? '▼' : '▶'}</span>
+          </button>
+          <div class="endpoint-list ${isExpanded ? 'expanded' : ''}" id="category-${key}">
+            ${categoryEndpoints.map(endpoint => `
+              <button class="endpoint-item ${endpoint.id === selectedEndpoint.id ? 'active' : ''}" data-id="${endpoint.id}">
+                <span class="endpoint-method ${endpoint.method}">${endpoint.method}</span>
+                <span class="text-truncate">${endpoint.name}</span>
+              </button>
+            `).join('')}
+          </div>
+        `;
+        endpointList.appendChild(categoryDiv);
+      });
+
+      // Add click handlers
+      document.querySelectorAll('.category-header').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const category = btn.dataset.category;
+          expandedCategories[category] = !expandedCategories[category];
+          renderEndpointList();
+        });
+      });
+
+      document.querySelectorAll('.endpoint-item').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const endpoint = ENDPOINTS.find(e => e.id === btn.dataset.id);
+          if (endpoint) {
+            selectedEndpoint = endpoint;
+            pathParams = {};
+            queryParams = {};
+            renderEndpointList();
+            renderEndpointInfo();
+            renderParams();
+          }
+        });
+      });
+    }
+
+    // Render endpoint info
+    function renderEndpointInfo() {
+      methodBadge.textContent = selectedEndpoint.method;
+      methodBadge.className = `method-badge ${selectedEndpoint.method}`;
+      endpointPath.textContent = buildUrl(selectedEndpoint);
+      endpointName.textContent = selectedEndpoint.name;
+      endpointDescription.textContent = selectedEndpoint.description;
+
+      if (selectedEndpoint.body) {
+        requestBody.value = JSON.stringify(selectedEndpoint.body, null, 2);
+      } else {
+        requestBody.value = '';
+      }
+
+      if (selectedEndpoint.method === 'GET' || selectedEndpoint.method === 'DELETE') {
+        requestBody.disabled = true;
+        bodyHint.textContent = 'Body not sent for GET/DELETE requests';
+      } else {
+        requestBody.disabled = false;
+        bodyHint.textContent = '';
+      }
+    }
+
+    // Render parameters
+    function renderParams() {
+      if (!selectedEndpoint.params || selectedEndpoint.params.length === 0) {
+        paramsContainer.innerHTML = '<p class="empty-state">No parameters required for this endpoint</p>';
+        return;
+      }
+
+      paramsContainer.innerHTML = selectedEndpoint.params.map(param => `
+        <div class="form-group">
+          <label class="form-label">
+            ${param.name}
+            ${param.required ? '<span class="required">*</span>' : ''}
+            <span style="color: var(--text-muted); font-size: 0.75rem; margin-left: 0.5rem;">(${param.type})</span>
+          </label>
+          <input 
+            type="text" 
+            class="form-input" 
+            placeholder="${param.description}"
+            value="${param.type === 'query' ? (queryParams[param.name] || '') : (pathParams[param.name] || '')}"
+            data-param="${param.name}"
+            data-type="${param.type}"
+          >
+          <p class="form-hint">${param.description}</p>
+        </div>
+      `).join('');
+
+      // Add input handlers
+      paramsContainer.querySelectorAll('input').forEach(input => {
+        input.addEventListener('input', () => {
+          const paramName = input.dataset.param;
+          const paramType = input.dataset.type;
+          if (paramType === 'query') {
+            queryParams[paramName] = input.value;
+          } else {
+            pathParams[paramName] = input.value;
+          }
+          endpointPath.textContent = buildUrl(selectedEndpoint);
+        });
+      });
+    }
+
+    // Render headers
+    function renderHeaders() {
+      const headerEntries = Object.entries(customHeaders);
+      if (headerEntries.length === 0) {
+        headersContainer.innerHTML = '<p class="empty-state">No custom headers</p>';
+        return;
+      }
+
+      headersContainer.innerHTML = headerEntries.map(([key, value], index) => `
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+          <input type="text" class="form-input" placeholder="Header name" value="${key}" data-header-key="${index}">
+          <input type="text" class="form-input" placeholder="Header value" value="${value}" data-header-value="${index}">
+          <button class="btn btn-secondary" style="padding: 0.5rem;" data-remove="${index}">✕</button>
+        </div>
+      `).join('');
+
+      // Add handlers
+      headersContainer.querySelectorAll('[data-header-key]').forEach(input => {
+        input.addEventListener('change', () => {
+          const index = parseInt(input.dataset.headerKey);
+          const oldKey = Object.keys(customHeaders)[index];
+          const value = customHeaders[oldKey];
+          delete customHeaders[oldKey];
+          if (input.value) customHeaders[input.value] = value;
+          renderHeaders();
+        });
+      });
+
+      headersContainer.querySelectorAll('[data-header-value]').forEach(input => {
+        input.addEventListener('change', () => {
+          const index = parseInt(input.dataset.headerValue);
+          const key = Object.keys(customHeaders)[index];
+          customHeaders[key] = input.value;
+        });
+      });
+
+      headersContainer.querySelectorAll('[data-remove]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const index = parseInt(btn.dataset.remove);
+          const key = Object.keys(customHeaders)[index];
+          delete customHeaders[key];
+          renderHeaders();
+        });
+      });
+    }
+
+    // Build URL with params
+    function buildUrl(endpoint) {
+      let url = endpoint.path;
+      
+      if (endpoint.params) {
+        endpoint.params.forEach(param => {
+          if (param.type !== 'query') {
+            const value = pathParams[param.name] || `{${param.name}}`;
+            url = url.replace(`{${param.name}}`, value);
+          }
+        });
+      }
+
+      const queryParts = [];
+      if (endpoint.params) {
+        endpoint.params.forEach(param => {
+          if (param.type === 'query' && queryParams[param.name]) {
+            queryParts.push(`${param.name}=${encodeURIComponent(queryParams[param.name])}`);
+          }
+        });
+      }
+      if (queryParts.length > 0) {
+        url += `?${queryParts.join('&')}`;
+      }
+
+      return url;
+    }
+
+    // Tab switching
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tabPanels.forEach(p => p.classList.remove('active'));
+        
+        tab.classList.add('active');
+        document.getElementById(`${tab.dataset.tab}Panel`).classList.add('active');
+      });
+    });
+
+    // Add header
+    addHeaderBtn.addEventListener('click', () => {
+      customHeaders[''] = '';
+      renderHeaders();
+    });
+
+    // Make request
+    async function makeRequest() {
+      const url = buildUrl(selectedEndpoint);
+      const startTime = performance.now();
+      
+      const headers = {
+        'Content-Type': 'application/json',
+        ...customHeaders,
+      };
+
+      const apiKey = apiKeyInput.value.trim();
+      if (apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`;
+      }
+
+      const options = {
+        method: selectedEndpoint.method,
+        headers,
+      };
+
+      if (selectedEndpoint.method !== 'GET' && selectedEndpoint.method !== 'DELETE' && requestBody.value) {
+        try {
+          JSON.parse(requestBody.value);
+          options.body = requestBody.value;
+        } catch (e) {
+          showError('Invalid JSON in request body');
+          return null;
+        }
+      }
+
+      try {
+        const res = await fetch(url, options);
+        const latency = Math.round(performance.now() - startTime);
+        const data = await res.json().catch(() => null);
+        
+        showResponse(data, res.status, latency);
+        
+        const historyEntry = {
+          id: Date.now().toString(),
+          timestamp: new Date().toLocaleTimeString(),
+          method: selectedEndpoint.method,
+          path: url,
+          status: res.status,
+          latency,
+          success: res.ok,
+        };
+        
+        requestHistory.unshift(historyEntry);
+        if (requestHistory.length > 50) requestHistory.pop();
+        localStorage.setItem('scca_test_history', JSON.stringify(requestHistory));
+        renderHistory();
+
+        return { success: res.ok, status: res.status, latency };
+      } catch (err) {
+        const latency = Math.round(performance.now() - startTime);
+        showError(err.message);
+        return { success: false, status: 0, latency, error: err.message };
+      }
+    }
+
+    // Show response
+    function showResponse(data, status, latency) {
+      responseSection.classList.remove('hidden');
+      errorContainer.classList.add('hidden');
+      jsonResponse.classList.remove('hidden');
+      
+      jsonResponse.textContent = JSON.stringify(data, null, 2);
+      responseStatus.textContent = `HTTP ${status}`;
+      responseStatus.className = status < 400 ? 'status-success' : 'status-error';
+      
+      latencyDisplay.textContent = `⏱️ ${latency}ms`;
+      statusDisplay.textContent = `Status: ${status}`;
+      statusDisplay.className = status < 400 ? 'status-success' : 'status-error';
+    }
+
+    // Show error
+    function showError(message) {
+      responseSection.classList.remove('hidden');
+      errorContainer.classList.remove('hidden');
+      jsonResponse.classList.add('hidden');
+      errorMessage.textContent = message;
+      
+      latencyDisplay.textContent = '';
+      statusDisplay.textContent = '';
+    }
+
+    // Render history
+    function renderHistory() {
+      if (requestHistory.length === 0) {
+        historySection.classList.add('hidden');
+        return;
+      }
+      
+      historySection.classList.remove('hidden');
+      historyTable.innerHTML = requestHistory.map(entry => `
+        <tr>
+          <td style="color: var(--text-muted);">${entry.timestamp}</td>
+          <td>
+            <span style="color: ${
+              entry.method === 'GET' ? 'var(--method-get)' :
+              entry.method === 'POST' ? 'var(--method-post)' :
+              entry.method === 'PATCH' ? 'var(--method-patch)' :
+              'var(--method-delete)'
+            }; font-family: monospace; font-size: 0.75rem; font-weight: 600;">${entry.method}</span>
+          </td>
+          <td class="text-truncate" title="${entry.path}">${entry.path}</td>
+          <td style="color: ${entry.success ? 'var(--method-post)' : 'var(--method-delete)'};">${entry.status}</td>
+          <td style="color: var(--text-muted);">${entry.latency}ms</td>
+        </tr>
+      `).join('');
+    }
+
+    // Clear history
+    clearHistoryBtn.addEventListener('click', () => {
+      requestHistory = [];
+      localStorage.removeItem('scca_test_history');
+      renderHistory();
+    });
+
+    // Send request
+    sendBtn.addEventListener('click', async () => {
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'Sending...';
+      await makeRequest();
+      sendBtn.disabled = false;
+      sendBtn.textContent = 'Send Request';
+    });
+
+    // Test connection
+    testConnectionBtn.addEventListener('click', async () => {
+      testConnectionBtn.disabled = true;
+      testConnectionBtn.textContent = 'Testing...';
+      
+      // Switch to health endpoint temporarily
+      const prevEndpoint = selectedEndpoint;
+      selectedEndpoint = ENDPOINTS.find(e => e.id === 'health');
+      renderEndpointInfo();
+      await makeRequest();
+      selectedEndpoint = prevEndpoint;
+      renderEndpointInfo();
+      
+      testConnectionBtn.disabled = false;
+      testConnectionBtn.textContent = 'Test Connection';
+    });
+
+    // Batch testing
+    runBatchBtn.addEventListener('click', async () => {
+      const count = parseInt(batchCountInput.value);
+      if (count < 1 || count > 100) {
+        showError('Batch count must be between 1 and 100');
+        return;
+      }
+
+      batchRunning = true;
+      batchResults.classList.remove('hidden');
+      runBatchBtn.disabled = true;
+      runBatchBtn.textContent = 'Running...';
+
+      const results = [];
+      const batchGrid = document.getElementById('batchGrid');
+      batchGrid.innerHTML = '';
+
+      for (let i = 0; i < count; i++) {
+        const result = await makeRequest();
+        results.push(result);
+
+        // Update stats
+        const success = results.filter(r => r.success).length;
+        const failed = results.filter(r => !r.success).length;
+        const avgLatency = results.length > 0 
+          ? Math.round(results.reduce((a, b) => a + b.latency, 0) / results.length)
+          : 0;
+        const successRate = results.length > 0 ? Math.round((success / results.length) * 100) : 0;
+
+        document.getElementById('batchSuccess').textContent = success;
+        document.getElementById('batchFailed').textContent = failed;
+        document.getElementById('batchLatency').textContent = `${avgLatency}ms`;
+        document.getElementById('batchRate').textContent = `${successRate}%`;
+        document.getElementById('progressFill').style.width = `${successRate}%`;
+
+        // Add to grid
+        const item = document.createElement('div');
+        item.className = `batch-item ${result.success ? 'success' : 'error'}`;
+        item.textContent = i + 1;
+        item.title = `Request ${i + 1}: ${result.status} (${result.latency}ms)`;
+        batchGrid.appendChild(item);
+
+        // Small delay
+        if (i < count - 1) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+
+      batchRunning = false;
+      runBatchBtn.disabled = false;
+      runBatchBtn.textContent = 'Run Batch Test';
+    });
+
+    // Initial render
+    renderEndpointList();
+    renderEndpointInfo();
+    renderParams();
+    renderHeaders();
+  </script>
+</body>
+</html>
