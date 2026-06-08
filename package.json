@@ -21,6 +21,7 @@
     "@polar-sh/nextjs": "^0.9.3",
     "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^5.22.0",
+    "animejs": "^4.4.1",
     "clsx": "^2.1.0",
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.4",

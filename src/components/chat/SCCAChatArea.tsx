@@ -2,8 +2,9 @@
 
 import { useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, Shield, Terminal, Lock } from 'lucide-react';
+import { Bot, Shield, Lock } from 'lucide-react';
 import { SCCAMessageBubble } from './SCCAMessageBubble';
+import { BlockStreamingIndicator, InlineStreamingCursor } from './BlockStreamingIndicator';
 import type { SCCAMessage } from '@/types/chat';
 
 interface SCCAChatAreaProps {
@@ -199,9 +200,9 @@ export function SCCAChatArea({
                 </span>
               </div>
 
-              <div 
+              <div
                 className="rounded-lg px-4 py-3 text-sm leading-relaxed"
-                style={{ 
+                style={{
                   backgroundColor: 'color-mix(in srgb, var(--bg-tertiary) 40%, transparent)',
                   border: '1px solid var(--border-color)',
                   color: 'var(--text-primary)'
@@ -210,19 +211,11 @@ export function SCCAChatArea({
                 {streamingContent ? (
                   <div className="whitespace-pre-wrap break-words">
                     {streamingContent}
-                    <motion.span
-                      className="inline-block w-2 h-4 ml-1 align-middle rounded-sm"
-                      style={{ backgroundColor: 'var(--neon-cyan)' }}
-                      animate={{ opacity: [1, 0.3, 1] }}
-                      transition={{ duration: 0.8, repeat: Infinity }}
-                    />
+                    <InlineStreamingCursor />
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2 py-1">
-                    <Terminal className="w-3.5 h-3.5" style={{ color: 'var(--neon-green)', opacity: 0.6 }} />
-                    <span className="text-xs italic" style={{ color: 'var(--text-secondary)' }}>
-                      Initializing response stream...
-                    </span>
+                  <div className="flex items-center gap-3 py-1">
+                    <BlockStreamingIndicator />
                   </div>
                 )}
               </div>

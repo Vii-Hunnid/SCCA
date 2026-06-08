@@ -2,20 +2,22 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Send, 
-  Square, 
-  Lock, 
-  Paperclip, 
-  X, 
-  Image, 
-  Film, 
-  Music, 
+import {
+  Send,
+  Square,
+  Lock,
+  Paperclip,
+  X,
+  Image,
+  Film,
+  Music,
   FileText,
   Upload,
   AlertCircle,
   Check,
-  Trash2
+  Trash2,
+  Mic,
+  MicOff,
 } from 'lucide-react';
 
 interface PendingAttachment {
@@ -25,12 +27,15 @@ interface PendingAttachment {
   id: string;
 }
 
+type VoicePhase = 'idle' | 'recording' | 'transcribing';
+
 interface ChatInputProps {
   onSend: (content: string, attachments?: File[]) => void;
   onStop?: () => void;
   isStreaming: boolean;
   disabled?: boolean;
   placeholder?: string;
+  onVoiceInput?: (transcript: string) => void;
 }
 
 const ACCEPT = '.png,.jpg,.jpeg,.webp,.gif,.svg,.mp4,.webm,.mov,.mp3,.wav,.ogg,.m4a,.flac,.pdf,.txt,.md,.json';
@@ -59,20 +64,99 @@ function generateId(): string {
   return Math.random().toString(36).substring(2, 9);
 }
 
+const VOICE_BLOCK_CHARS = ['░', '▒', '▓', '█', '▓', '▒', '░'];
+
+function VoiceWave({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 py-1 select-none">
+      <span className="font-mono text-sm tracking-widest" style={{ color: '#10b981' }}>
+        {VOICE_BLOCK_CHARS.map((ch, i) => (
+          <span
+            key={i}
+            className="inline-block animate-pulse"
+            style={{ animationDelay: `${i * 80}ms`, color: '#10b981' }}
+          >
+            {ch}
+          </span>
+        ))}
+      </span>
+      <span className="text-xs font-mono italic" style={{ color: 'var(--text-secondary)' }}>{label}</span>
+    </div>
+  );
+}
+
 export function ChatInput({
   onSend,
   onStop,
   isStreaming,
   disabled,
   placeholder = 'Enter message... (encrypted with AES-256-GCM)',
+  onVoiceInput,
 }: ChatInputProps) {
   const [content, setContent] = useState('');
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [dragError, setDragError] = useState<string | null>(null);
+  const [voicePhase, setVoicePhase] = useState<VoicePhase>('idle');
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
+
+  const isMicActive = voicePhase !== 'idle';
+
+  const handleMicClick = useCallback(async () => {
+    if (voicePhase === 'recording') {
+      mediaRecorderRef.current?.stop();
+      return;
+    }
+
+    if (voicePhase === 'transcribing') return;
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunksRef.current = [];
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        setVoicePhase('transcribing');
+
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const formData = new FormData();
+        formData.append('file', blob, 'recording.webm');
+
+        try {
+          const res = await fetch('/api/ai/transcribe', { method: 'POST', body: formData });
+          if (res.ok) {
+            const { text } = await res.json();
+            if (text?.trim()) {
+              if (onVoiceInput) {
+                onVoiceInput(text.trim());
+              } else {
+                setContent((prev) => (prev ? `${prev} ${text.trim()}` : text.trim()));
+              }
+            }
+          }
+        } catch {
+          // transcription failed silently
+        } finally {
+          setVoicePhase('idle');
+        }
+      };
+
+      recorder.start();
+      setVoicePhase('recording');
+    } catch {
+      setVoicePhase('idle');
+    }
+  }, [voicePhase, onVoiceInput]);
 
   // Handle sending message
   const handleSend = useCallback(() => {
@@ -264,11 +348,28 @@ export function ChatInput({
         )}
       </AnimatePresence>
 
-      <div 
-        className="border-t p-4"
-        style={{ 
-          borderColor: 'var(--border-color)', 
-          backgroundColor: 'color-mix(in srgb, var(--bg-secondary) 90%, transparent)' 
+      <motion.div
+        className="p-4"
+        animate={
+          isMicActive
+            ? {
+                boxShadow: [
+                  '0 0 0px rgba(16,185,129,0)',
+                  '0 0 24px rgba(16,185,129,0.35)',
+                  '0 0 8px rgba(16,185,129,0.15)',
+                  '0 0 24px rgba(16,185,129,0.35)',
+                  '0 0 0px rgba(16,185,129,0)',
+                ],
+              }
+            : { boxShadow: '0 0 0px rgba(16,185,129,0)' }
+        }
+        transition={isMicActive ? { duration: 1.8, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.3 }}
+        style={{
+          borderColor: isMicActive ? 'rgba(16,185,129,0.5)' : 'var(--border-color)',
+          borderTopWidth: '1px',
+          borderTopStyle: 'solid',
+          backgroundColor: 'color-mix(in srgb, var(--bg-secondary) 90%, transparent)',
+          transition: 'border-color 0.3s',
         }}
       >
         {/* Attachment Previews */}
@@ -392,14 +493,11 @@ export function ChatInput({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => fileInputRef.current?.click()}
-            disabled={disabled || isStreaming}
+            disabled={disabled || isStreaming || isMicActive}
             className="flex-shrink-0 p-2.5 rounded-lg transition-all disabled:opacity-50"
-            style={{ 
-              border: '1px solid var(--border-color)', 
-              color: 'var(--text-secondary)',
-            }}
+            style={{ border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}
             onMouseEnter={(e) => {
-              if (!disabled && !isStreaming) {
+              if (!disabled && !isStreaming && !isMicActive) {
                 e.currentTarget.style.borderColor = 'var(--neon-cyan)';
                 e.currentTarget.style.color = 'var(--neon-cyan)';
               }
@@ -413,35 +511,72 @@ export function ChatInput({
             <Paperclip className="w-4 h-4" />
           </motion.button>
 
-          {/* Textarea */}
+          {/* Textarea or voice overlay */}
           <div className="flex-1 relative">
-            <textarea
-              ref={textareaRef}
-              value={content}
-              onChange={handleInput}
-              onKeyDown={handleKeyDown}
-              placeholder={placeholder}
-              disabled={disabled}
-              rows={1}
-              className="w-full py-3 px-4 pr-10 rounded-lg resize-none max-h-[200px] text-sm leading-relaxed"
+            {isMicActive ? (
+              <div
+                className="w-full py-3 px-4 rounded-lg text-sm leading-relaxed min-h-[44px] flex items-center"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--bg-primary) 50%, transparent)',
+                  border: '1px solid rgba(16,185,129,0.4)',
+                  boxShadow: '0 0 8px rgba(16,185,129,0.15)',
+                }}
+              >
+                <VoiceWave label={voicePhase === 'recording' ? 'Listening...' : 'Transcribing...'} />
+              </div>
+            ) : (
+              <>
+                <textarea
+                  ref={textareaRef}
+                  value={content}
+                  onChange={handleInput}
+                  onKeyDown={handleKeyDown}
+                  placeholder={placeholder}
+                  disabled={disabled}
+                  rows={1}
+                  className="w-full py-3 px-4 pr-10 rounded-lg resize-none max-h-[200px] text-sm leading-relaxed"
+                  style={{
+                    backgroundColor: 'color-mix(in srgb, var(--bg-primary) 50%, transparent)',
+                    border: '1px solid var(--border-color)',
+                    color: 'var(--text-primary)',
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--neon-cyan)';
+                    e.currentTarget.style.boxShadow = '0 0 0 2px color-mix(in srgb, var(--neon-cyan) 20%, transparent)';
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--border-color)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                />
+                <Lock
+                  className="absolute right-3 top-3.5 w-3.5 h-3.5 pointer-events-none"
+                  style={{ color: 'color-mix(in srgb, var(--text-secondary) 40%, transparent)' }}
+                />
+              </>
+            )}
+          </div>
+
+          {/* Mic button */}
+          <div className="relative flex-shrink-0">
+            {voicePhase === 'recording' && (
+              <span className="absolute inset-0 rounded-lg animate-ping" style={{ backgroundColor: 'rgba(16,185,129,0.35)' }} />
+            )}
+            <motion.button
+              whileHover={{ scale: voicePhase === 'transcribing' ? 1 : 1.05 }}
+              whileTap={{ scale: voicePhase === 'transcribing' ? 1 : 0.95 }}
+              onClick={handleMicClick}
+              disabled={disabled || isStreaming || voicePhase === 'transcribing'}
+              className="relative p-2.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
-                backgroundColor: 'color-mix(in srgb, var(--bg-primary) 50%, transparent)',
-                border: '1px solid var(--border-color)',
-                color: 'var(--text-primary)',
+                border: `1px solid ${voicePhase === 'recording' ? 'rgba(16,185,129,0.6)' : 'var(--border-color)'}`,
+                color: voicePhase === 'recording' ? '#10b981' : 'var(--text-secondary)',
+                backgroundColor: voicePhase === 'recording' ? 'rgba(16,185,129,0.12)' : 'transparent',
               }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = 'var(--neon-cyan)';
-                e.currentTarget.style.boxShadow = '0 0 0 2px color-mix(in srgb, var(--neon-cyan) 20%, transparent)';
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'var(--border-color)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-            />
-            <Lock 
-              className="absolute right-3 top-3.5 w-3.5 h-3.5 pointer-events-none" 
-              style={{ color: 'color-mix(in srgb, var(--text-secondary) 40%, transparent)' }} 
-            />
+              title={voicePhase === 'recording' ? 'Stop recording' : 'Start voice input'}
+            >
+              {voicePhase === 'recording' ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            </motion.button>
           </div>
 
           {/* Send/Stop button */}
@@ -451,10 +586,10 @@ export function ChatInput({
               whileTap={{ scale: 0.95 }}
               onClick={onStop}
               className="flex-shrink-0 p-2.5 rounded-lg transition-all hover:opacity-80 flex items-center gap-2"
-              style={{ 
-                border: '1px solid color-mix(in srgb, var(--neon-red) 50%, transparent)', 
+              style={{
+                border: '1px solid color-mix(in srgb, var(--neon-red) 50%, transparent)',
                 color: 'var(--neon-red)',
-                backgroundColor: 'color-mix(in srgb, var(--neon-red) 10%, transparent)'
+                backgroundColor: 'color-mix(in srgb, var(--neon-red) 10%, transparent)',
               }}
               title="Stop generating"
             >
@@ -465,16 +600,12 @@ export function ChatInput({
               whileHover={{ scale: canSend ? 1.05 : 1 }}
               whileTap={{ scale: canSend ? 0.95 : 1 }}
               onClick={handleSend}
-              disabled={!canSend}
+              disabled={!canSend || isMicActive}
               className="flex-shrink-0 p-2.5 rounded-lg border transition-all disabled:cursor-not-allowed flex items-center gap-2"
               style={{
-                borderColor: canSend
-                  ? 'color-mix(in srgb, var(--neon-cyan) 50%, transparent)'
-                  : 'var(--border-color)',
-                color: canSend ? 'var(--neon-cyan)' : 'var(--text-secondary)',
-                backgroundColor: canSend
-                  ? 'color-mix(in srgb, var(--neon-cyan) 15%, transparent)'
-                  : 'transparent'
+                borderColor: canSend && !isMicActive ? 'color-mix(in srgb, var(--neon-cyan) 50%, transparent)' : 'var(--border-color)',
+                color: canSend && !isMicActive ? 'var(--neon-cyan)' : 'var(--text-secondary)',
+                backgroundColor: canSend && !isMicActive ? 'color-mix(in srgb, var(--neon-cyan) 15%, transparent)' : 'transparent',
               }}
               title={canSend ? 'Send message (Enter)' : 'Type a message to send'}
             >
@@ -510,7 +641,7 @@ export function ChatInput({
             Shift + Enter for new line
           </span>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, memo } from 'react';
+import { InlineStreamingCursor } from './BlockStreamingIndicator';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Copy,
@@ -22,6 +23,7 @@ interface SCCAMessageBubbleProps {
   message: SCCAMessage;
   isLast: boolean;
   isLastAssistant: boolean;
+  isStreaming?: boolean;
   onEdit?: (sequence: number, content: string) => void;
   onDelete?: (sequence: number) => void;
   onRegenerate?: () => void;
@@ -214,6 +216,7 @@ export const SCCAMessageBubble = memo(function SCCAMessageBubble({
   message,
   isLast,
   isLastAssistant,
+  isStreaming = false,
   onEdit,
   onDelete,
   onRegenerate,
@@ -399,6 +402,7 @@ export const SCCAMessageBubble = memo(function SCCAMessageBubble({
           ) : (
             <div className="break-words">
               {formatContent(message.content)}
+              {isStreaming && isLastAssistant && <InlineStreamingCursor />}
             </div>
           )}
         </div>
