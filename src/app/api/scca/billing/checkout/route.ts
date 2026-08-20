@@ -1,18 +1,7 @@
 /**
- * POST /api/scca/billing/checkout — Create a Polar checkout URL
+ * POST /api/scca/billing/checkout — Create a Polar checkout session
  *
- * Generates a checkout link for upgrading to a paid tier.
- * The user is redirected to Polar's hosted checkout page.
- *
- * Request:
- *   { tier?: string, productId?: string }
- *
- * - If `tier` is provided (e.g. "tier_2"), looks up the product ID from POLAR_TIER_MAP.
- * - If `productId` is provided directly, uses that.
- * - Otherwise falls back to the first product in POLAR_TIER_MAP or POLAR_DEFAULT_PRODUCT_ID.
- *
- * Response:
- *   { url: string }
+ * Request body: { tier?: string, productId?: string }
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -32,15 +21,15 @@ function parseTierMap(): {
   const byTier: Record<string, string> = {};
   try {
     const raw = process.env.POLAR_TIER_MAP || "";
-    const parsed = JSON.parse(raw);
+    const parsed = raw ? JSON.parse(raw) : {};
     for (const [productId, tierName] of Object.entries(parsed)) {
       if (typeof tierName === "string") {
         byProduct[productId] = tierName;
         byTier[tierName] = productId;
       }
     }
-  } catch {
-    // Invalid JSON — maps will be empty
+  } catch (err) {
+    console.error("[billing/checkout] POLAR_TIER_MAP parse error:", (err as Error).message);
   }
   return { byProduct, byTier };
 }
@@ -52,8 +41,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Fail fast if essential env vars missing
+    if (!process.env.POLAR_ACCESS_TOKEN) {
+      console.error("[billing/checkout] Missing POLAR_ACCESS_TOKEN");
+      return NextResponse.json(
+        { error: "Payment provider not configured (POLAR_ACCESS_TOKEN missing)" },
+        { status: 500 }
+      );
+    }
+
     const body = await request.json().catch(() => ({}));
-    let { productId, tier } = body;
+    let { productId, tier } = body as { productId?: string; tier?: string };
 
     const { byProduct, byTier } = parseTierMap();
 
@@ -76,6 +74,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!productId) {
+      console.error("[billing/checkout] No product configured - POLAR_TIER_MAP and POLAR_DEFAULT_PRODUCT_ID empty");
       return NextResponse.json(
         {
           error:
@@ -90,22 +89,32 @@ export async function POST(request: NextRequest) {
       process.env.NEXTAUTH_URL ||
       "http://localhost:3000";
 
-    const polar = getPolarClient();
-    const checkout = await polar.checkouts.create({
-      products: [productId],
-      successUrl: `${appUrl}/dashboard/billing?checkout=success`,
-      customerEmail: session.user.email,
-      metadata: {
+    let checkout: any;
+    try {
+      const polar = getPolarClient();
+      checkout = await polar.checkouts.create({
+        products: [productId],
+        successUrl: `${appUrl}/dashboard/billing?checkout=success`,
+        customerEmail: session.user.email,
+        metadata: {
+          userId: session.user.id,
+        },
+      });
+    } catch (err: any) {
+      // Make sure the log includes helpful context (but no secrets)
+      console.error("[billing/checkout] polar.checkouts.create failed", {
         userId: session.user.id,
-      },
-    });
+        productId,
+        envPolarEnv: process.env.POLAR_ENVIRONMENT,
+        message: err?.message,
+        stack: err?.stack,
+      });
+      return NextResponse.json({ error: "Failed to create checkout" }, { status: 500 });
+    }
 
     return NextResponse.json({ url: checkout.url });
   } catch (err: any) {
-    console.error("[billing/checkout]", err);
-    return NextResponse.json(
-      { error: err.message || "Failed to create checkout" },
-      { status: 500 }
-    );
+    console.error("[billing/checkout] unexpected error:", err);
+    return NextResponse.json({ error: err.message || "Failed to create checkout" }, { status: 500 });
   }
 }

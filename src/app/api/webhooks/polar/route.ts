@@ -39,17 +39,29 @@ export async function POST(request: NextRequest) {
       process.env.POLAR_WEBHOOK_SECRET || ""
     );
   } catch (err) {
+    // If signature verification fails, log headers + small payload snippet for triage (do NOT log secret)
     if (err instanceof WebhookVerificationError) {
-      console.error("[polar/webhook] Verification failed:", err.message);
+      console.error("[polar/webhook] Verification failed:", {
+        message: err.message,
+        headers: webhookHeaders,
+        snippet: body.slice(0, 200), // small snippet for context
+      });
       return NextResponse.json(
         { error: "Invalid webhook signature" },
         { status: 403 }
       );
     }
+    console.error("[polar/webhook] validateEvent threw:", err);
     throw err;
   }
 
   try {
+    // Log basic event metadata for debugging
+    console.log(`[polar/webhook] Received event`, {
+      type: event.type,
+      id: (event.data && event.data.id) || (event as any).id || null,
+    });
+
     switch (event.type) {
       case "order.paid":
         await handleOrderPaid(event.data);
@@ -73,7 +85,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ received: true });
   } catch (err: any) {
-    console.error(`[polar/webhook] Error processing ${event.type}:`, err);
+    // Log the full payload and error to assist debugging
+    console.error(`[polar/webhook] Error processing ${event?.type}:`, {
+      message: err?.message,
+      stack: err?.stack,
+      eventType: event?.type,
+      eventId: event?.data?.id || (event as any).id,
+      eventSnippet: JSON.stringify(event?.data).slice(0, 1000),
+    });
     return NextResponse.json(
       { error: "Webhook processing failed" },
       { status: 500 }
@@ -239,65 +258,43 @@ async function handleSubscriptionCreated(data: any) {
  * subscription.updated — Subscription has been modified (plan change, status change).
  */
 async function handleSubscriptionUpdated(data: any) {
-  const { id: subscriptionId, customer, product_id, product, status, cancel_at_period_end } = data;
+  const { id: subscriptionId, customer, product_id, product, status } = data;
   const customerEmail = customer?.email;
-
   if (!customerEmail) return;
 
-  const user = await prisma.user.findUnique({
-    where: { email: customerEmail },
-  });
+  const user = await prisma.user.findUnique({ where: { email: customerEmail } });
   if (!user) return;
 
   const tier = mapProductToTier(product_id, product?.metadata);
-  const subStatus = cancel_at_period_end ? "canceled" : (status || "active");
 
-  await prisma.billingAccount.upsert({
-    where: { userId: user.id },
-    create: {
-      userId: user.id,
-      tier,
-      polarCustomerId: data.customer_id,
-      polarSubscriptionId: subscriptionId,
-      polarProductId: product_id,
-      subscriptionStatus: subStatus,
-    },
-    update: {
-      tier,
-      polarSubscriptionId: subscriptionId,
-      polarProductId: product_id,
-      subscriptionStatus: subStatus,
-    },
-  });
-
-  console.log(
-    `[polar/webhook] subscription.updated: ${customerEmail} — status=${subStatus}`
-  );
-}
-
-/**
- * subscription.canceled — Subscription has been canceled.
- */
-async function handleSubscriptionCanceled(data: any) {
-  const { customer } = data;
-  const customerEmail = customer?.email;
-
-  if (!customerEmail) return;
-
-  const user = await prisma.user.findUnique({
-    where: { email: customerEmail },
-  });
-  if (!user) return;
-
-  // Set status to canceled but keep the tier until period end
   await prisma.billingAccount.updateMany({
     where: { userId: user.id },
     data: {
-      subscriptionStatus: "canceled",
+      tier,
+      polarSubscriptionId: subscriptionId,
+      polarProductId: product_id,
+      subscriptionStatus: status || undefined,
     },
   });
 
-  console.log(
-    `[polar/webhook] subscription.canceled: ${customerEmail}`
-  );
+  console.log(`[polar/webhook] subscription.updated: ${customerEmail} — sub=${subscriptionId} — status=${status}`);
+}
+
+/**
+ * subscription.canceled — Handle cancellations
+ */
+async function handleSubscriptionCanceled(data: any) {
+  const { id: subscriptionId, customer, status } = data;
+  const customerEmail = customer?.email;
+  if (!customerEmail) return;
+
+  const user = await prisma.user.findUnique({ where: { email: customerEmail } });
+  if (!user) return;
+
+  await prisma.billingAccount.updateMany({
+    where: { userId: user.id, polarSubscriptionId: subscriptionId },
+    data: { subscriptionStatus: status || "canceled" },
+  });
+
+  console.log(`[polar/webhook] subscription.canceled: ${customerEmail} — sub=${subscriptionId} — status=${status}`);
 }

@@ -3,11 +3,6 @@
  *
  * Configures the Polar SDK for server-side usage.
  * Supports both sandbox and production environments.
- *
- * Environment variables:
- *   POLAR_ACCESS_TOKEN  — Organization access token from Polar dashboard
- *   POLAR_WEBHOOK_SECRET — Webhook signing secret
- *   POLAR_ENVIRONMENT   — "sandbox" or "production" (default: "sandbox")
  */
 
 import { Polar } from "@polar-sh/sdk";
@@ -31,22 +26,19 @@ export function getPolarClient(): Polar {
 
 /**
  * Get the Polar API base URL for the current environment.
+ * Use explicit sandbox vs production endpoints (was confusing before).
  */
 export function getPolarApiBase(): string {
   const env = process.env.POLAR_ENVIRONMENT || "sandbox";
+  // production -> official API; sandbox -> sandbox API
   return env === "production"
-    ? "https://sandbox-api.polar.sh"
-    : "https://sandbox-api.polar.sh/v1/checkouts/";
+    ? "https://api.polar.sh/v1"
+    : "https://sandbox-api.polar.sh/v1";
 }
 
 /**
  * Map a Polar product to an SCCA billing tier.
  * This maps your Polar.sh products to the internal tier system.
- *
- * Configure via POLAR_TIER_MAP env var as JSON, e.g.:
- *   {"prod_xxx": "tier_1", "prod_yyy": "tier_2"}
- *
- * Or use product metadata with a "scca_tier" key.
  */
 export function mapProductToTier(productId: string, metadata?: Record<string, string>): string {
   // Check metadata first
@@ -60,9 +52,10 @@ export function mapProductToTier(productId: string, metadata?: Record<string, st
     if (tierMap[productId]) {
       return tierMap[productId];
     }
-  } catch {
+  } catch (err) {
+    console.error("[polar] POLAR_TIER_MAP parse error:", (err as Error).message);
     // Invalid JSON, fall through
   }
 
-  return "tier_1"; // Default to tier_1 for any paid product
+  return "tier_1"; // Default fallback
 }
