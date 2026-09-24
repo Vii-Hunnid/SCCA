@@ -33,8 +33,9 @@ const config: Config = {
         },
       },
       fontFamily: {
-        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
-        display: ['Orbitron', 'sans-serif'],
+        sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-mono)', 'JetBrains Mono', 'Fira Code', 'monospace'],
+        display: ['var(--font-sans)', 'system-ui', 'sans-serif'],
       },
       animation: {
         'pulse-slow': 'pulse 3s ease-in-out infinite',

@@ -25,23 +25,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>('dark');
 
   useEffect(() => {
-    // Initialize from localStorage or system preference
+    // Dark is the default; only an explicit stored choice overrides it
     const stored =
       typeof window !== 'undefined'
         ? (window.localStorage.getItem('scca-theme') as Theme | null)
         : null;
 
-    if (stored === 'light' || stored === 'dark') {
-      setTheme(stored);
-      return;
-    }
-
-    const prefersDark =
-      typeof window !== 'undefined' &&
-      window.matchMedia &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-    setTheme(prefersDark ? 'dark' : 'light');
+    setTheme(stored === 'light' || stored === 'dark' ? stored : 'dark');
   }, []);
 
   useEffect(() => {
@@ -68,20 +58,19 @@ export function Providers({ children }: { children: React.ReactNode }) {
           position="top-right"
           toastOptions={{
             style: {
-              background: theme === 'dark' ? '#12121a' : '#ffffff',
-              color: theme === 'dark' ? '#b3b1ad' : '#111827',
-              border:
-                theme === 'dark'
-                  ? '1px solid rgba(0, 240, 255, 0.2)'
-                  : '1px solid rgba(15, 23, 42, 0.08)',
-              fontFamily: 'JetBrains Mono, monospace',
+              background: 'var(--bg-elevated)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-color)',
+              borderRadius: '10px',
+              boxShadow: 'var(--shadow-elevated)',
+              fontFamily: 'var(--font-sans)',
               fontSize: '0.85rem',
             },
             success: {
-              iconTheme: { primary: '#00ff9d', secondary: '#0a0a0f' },
+              iconTheme: { primary: 'var(--neon-green)', secondary: 'var(--bg-primary)' },
             },
             error: {
-              iconTheme: { primary: '#ff3333', secondary: '#0a0a0f' },
+              iconTheme: { primary: 'var(--neon-red)', secondary: 'var(--bg-primary)' },
             },
           }}
         />

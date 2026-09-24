@@ -2,67 +2,77 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap');
-
 @layer base {
   :root {
-    /* Light mode color variables */
+    /* Light mode */
     --bg-primary: #ffffff;
     --bg-secondary: #f8fafc;
     --bg-tertiary: #f1f5f9;
     --bg-card: #ffffff;
+    --bg-elevated: #ffffff;
     --bg-input: #f8fafc;
-    
+
     --text-primary: #0f172a;
     --text-secondary: #475569;
     --text-tertiary: #94a3b8;
     --text-muted: #64748b;
-    
+
     --border-color: #e2e8f0;
     --border-light: #cbd5e1;
-    
-    /* Neon colors (work in both modes) */
+
+    /* Accent colors (light mode) */
     --neon-cyan: #0891b2;
     --neon-green: #059669;
     --neon-purple: #7c3aed;
     --neon-pink: #db2777;
     --neon-yellow: #d97706;
     --neon-red: #dc2626;
-    
-    /* Cyber colors for light mode */
+
     --cyber-bg: #f0f9ff;
     --cyber-border: rgba(8, 145, 178, 0.2);
     --cyber-glow: rgba(8, 145, 178, 0.1);
+
+    --radius-card: 12px;
+    --radius-control: 8px;
+
+    --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 16px -8px rgba(15, 23, 42, 0.08);
+    --shadow-elevated: 0 4px 24px -8px rgba(15, 23, 42, 0.16);
   }
 
   .dark {
-    /* Dark mode color variables */
-    --bg-primary: #0a0a0f;
-    --bg-secondary: #0d0d14;
-    --bg-tertiary: #12121a;
-    --bg-card: #12121a;
-    --bg-input: #0d0d14;
-    
-    --text-primary: #b3b1ad;
-    --text-secondary: #8b949e;
-    --text-tertiary: #3d4455;
-    --text-muted: #6e7681;
-    
-    --border-color: rgba(0, 240, 255, 0.15);
-    --border-light: rgba(0, 240, 255, 0.1);
-    
-    /* Neon colors for dark mode (brighter) */
-    --neon-cyan: #00f0ff;
-    --neon-green: #00ff9d;
-    --neon-purple: #b000ff;
-    --neon-pink: #ff0080;
-    --neon-yellow: #ffd700;
-    --neon-red: #ff3333;
-    
-    /* Cyber colors for dark mode */
-    --cyber-bg: #0a0a0f;
-    --cyber-border: rgba(0, 240, 255, 0.2);
-    --cyber-glow: rgba(0, 240, 255, 0.15);
+    /* Dark mode — deep, calm base; accents reserved for meaning */
+    --bg-primary: #05070d;
+    --bg-secondary: #090c15;
+    --bg-tertiary: #10141f;
+    --bg-card: #0b0f1a;
+    --bg-elevated: #12172a;
+    --bg-input: #090c15;
+
+    --text-primary: #e7eaf0;
+    --text-secondary: #9aa3b4;
+    --text-tertiary: #596374;
+    --text-muted: #7c8698;
+
+    --border-color: rgba(148, 163, 184, 0.14);
+    --border-light: rgba(148, 163, 184, 0.09);
+
+    /* Softer neon accents — readable, still cyber */
+    --neon-cyan: #22d3ee;
+    --neon-green: #34d399;
+    --neon-purple: #a78bfa;
+    --neon-pink: #f472b6;
+    --neon-yellow: #fbbf24;
+    --neon-red: #f87171;
+
+    --cyber-bg: #05070d;
+    --cyber-border: rgba(34, 211, 238, 0.18);
+    --cyber-glow: rgba(34, 211, 238, 0.12);
+
+    --radius-card: 12px;
+    --radius-control: 8px;
+
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px -8px rgba(0, 0, 0, 0.5);
+    --shadow-elevated: 0 8px 32px -8px rgba(0, 0, 0, 0.6);
   }
 
   * {
@@ -74,81 +84,137 @@
   }
 
   body {
-    @apply bg-[var(--bg-primary)] text-[var(--text-primary)] font-mono antialiased;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    @apply bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans antialiased;
   }
 
   ::selection {
-    background-color: color-mix(in srgb, var(--neon-cyan) 20%, transparent);
-    color: var(--neon-cyan);
+    background-color: color-mix(in srgb, var(--neon-cyan) 24%, transparent);
+    color: var(--text-primary);
+  }
+
+  /* Consistent focus ring for keyboard navigation */
+  :focus-visible {
+    outline: 2px solid var(--neon-cyan);
+    outline-offset: 2px;
+    border-radius: var(--radius-control);
   }
 }
 
 @layer components {
-  /* Cyber card - Updated for both themes */
+  /* ── Cards ── */
   .cyber-card {
-    @apply bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg;
-    @apply backdrop-blur-sm;
-    transition: all 0.3s ease;
+    @apply bg-[var(--bg-card)] border border-[var(--border-color)];
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
   }
 
   .cyber-card-hover {
     @apply cyber-card;
   }
-  
+
   .cyber-card-hover:hover {
-    border-color: var(--neon-cyan);
-    box-shadow: 0 0 15px var(--cyber-glow);
+    border-color: color-mix(in srgb, var(--neon-cyan) 45%, transparent);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-elevated);
   }
 
-  /* Cyber button - Updated for both themes */
+  /* ── Buttons ── */
   .cyber-btn {
-    @apply relative px-6 py-2.5 bg-transparent border font-mono text-sm tracking-wider uppercase;
-    @apply transition-all duration-300 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed;
-    border-color: color-mix(in srgb, var(--neon-cyan) 50%, transparent);
+    @apply relative inline-flex items-center justify-center gap-2 px-5 py-2 font-medium text-sm;
+    @apply bg-transparent border transition-all duration-200 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed;
+    border-radius: var(--radius-control);
+    border-color: color-mix(in srgb, var(--neon-cyan) 45%, transparent);
     color: var(--neon-cyan);
   }
-  
+
   .cyber-btn:hover:not(:disabled) {
     background-color: color-mix(in srgb, var(--neon-cyan) 10%, transparent);
     border-color: var(--neon-cyan);
-    box-shadow: 0 0 15px var(--cyber-glow);
+    box-shadow: 0 0 16px var(--cyber-glow);
+  }
+
+  .cyber-btn-sm {
+    @apply cyber-btn px-3 py-1 text-xs;
   }
 
   .cyber-btn-solid {
     @apply cyber-btn;
-    background-color: color-mix(in srgb, var(--neon-cyan) 10%, transparent);
+    background-color: color-mix(in srgb, var(--neon-cyan) 14%, transparent);
   }
-  
+
   .cyber-btn-solid:hover:not(:disabled) {
-    background-color: color-mix(in srgb, var(--neon-cyan) 20%, transparent);
+    background-color: color-mix(in srgb, var(--neon-cyan) 22%, transparent);
   }
 
   .cyber-btn-danger {
     @apply cyber-btn;
-    border-color: color-mix(in srgb, var(--neon-red) 50%, transparent);
+    border-color: color-mix(in srgb, var(--neon-red) 45%, transparent);
     color: var(--neon-red);
   }
-  
+
   .cyber-btn-danger:hover:not(:disabled) {
     background-color: color-mix(in srgb, var(--neon-red) 10%, transparent);
     border-color: var(--neon-red);
-    box-shadow: 0 0 15px color-mix(in srgb, var(--neon-red) 20%, transparent);
+    box-shadow: 0 0 16px color-mix(in srgb, var(--neon-red) 18%, transparent);
   }
 
-  /* Cyber input - Updated for both themes */
+  /* ── Inputs ── */
   .cyber-input {
-    @apply w-full rounded px-4 py-2.5 font-mono text-sm transition-all duration-300;
+    @apply w-full px-4 py-2.5 text-sm transition-shadow duration-150;
     @apply bg-[var(--bg-input)] border border-[var(--border-light)] text-[var(--text-primary)];
     @apply placeholder:text-[var(--text-tertiary)];
     @apply focus:outline-none focus:border-[var(--neon-cyan)];
-  }
-  
-  .cyber-input:focus {
-    box-shadow: 0 0 10px var(--cyber-glow);
+    border-radius: var(--radius-control);
   }
 
-  /* Terminal text - Updated */
+  .cyber-input:focus {
+    box-shadow: 0 0 0 3px var(--cyber-glow);
+  }
+
+  /* ── Badges / chips ── */
+  .badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider border;
+    border-radius: 999px;
+  }
+  .badge-cyan {
+    @apply badge;
+    color: var(--neon-cyan);
+    border-color: color-mix(in srgb, var(--neon-cyan) 35%, transparent);
+    background-color: color-mix(in srgb, var(--neon-cyan) 8%, transparent);
+  }
+  .badge-green {
+    @apply badge;
+    color: var(--neon-green);
+    border-color: color-mix(in srgb, var(--neon-green) 35%, transparent);
+    background-color: color-mix(in srgb, var(--neon-green) 8%, transparent);
+  }
+  .badge-red {
+    @apply badge;
+    color: var(--neon-red);
+    border-color: color-mix(in srgb, var(--neon-red) 35%, transparent);
+    background-color: color-mix(in srgb, var(--neon-red) 8%, transparent);
+  }
+  .badge-yellow {
+    @apply badge;
+    color: var(--neon-yellow);
+    border-color: color-mix(in srgb, var(--neon-yellow) 35%, transparent);
+    background-color: color-mix(in srgb, var(--neon-yellow) 8%, transparent);
+  }
+  .badge-purple {
+    @apply badge;
+    color: var(--neon-purple);
+    border-color: color-mix(in srgb, var(--neon-purple) 35%, transparent);
+    background-color: color-mix(in srgb, var(--neon-purple) 8%, transparent);
+  }
+  .badge-neutral {
+    @apply badge;
+    color: var(--text-secondary);
+    border-color: var(--border-color);
+    background-color: var(--bg-tertiary);
+  }
+
+  /* ── Terminal text ── */
   .terminal-prompt {
     color: var(--neon-green);
     @apply font-mono text-sm;
@@ -159,20 +225,18 @@
     @apply font-mono text-sm leading-relaxed;
   }
 
-  /* Neon text effects - Updated */
+  /* ── Neon text (sparing) ── */
   .neon-text {
     color: var(--neon-cyan);
-    text-shadow: 0 0 7px color-mix(in srgb, var(--neon-cyan) 30%, transparent), 
-                 0 0 10px color-mix(in srgb, var(--neon-cyan) 20%, transparent);
+    text-shadow: 0 0 12px color-mix(in srgb, var(--neon-cyan) 35%, transparent);
   }
 
   .neon-text-green {
     color: var(--neon-green);
-    text-shadow: 0 0 7px color-mix(in srgb, var(--neon-green) 30%, transparent), 
-                 0 0 10px color-mix(in srgb, var(--neon-green) 20%, transparent);
+    text-shadow: 0 0 12px color-mix(in srgb, var(--neon-green) 35%, transparent);
   }
 
-  /* Status indicator - Updated */
+  /* ── Status dots ── */
   .status-dot {
     @apply w-2 h-2 rounded-full;
   }
@@ -180,112 +244,100 @@
   .status-dot-active {
     @apply status-dot;
     background-color: var(--neon-green);
-    box-shadow: 0 0 6px color-mix(in srgb, var(--neon-green) 50%, transparent);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--neon-green) 55%, transparent);
   }
 
   .status-dot-warning {
     @apply status-dot;
     background-color: var(--neon-yellow);
-    box-shadow: 0 0 6px color-mix(in srgb, var(--neon-yellow) 50%, transparent);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--neon-yellow) 55%, transparent);
   }
 
   .status-dot-error {
     @apply status-dot;
     background-color: var(--neon-red);
-    box-shadow: 0 0 6px color-mix(in srgb, var(--neon-red) 50%, transparent);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--neon-red) 55%, transparent);
   }
-  
-  /* Theme-aware text colors */
+
+  /* ── Theme-aware text / background shortcuts ── */
   .text-terminal-text {
     color: var(--text-primary);
   }
-  
+
   .text-terminal-dim {
     color: var(--text-secondary);
   }
-  
-  /* Theme-aware background colors */
+
   .bg-cyber-darker {
     background-color: var(--bg-secondary);
   }
-  
+
   .bg-cyber-dark {
     background-color: var(--bg-tertiary);
   }
-  
+
   .bg-cyber-mid {
     background-color: var(--bg-card);
   }
-  
+
   .bg-cyber-black {
     background-color: var(--bg-primary);
   }
 }
 
-/* Scrollbar styling - Theme aware */
+/* Scrollbar styling — theme aware */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--neon-cyan) 15%, var(--bg-tertiary));
-  border-radius: 3px;
+  background: color-mix(in srgb, var(--text-tertiary) 40%, transparent);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--neon-cyan) 30%, var(--bg-tertiary));
-}
-
-/* Smooth transitions for theme changes */
-* {
-  scrollbar-color: color-mix(in srgb, var(--neon-cyan) 15%, var(--bg-tertiary)) var(--bg-secondary);
-  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  background: color-mix(in srgb, var(--text-tertiary) 70%, transparent);
 }
 
 @layer utilities {
-  /* Thin scrollbar utility */
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: color-mix(in srgb, var(--neon-cyan) 15%, var(--bg-tertiary)) var(--bg-secondary);
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
+    width: 5px;
+    height: 5px;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar-track {
     background: transparent;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: color-mix(in srgb, var(--neon-cyan) 15%, var(--bg-tertiary));
-    border-radius: 2px;
+    background: color-mix(in srgb, var(--text-tertiary) 35%, transparent);
+    border-radius: 3px;
   }
-  
-  /* Animation utilities */
+
   .animate-pulse-slow {
     animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
-  
-  /* Glow effects */
+
   .glow-cyan {
-    box-shadow: 0 0 20px color-mix(in srgb, var(--neon-cyan) 20%, transparent);
+    box-shadow: 0 0 20px color-mix(in srgb, var(--neon-cyan) 18%, transparent);
   }
-  
+
   .glow-green {
-    box-shadow: 0 0 20px color-mix(in srgb, var(--neon-green) 20%, transparent);
+    box-shadow: 0 0 20px color-mix(in srgb, var(--neon-green) 18%, transparent);
   }
-  
-  /* Gradient borders */
+
   .border-gradient {
     border: 1px solid transparent;
-    background: linear-gradient(var(--bg-primary), var(--bg-primary)) padding-box,
+    background: linear-gradient(var(--bg-card), var(--bg-card)) padding-box,
                 linear-gradient(135deg, var(--neon-cyan), var(--neon-green)) border-box;
   }
 }
