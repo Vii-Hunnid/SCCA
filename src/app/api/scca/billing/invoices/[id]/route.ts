@@ -14,7 +14,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-// import { getPolarApiBase } from "@/lib/polar";
+import { getPolarApiBase } from "@/lib/polar";
 
 export async function GET(
   request: NextRequest,
@@ -55,7 +55,7 @@ export async function GET(
     }
 
     // Generate + retrieve invoice from Polar
-    const polarBase = "https://sandbox-api.polar.sh";
+    const polarBase = getPolarApiBase();
     const accessToken = process.env.POLAR_ACCESS_TOKEN;
 
     if (!accessToken) {
@@ -67,7 +67,7 @@ export async function GET(
 
     // Step 1: Generate the invoice (POST)
     const generateRes = await fetch(
-      `${polarBase}/v1/orders/${invoice.polarOrderId}/invoice`,
+      `${polarBase}/orders/${invoice.polarOrderId}/invoice`,
       {
         method: "POST",
         headers: {
@@ -86,7 +86,7 @@ export async function GET(
 
     // Step 2: Retrieve the invoice URL (GET)
     const getRes = await fetch(
-      `${polarBase}/v1/orders/${invoice.polarOrderId}/invoice`,
+      `${polarBase}/orders/${invoice.polarOrderId}/invoice`,
       {
         method: "GET",
         headers: {

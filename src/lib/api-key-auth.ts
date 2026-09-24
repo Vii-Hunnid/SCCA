@@ -14,6 +14,7 @@ import { getServerSession } from "next-auth/next";
 import { createHash, randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { authOptions, deriveMasterKeyForUser } from "@/lib/auth";
+import { loadActiveUser } from "@/lib/session";
 
 const API_KEY_PREFIX = "scca_k_";
 
@@ -42,16 +43,15 @@ export async function authenticateRequest(
     }
   }
 
-  // 2. Fallback to NextAuth session
+  // 2. Fallback to NextAuth session — verified against the DB so deleted
+  //    users and pre-password-change sessions lose access immediately.
   const session = await getServerSession(authOptions);
-  if (session?.user?.id && session?.user?.masterKey) {
-    return {
-      id: session.user.id,
-      email: session.user.email || "",
-      masterKeySalt: session.user.masterKeySalt || "",
-      masterKey: Buffer.from(session.user.masterKey, "base64"),
-      authMethod: "session",
-    };
+  if (session?.user?.id) {
+    const user = await loadActiveUser(
+      session.user.id,
+      session.user.sessionIssuedAt
+    );
+    if (user) return { ...user, authMethod: "session" };
   }
 
   return null;
@@ -68,7 +68,16 @@ async function authenticateApiKey(
 
   const apiKey = await prisma.apiKey.findUnique({
     where: { keyHash },
-    include: { user: { select: { id: true, email: true, masterKeySalt: true } } },
+    include: {
+      user: {
+        select: {
+          id: true,
+          email: true,
+          masterKeySalt: true,
+          deletedAt: true,
+        },
+      },
+    },
   });
 
   if (!apiKey) return null;
@@ -78,6 +87,9 @@ async function authenticateApiKey(
 
   // Check if expired
   if (apiKey.expiresAt && apiKey.expiresAt < new Date()) return null;
+
+  // Deleted users lose API access immediately
+  if (apiKey.user.deletedAt) return null;
 
   // Update last used (fire-and-forget)
   prisma.apiKey

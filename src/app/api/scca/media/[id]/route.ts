@@ -4,29 +4,37 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions, getMasterKeyFromSession } from "@/lib/auth";
+import { requireUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import {
   deriveUserKey,
   deriveConversationKey,
 } from "@/lib/crypto/engine";
-import { decryptMedia } from "@/lib/media/processor";
+import { decryptMedia, sanitizeFilename } from "@/lib/media/processor";
+
+// Raster images are safe to render inline; anything else (notably SVG,
+// which can contain scripts) must be downloaded as an attachment
+const INLINE_IMAGE_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+]);
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const auth = await requireUser();
+    if (!auth) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
 
     const attachment = await prisma.mediaAttachment.findFirst({
-      where: { id, userId: session.user.id },
+      where: { id, userId: auth.id },
     });
 
     if (!attachment) {
@@ -34,20 +42,25 @@ export async function GET(
     }
 
     // Derive key
-    const masterKey = getMasterKeyFromSession(session);
-    const userKey = deriveUserKey(masterKey, session.user.masterKeySalt);
+    const userKey = deriveUserKey(auth.masterKey, auth.masterKeySalt);
     const convKey = deriveConversationKey(userKey, attachment.conversationId);
 
     // Decrypt
     const sccaBuffer = Buffer.from(attachment.encryptedData, "base64");
     const { data, mimeType } = await decryptMedia(sccaBuffer, convKey);
 
+    const dispositionType = INLINE_IMAGE_TYPES.has(mimeType)
+      ? "inline"
+      : "attachment";
+    const safeName = sanitizeFilename(attachment.originalName);
+
     return new NextResponse(new Uint8Array(data), {
       headers: {
         "Content-Type": mimeType,
-        "Content-Disposition": `inline; filename="${attachment.originalName}"`,
+        "Content-Disposition": `${dispositionType}; filename="${safeName}"`,
         "Content-Length": String(data.length),
         "Cache-Control": "private, max-age=300",
+        "X-Content-Type-Options": "nosniff",
       },
     });
   } catch (err: any) {
@@ -64,15 +77,15 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const auth = await requireUser();
+    if (!auth) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
 
     const attachment = await prisma.mediaAttachment.findFirst({
-      where: { id, userId: session.user.id },
+      where: { id, userId: auth.id },
     });
 
     if (!attachment) {

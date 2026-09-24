@@ -5,8 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions, getMasterKeyFromSession } from "@/lib/auth";
+import { requireUser } from "@/lib/session";
 import {
   getSCCAConversationById,
   updateSCCAConversation,
@@ -21,18 +20,50 @@ import {
   verifyMerkleRoot,
 } from "@/lib/crypto/engine";
 
+function parseViewportParams(request: NextRequest): {
+  offset: number;
+  limit: number;
+} | null {
+  const { searchParams } = new URL(request.url);
+  const rawOffset = searchParams.get("offset");
+  const rawLimit = searchParams.get("limit");
+
+  const offset = rawOffset === null ? 0 : Number.parseInt(rawOffset, 10);
+  const limit = rawLimit === null ? 100 : Number.parseInt(rawLimit, 10);
+
+  if (
+    !Number.isInteger(offset) ||
+    !Number.isInteger(limit) ||
+    offset < 0 ||
+    limit < 1 ||
+    limit > 500
+  ) {
+    return null;
+  }
+  return { offset, limit };
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const auth = await requireUser();
+    if (!auth) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const viewport = parseViewportParams(request);
+    if (!viewport) {
+      return NextResponse.json(
+        { error: "Invalid offset/limit parameters" },
+        { status: 400 }
+      );
+    }
+    const { offset, limit } = viewport;
+
     const { id } = await params;
-    const conversation = await getSCCAConversationById(id, session.user.id);
+    const conversation = await getSCCAConversationById(id, auth.id);
 
     if (!conversation) {
       return NextResponse.json(
@@ -41,13 +72,8 @@ export async function GET(
       );
     }
 
-    const { searchParams } = new URL(request.url);
-    const offset = parseInt(searchParams.get("offset") || "0");
-    const limit = parseInt(searchParams.get("limit") || "100");
-
     // Derive keys for decryption
-    const masterKey = getMasterKeyFromSession(session);
-    const userKey = deriveUserKey(masterKey, session.user.masterKeySalt);
+    const userKey = deriveUserKey(auth.masterKey, auth.masterKeySalt);
     const convKey = deriveConversationKey(userKey, id);
     const intKey = deriveIntegrityKey(userKey, id);
 
@@ -90,18 +116,20 @@ export async function GET(
   }
 }
 
+const MAX_TITLE_LENGTH = 200;
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const auth = await requireUser();
+    if (!auth) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
-    const conversation = await getSCCAConversationById(id, session.user.id);
+    const conversation = await getSCCAConversationById(id, auth.id);
 
     if (!conversation) {
       return NextResponse.json(
@@ -110,11 +138,46 @@ export async function PATCH(
       );
     }
 
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== "object") {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
+
     const updates: Record<string, string> = {};
 
-    if (body.title) updates.title = body.title.trim();
-    if (body.model) updates.model = body.model;
+    if (body.title !== undefined) {
+      if (typeof body.title !== "string") {
+        return NextResponse.json(
+          { error: "Title must be a string" },
+          { status: 400 }
+        );
+      }
+      const title = body.title.trim();
+      if (title.length === 0 || title.length > MAX_TITLE_LENGTH) {
+        return NextResponse.json(
+          { error: `Title must be 1-${MAX_TITLE_LENGTH} characters` },
+          { status: 400 }
+        );
+      }
+      updates.title = title;
+    }
+
+    if (body.model !== undefined) {
+      if (typeof body.model !== "string" || body.model.length > 100) {
+        return NextResponse.json(
+          { error: "Invalid model" },
+          { status: 400 }
+        );
+      }
+      updates.model = body.model;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json(
+        { error: "No valid updates provided" },
+        { status: 400 }
+      );
+    }
 
     await updateSCCAConversation(id, updates);
 
@@ -133,13 +196,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const auth = await requireUser();
+    if (!auth) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
-    const conversation = await getSCCAConversationById(id, session.user.id);
+    const conversation = await getSCCAConversationById(id, auth.id);
 
     if (!conversation) {
       return NextResponse.json(
@@ -148,10 +211,10 @@ export async function DELETE(
       );
     }
 
-    await deleteSCCAConversation(id, session.user.id);
+    await deleteSCCAConversation(id, auth.id);
 
     await createAuditLog({
-      userId: session.user.id,
+      userId: auth.id,
       conversationId: id,
       action: "delete",
       details: { messageCount: conversation.messageCount },

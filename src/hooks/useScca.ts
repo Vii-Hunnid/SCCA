@@ -6,12 +6,16 @@
  * - Message send with SSE streaming
  * - Destructive edit/delete with regeneration
  * - Real-time streaming state
+ *
+ * All SSE reads go through readSSEStream (src/lib/sse-client.ts), which
+ * buffers partial lines so tokens are never lost at chunk boundaries.
  */
 
 "use client";
 
 import { useState, useCallback, useRef } from "react";
 import type { Conversation, SCCAMessage } from "@/types/chat";
+import { readSSEStream } from "@/lib/sse-client";
 
 interface UseSccaReturn {
   // State
@@ -93,7 +97,12 @@ export function useScca(): UseSccaReturn {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ title, model }),
         });
-        if (!res.ok) throw new Error("Failed to create conversation");
+        if (!res.ok) {
+          const errData = await res
+            .json()
+            .catch(() => ({ error: "Failed to create conversation" }));
+          throw new Error(errData.error);
+        }
         const data = await res.json();
         setConversations((prev) => [data, ...prev]);
         return data.id;
@@ -228,77 +237,62 @@ export function useScca(): UseSccaReturn {
         );
 
         if (!res.ok) {
-          const errData = await res.json().catch(() => ({ error: "Request failed" }));
-          throw new Error(errData.error);
+          const errData = await res
+            .json()
+            .catch(() => ({ error: "Request failed" }));
+          throw new Error(errData.error || "Request failed");
         }
 
-        const reader = res.body?.getReader();
-        if (!reader) throw new Error("No response body");
-
-        const decoder = new TextDecoder();
         let accumulated = "";
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+        await readSSEStream(res, {
+          onToken: (token) => {
+            accumulated += token;
+            setStreamingContent(accumulated);
+          },
+          onDone: (data) => {
+            const assistantMsg: SCCAMessage = {
+              id: `msg-${(data.messageCount as number) - 1}`,
+              role: "assistant",
+              content: accumulated,
+              sequence: (data.messageCount as number) - 1,
+              timestamp: new Date().toISOString(),
+            };
+            setMessages((prev) => [...prev, assistantMsg]);
 
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n");
-
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              try {
-                const data = JSON.parse(line.slice(6));
-
-                if (data.token) {
-                  accumulated += data.token;
-                  setStreamingContent(accumulated);
-                }
-
-                if (data.done) {
-                  // Add final assistant message
-                  const assistantMsg: SCCAMessage = {
-                    id: `msg-${data.messageCount - 1}`,
-                    role: "assistant",
-                    content: accumulated,
-                    sequence: data.messageCount - 1,
-                    timestamp: new Date().toISOString(),
-                  };
-                  setMessages((prev) => [...prev, assistantMsg]);
-
-                  // Update conversation title if changed
-                  if (data.title) {
-                    setCurrentConversation((prev) =>
-                      prev
-                        ? { ...prev, title: data.title, messageCount: data.messageCount }
-                        : null
-                    );
-                    setConversations((prev) =>
-                      prev.map((c) =>
-                        c.id === conversationId
-                          ? { ...c, title: data.title, messageCount: data.messageCount }
-                          : c
-                      )
-                    );
-                  }
-                }
-
-                if (data.error) {
-                  throw new Error(data.error);
-                }
-              } catch (e: any) {
-                if (e.message && !e.message.includes("JSON")) {
-                  setError(e.message);
-                }
-              }
+            if (data.title) {
+              setCurrentConversation((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      title: data.title as string,
+                      messageCount: data.messageCount as number,
+                    }
+                  : null
+              );
+              setConversations((prev) =>
+                prev.map((c) =>
+                  c.id === conversationId
+                    ? {
+                        ...c,
+                        title: data.title as string,
+                        messageCount: data.messageCount as number,
+                      }
+                    : c
+                )
+              );
             }
-          }
-        }
+          },
+          onError: (message) => {
+            throw new Error(message);
+          },
+        });
       } catch (err: any) {
         if (err.name !== "AbortError") {
           setError(err.message);
-          // Remove optimistic user message on error
-          setMessages((prev) => prev.filter((m) => m.id !== userMsg.id));
+          // The server persists the user message before streaming, so on
+          // failure our local state may be behind — resync with the DB.
+          await loadConversation(conversationId);
         }
       } finally {
         setIsStreaming(false);
@@ -306,7 +300,7 @@ export function useScca(): UseSccaReturn {
         abortControllerRef.current = null;
       }
     },
-    [messages.length]
+    [messages.length, loadConversation]
   );
 
   // ── Stop streaming ──
@@ -363,51 +357,42 @@ export function useScca(): UseSccaReturn {
         );
 
         if (!res.ok) {
-          const errData = await res.json().catch(() => ({ error: "Edit failed" }));
-          throw new Error(errData.error);
+          const errData = await res
+            .json()
+            .catch(() => ({ error: "Edit failed" }));
+          throw new Error(errData.error || "Edit failed");
         }
 
-        if (regenerate && res.headers.get("content-type")?.includes("text/event-stream")) {
-          const reader = res.body?.getReader();
-          if (!reader) throw new Error("No response body");
-
-          const decoder = new TextDecoder();
+        if (
+          regenerate &&
+          res.headers.get("content-type")?.includes("text/event-stream")
+        ) {
           let accumulated = "";
 
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split("\n");
-
-            for (const line of lines) {
-              if (line.startsWith("data: ")) {
-                try {
-                  const data = JSON.parse(line.slice(6));
-                  if (data.token) {
-                    accumulated += data.token;
-                    setStreamingContent(accumulated);
-                  }
-                  if (data.done) {
-                    const assistantMsg: SCCAMessage = {
-                      id: `msg-${sequence + 1}`,
-                      role: "assistant",
-                      content: accumulated,
-                      sequence: sequence + 1,
-                      timestamp: new Date().toISOString(),
-                    };
-                    setMessages((prev) => [...prev, assistantMsg]);
-                  }
-                  if (data.error) throw new Error(data.error);
-                } catch (e: any) {
-                  if (e.message && !e.message.includes("JSON")) {
-                    setError(e.message);
-                  }
-                }
-              }
-            }
-          }
+          await readSSEStream(res, {
+            onToken: (token) => {
+              accumulated += token;
+              setStreamingContent(accumulated);
+            },
+            onDone: (data) => {
+              const assistantMsg: SCCAMessage = {
+                id: `msg-${(data.messageCount as number) - 1}`,
+                role: "assistant",
+                content: accumulated,
+                sequence: (data.messageCount as number) - 1,
+                timestamp: new Date().toISOString(),
+              };
+              setMessages((prev) => [...prev, assistantMsg]);
+              setCurrentConversation((prev) =>
+                prev
+                  ? { ...prev, messageCount: data.messageCount as number }
+                  : null
+              );
+            },
+            onError: (message) => {
+              throw new Error(message);
+            },
+          });
         }
       } catch (err: any) {
         if (err.name !== "AbortError") {
@@ -455,12 +440,13 @@ export function useScca(): UseSccaReturn {
   );
 
   // ── Regenerate last assistant response ──
+  // Single server round-trip: the edit endpoint truncates everything after
+  // the last user message and streams a fresh response.
   const regenerateLastResponse = useCallback(
     async (
       conversationId: string,
       options?: { temperature?: number; systemPrompt?: string }
     ) => {
-      // Find the last user message
       const lastUserMsg = [...messages]
         .reverse()
         .find((m) => m.role === "user");
@@ -470,19 +456,15 @@ export function useScca(): UseSccaReturn {
         return;
       }
 
-      // Remove last assistant message and re-send
-      const lastAssistant = [...messages]
-        .reverse()
-        .find((m) => m.role === "assistant");
-
-      if (lastAssistant) {
-        await deleteMessage(conversationId, lastAssistant.sequence);
-      }
-
-      // Re-send the last user message
-      await sendMessage(conversationId, lastUserMsg.content, options);
+      await editMessage(
+        conversationId,
+        lastUserMsg.sequence,
+        lastUserMsg.content,
+        true,
+        options
+      );
     },
-    [messages, deleteMessage, sendMessage]
+    [messages, editMessage]
   );
 
   return {

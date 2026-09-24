@@ -10,7 +10,9 @@
  * - Edge cases and error handling
  */
 
-import { randomBytes } from "crypto";
+import { createCipheriv, randomBytes } from "crypto";
+import { deflate } from "zlib";
+import { promisify } from "util";
 import {
   deriveUserKey,
   deriveConversationKey,
@@ -19,6 +21,7 @@ import {
   unpackMessage,
   peekMessageHeader,
   computeMerkleRoot,
+  computeNextMerkleRoot,
   verifyMerkleRoot,
   appendMessage,
   decryptMessages,
@@ -27,6 +30,37 @@ import {
   verifyIntegrity,
   estimateStorageSize,
 } from "../../src/lib/crypto/engine";
+
+const deflateAsync = promisify(deflate);
+
+/**
+ * Build a legacy format-v1 packet (uint16 ciphertext length) exactly as
+ * engine.ts did before the v2 format, to prove v1 data stays readable.
+ */
+async function packMessageV1(
+  content: string,
+  role: "user" | "assistant" | "system",
+  sequence: number,
+  conversationKey: Buffer
+): Promise<string> {
+  const ROLE_MAP = { user: 0, assistant: 1, system: 2 };
+  const header = Buffer.alloc(10);
+  header.writeUInt8(1, 0);
+  header.writeUInt8(ROLE_MAP[role], 1);
+  header.writeUInt32BE(sequence, 2);
+  header.writeUInt32BE(Math.floor(Date.now() / 1000), 6);
+
+  const compressed = await deflateAsync(Buffer.from(content, "utf-8"), { level: 9 });
+  const nonce = randomBytes(16);
+  const cipher = createCipheriv("aes-256-gcm", conversationKey, nonce);
+  const encrypted = Buffer.concat([cipher.update(compressed), cipher.final()]);
+  const ciphertext = Buffer.concat([encrypted, cipher.getAuthTag()]);
+
+  const lengthBuf = Buffer.alloc(2);
+  lengthBuf.writeUInt16BE(ciphertext.length, 0);
+
+  return Buffer.concat([header, lengthBuf, ciphertext, nonce]).toString("base64url");
+}
 
 // ── Test helpers ──
 
@@ -206,7 +240,7 @@ describe("Header Peek", () => {
     expect(header).not.toBeNull();
     expect(header!.sequence).toBe(42);
     expect(header!.role).toBe("user");
-    expect(header!.version).toBe(1);
+    expect(header!.version).toBe(2);
   });
 
   test("returns null for invalid token", () => {
@@ -515,5 +549,88 @@ describe("estimateStorageSize", () => {
   test("empty array has only overhead", () => {
     const size = estimateStorageSize([]);
     expect(size).toBe(1024); // Row overhead only
+  });
+});
+
+
+// ── Format v2 (uint32 length) & legacy v1 compatibility ──
+
+describe("packet format versions", () => {
+  const convKey = randomKey();
+
+  test("packMessage writes format version 2", async () => {
+    const token = await packMessage("Hello", "user", 0, convKey);
+    const header = peekMessageHeader(token);
+    expect(header?.version).toBe(2);
+  });
+
+  test("round-trips large incompressible content without overflow", async () => {
+    // Random data barely compresses — ciphertext (~80KB+tag) far exceeds the
+    // old uint16 length field (~65KB max) and would have thrown a RangeError.
+    const bigContent = randomBytes(60 * 1024).toString("base64");
+    const token = await packMessage(bigContent, "user", 7, convKey);
+    const msg = await unpackMessage(token, convKey, 7);
+    expect(msg.content).toBe(bigContent);
+    expect(msg.sequence).toBe(7);
+  });
+
+  test("reads legacy v1 packets (uint16 length)", async () => {
+    const content = "legacy format message";
+    const token = await packMessageV1(content, "assistant", 3, convKey);
+    expect(peekMessageHeader(token)?.version).toBe(1);
+
+    const msg = await unpackMessage(token, convKey, 3);
+    expect(msg.content).toBe(content);
+    expect(msg.role).toBe("assistant");
+    expect(msg.sequence).toBe(3);
+  });
+
+  test("rejects unsupported versions", async () => {
+    const token = await packMessage("Hello", "user", 0, convKey);
+    const blob = Buffer.from(token, "base64url");
+    blob.writeUInt8(99, 0);
+    await expect(
+      unpackMessage(blob.toString("base64url"), convKey)
+    ).rejects.toThrow(/Unsupported version/);
+  });
+});
+
+// ── Incremental Merkle root ──
+
+describe("computeNextMerkleRoot", () => {
+  const intKey = randomKey();
+
+  test("matches full recompute across many appends", async () => {
+    const tokens: string[] = [];
+    let incremental: string | null = null;
+
+    for (let i = 0; i < 10; i++) {
+      const packed = await packMessage(`message ${i}`, i % 2 ? "assistant" : "user", i, randomKey());
+      tokens.push(packed);
+      incremental = computeNextMerkleRoot(incremental, packed, intKey);
+    }
+
+    expect(incremental).toBe(computeMerkleRoot(tokens, intKey));
+  });
+
+  test("appendMessage with prevRoot matches full recompute of its own tokens", async () => {
+    const convKey = randomKey();
+    const first = await appendMessage([], "one", "user", 0, convKey, intKey);
+    const second = await appendMessage(
+      first.newTokens, "two", "assistant", 1, convKey, intKey, first.merkleRoot
+    );
+    // The root returned when passing prevRoot must equal a full recompute
+    // over exactly the tokens it returned.
+    expect(second.merkleRoot).toBe(
+      computeMerkleRoot(second.newTokens, intKey)
+    );
+  });
+
+  test("first append from null root matches two-message chain", async () => {
+    const convKey = randomKey();
+    const packed = await packMessage("only", "user", 0, convKey);
+    expect(computeNextMerkleRoot(null, packed, intKey)).toBe(
+      computeMerkleRoot([packed], intKey)
+    );
   });
 });

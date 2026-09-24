@@ -4,8 +4,8 @@
  * Features:
  * - Credential-based authentication (email/password)
  * - GitHub and Google OAuth
- * - PBKDF2 for password hashing
- * - Master key derivation stored in JWT session
+ * - PBKDF2-SHA512 for password hashing (OWASP iterations, legacy formats verify)
+ * - Master key derived per request — never stored in the JWT
  * - User-isolated encryption keys
  */
 
@@ -14,41 +14,68 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GitHubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "./prisma";
-import { randomBytes, pbkdf2Sync, createHash } from "crypto";
+import { createAuditLog } from "./db/client";
+import { randomBytes, pbkdf2Sync, createHash, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { pbkdf2 as pbkdf2Callback } from "crypto";
 
 const pbkdf2Async = promisify(pbkdf2Callback);
 
+// OWASP-recommended iteration count for PBKDF2-SHA512 (2023+). The count is
+// stored in the hash string, so verification of older 100k hashes still works.
+const PBKDF2_ITERATIONS = 210_000;
+
 // ═════════════════════════════════════════════════════════════════════════════
 // PASSWORD HASHING
 // ═════════════════════════════════════════════════════════════════════════════
 
+function safeEqual(a: Buffer, b: Buffer): boolean {
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 export async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16);
-  const hash = await pbkdf2Async(password, salt, 100000, 32, "sha512");
-  return `$pbkdf2$100000$${salt.toString("base64")}$${hash.toString("base64")}`;
+  const hash = await pbkdf2Async(password, salt, PBKDF2_ITERATIONS, 32, "sha512");
+  return `$pbkdf2$${PBKDF2_ITERATIONS}$${salt.toString("base64")}$${hash.toString("base64")}`;
 }
 
 export async function verifyPassword(
   password: string,
   hash: string
 ): Promise<boolean> {
-  const parts = hash.split("$");
-  if (parts[1] !== "pbkdf2") return false;
+  // Current format: $pbkdf2$<iterations>$<salt_b64>$<hash_b64>
+  if (hash.startsWith("$")) {
+    const parts = hash.split("$");
+    if (parts.length !== 5 || parts[1] !== "pbkdf2") return false;
 
-  const iterations = parseInt(parts[2]);
-  const salt = Buffer.from(parts[3], "base64");
-  const storedHash = parts[4];
+    const iterations = parseInt(parts[2], 10);
+    const salt = Buffer.from(parts[3], "base64");
+    const storedHash = Buffer.from(parts[4], "base64");
+    if (!iterations || !salt.length || !storedHash.length) return false;
 
+    const computed = await pbkdf2Async(
+      password,
+      salt,
+      iterations,
+      storedHash.length,
+      "sha512"
+    );
+    return safeEqual(computed, storedHash);
+  }
+
+  // Legacy format: <iterations>:<salt_hex>:<hash_hex>
+  const [iters, saltHex, hashHex] = hash.split(":");
+  if (!iters || !saltHex || !hashHex) return false;
+  const stored = Buffer.from(hashHex, "hex");
+  if (!stored.length) return false;
   const computed = await pbkdf2Async(
     password,
-    salt,
-    iterations,
-    32,
+    Buffer.from(saltHex, "hex"),
+    parseInt(iters, 10),
+    stored.length,
     "sha512"
   );
-  return computed.toString("base64") === storedHash;
+  return safeEqual(computed, stored);
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -143,10 +170,10 @@ const providers: NextAuthOptions["providers"] = [
       }
 
       const user = await prisma.user.findUnique({
-        where: { email: credentials.email },
+        where: { email: credentials.email.toLowerCase() },
       });
 
-      if (!user || !user.passwordHash) {
+      if (!user || !user.passwordHash || user.deletedAt) {
         // Timing attack protection: do dummy hash
         await verifyPassword(
           credentials.password,
@@ -163,19 +190,34 @@ const providers: NextAuthOptions["providers"] = [
         return null;
       }
 
-      const masterKey = deriveMasterKeyForUser(user.masterKeySalt);
+      // Backfill master key salt for legacy users missing one
+      let { masterKeySalt } = user;
+      if (!masterKeySalt) {
+        masterKeySalt = generateSalt();
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { masterKeySalt },
+        });
+      }
 
       await prisma.user.update({
         where: { id: user.id },
         data: { lastLoginAt: new Date() },
       });
 
+      createAuditLog({
+        userId: user.id,
+        action: "login",
+        details: { provider: "credentials" },
+      }).catch(() => {});
+
+      // The master encryption key is intentionally NOT returned here — it
+      // must never ride in the JWT. It is derived per request from
+      // MASTER_KEY_SECRET + the user's salt in src/lib/session.ts.
       return {
         id: user.id,
         email: user.email,
         name: user.name,
-        masterKey: masterKey.toString("base64"),
-        masterKeySalt: user.masterKeySalt,
       };
     },
   }),
@@ -227,29 +269,24 @@ export const authOptions: NextAuthOptions = {
     },
 
     async jwt({ token, user, account }) {
-      // Credentials login: user object has masterKey already
+      // Credentials login: user object present
       if (user && (!account || account.provider === "credentials")) {
         token.sub = user.id;
         token.email = user.email;
         token.name = user.name;
-        token.masterKey = (user as any).masterKey;
-        token.masterKeySalt = (user as any).masterKeySalt;
       }
 
-      // OAuth login: look up user in DB and derive master key
+      // OAuth login: look up user in DB to bind the token to our user record
       if (account && account.provider !== "credentials" && user?.email) {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { email: user.email.toLowerCase() },
           });
 
-          if (dbUser) {
-            const masterKey = deriveMasterKeyForUser(dbUser.masterKeySalt);
+          if (dbUser && !dbUser.deletedAt) {
             token.sub = dbUser.id;
             token.email = dbUser.email;
             token.name = dbUser.name;
-            token.masterKey = masterKey.toString("base64");
-            token.masterKeySalt = dbUser.masterKeySalt;
           }
         } catch (error) {
           console.error("OAuth JWT callback error:", error);
@@ -265,8 +302,9 @@ export const authOptions: NextAuthOptions = {
           id: token.sub as string,
           email: token.email as string,
           name: token.name as string,
-          masterKey: token.masterKey as string,
-          masterKeySalt: token.masterKeySalt as string,
+          // Epoch seconds — src/lib/session.ts rejects sessions issued
+          // before the user's last password change
+          sessionIssuedAt: token.iat as number | undefined,
         };
       }
       return session;
@@ -282,17 +320,3 @@ export const authOptions: NextAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
 };
-
-// ═════════════════════════════════════════════════════════════════════════════
-// HELPERS
-// ═════════════════════════════════════════════════════════════════════════════
-
-/**
- * Extract the user's master key Buffer from a NextAuth session.
- */
-export function getMasterKeyFromSession(session: any): Buffer {
-  if (!session?.user?.masterKey) {
-    throw new Error("Master key not available in session");
-  }
-  return Buffer.from(session.user.masterKey, "base64");
-}

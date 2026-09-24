@@ -2,27 +2,40 @@
  * POST /api/scca/conversations/[id]/messages - Send message with SSE streaming
  *
  * Flow:
- * 1. Authenticate user
- * 2. Load & decrypt conversation context
- * 3. Pack user message into encrypted token
- * 4. Stream AI response via SSE
- * 5. Pack AI response, append both tokens, update DB
+ * 1. Authenticate (session verified against DB — deleted users/stale sessions rejected)
+ * 2. Rate-limit by billing tier
+ * 3. Validate input
+ * 4. Pack + PERSIST the user message atomically (before any AI call, so a
+ *    Groq failure never loses the user's message)
+ * 5. Stream AI response via SSE, propagating client aborts upstream
+ * 6. Persist the assistant token atomically on success
+ * 7. Record usage for metering/billing
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions, getMasterKeyFromSession } from "@/lib/auth";
-import { getSCCAConversationById, createAuditLog } from "@/lib/db/client";
+import { requireUser } from "@/lib/session";
+import { getSCCAConversationById, createAuditLog, appendMessageAtomically } from "@/lib/db/client";
 import { prisma } from "@/lib/prisma";
 import {
   deriveUserKey,
   deriveConversationKey,
   deriveIntegrityKey,
   decryptMessages,
-  appendMessage,
 } from "@/lib/crypto/engine";
-import { streamAIResponse, generateTitle } from "@/lib/ai/client";
+import {
+  streamAIResponse,
+  generateTitle,
+  isAllowedModel,
+  resolveModel,
+} from "@/lib/ai/client";
 import type { ImageAttachment } from "@/lib/ai/client";
+import {
+  getOrCreateBillingAccount,
+  checkRateLimit,
+  buildRateLimitExceededResponse,
+  recordUsage,
+  estimateTokens,
+} from "@/lib/rate-limit";
 import { decryptMedia } from "@/lib/media/processor";
 
 // Image MIME types that can be sent to vision models
@@ -36,19 +49,22 @@ const VISION_MIME_TYPES = new Set([
 // Max image size for vision API (4MB base64 ≈ 3MB raw)
 const MAX_VISION_IMAGE_SIZE = 3 * 1024 * 1024;
 
+const MAX_CONTENT_LENGTH = 100_000;
+const MAX_SYSTEM_PROMPT_LENGTH = 8_000;
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const startTime = Date.now();
+
+  const auth = await requireUser();
+  if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body !== "object") {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
@@ -60,55 +76,100 @@ export async function POST(
     model,
     systemPrompt,
     attachmentIds,
-  } = body;
+  } = body as Record<string, unknown>;
 
   if (!content || typeof content !== "string" || content.trim().length === 0) {
     return NextResponse.json({ error: "Content required" }, { status: 400 });
   }
 
-  if (content.length > 100000) {
+  if (content.length > MAX_CONTENT_LENGTH) {
     return NextResponse.json(
       { error: "Content too long (max 100KB)" },
       { status: 400 }
     );
   }
 
-  try {
-    const { id } = await params;
-    const conversation = await getSCCAConversationById(id, session.user.id);
-
-    if (!conversation) {
+  for (const [key, value] of [
+    ["temperature", temperature],
+    ["top_p", top_p],
+    ["max_tokens", max_tokens],
+  ] as const) {
+    if (value !== undefined && value !== null && typeof value !== "number") {
       return NextResponse.json(
-        { error: "Conversation not found" },
-        { status: 404 }
+        { error: `${key} must be a number` },
+        { status: 400 }
       );
     }
+  }
 
-    // Derive encryption keys
-    const masterKey = getMasterKeyFromSession(session);
-    const userKey = deriveUserKey(masterKey, session.user.masterKeySalt);
-    const convKey = deriveConversationKey(userKey, id);
-    const intKey = deriveIntegrityKey(userKey, id);
+  if (systemPrompt !== undefined && systemPrompt !== null) {
+    if (
+      typeof systemPrompt !== "string" ||
+      systemPrompt.length > MAX_SYSTEM_PROMPT_LENGTH
+    ) {
+      return NextResponse.json(
+        { error: `systemPrompt must be a string ≤ ${MAX_SYSTEM_PROMPT_LENGTH} characters` },
+        { status: 400 }
+      );
+    }
+  }
 
-    // Decrypt existing messages for AI context
-    const existingMessages = await decryptMessages(
-      conversation.messageTokens,
-      convKey
+  const { id } = await params;
+
+  const conversation = await getSCCAConversationById(id, auth.id);
+  if (!conversation) {
+    return NextResponse.json(
+      { error: "Conversation not found" },
+      { status: 404 }
     );
-    const context = existingMessages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
+  }
 
-    // ── Resolve image attachments for vision ──
-    const images: ImageAttachment[] = [];
+  // Resolve model: explicit client model must be allowlisted; stored models
+  // fall back to the default if no longer supported.
+  if (model !== undefined && model !== null) {
+    if (typeof model !== "string" || !isAllowedModel(model)) {
+      return NextResponse.json({ error: "Unsupported model" }, { status: 400 });
+    }
+  }
+  const aiModel = model ? (model as string) : resolveModel(conversation.model);
 
-    if (attachmentIds && Array.isArray(attachmentIds) && attachmentIds.length > 0) {
+  // Rate limit by billing tier
+  const billing = await getOrCreateBillingAccount(auth.id);
+  const rateLimit = await checkRateLimit(auth.id, billing.tier);
+  if (!rateLimit.allowed) {
+    const resp = buildRateLimitExceededResponse(rateLimit);
+    return NextResponse.json(resp.body, { status: resp.status, headers: resp.headers });
+  }
+
+  // Derive encryption keys
+  const userKey = deriveUserKey(auth.masterKey, auth.masterKeySalt);
+  const convKey = deriveConversationKey(userKey, id);
+  const intKey = deriveIntegrityKey(userKey, id);
+
+  // Decrypt existing messages for AI context (pre-append state)
+  const existingMessages = await decryptMessages(
+    conversation.messageTokens,
+    convKey
+  );
+  const context = existingMessages.map((m) => ({
+    role: m.role,
+    content: m.content,
+  }));
+
+  // ── Resolve image attachments for vision ──
+  const images: ImageAttachment[] = [];
+
+  if (attachmentIds && Array.isArray(attachmentIds) && attachmentIds.length > 0) {
+    const ids = (attachmentIds as unknown[]).filter(
+      (v): v is string => typeof v === "string"
+    );
+
+    if (ids.length > 0) {
       // Fetch attachment records (max 5 for Groq vision limit)
       const attachments = await prisma.mediaAttachment.findMany({
         where: {
-          id: { in: attachmentIds.slice(0, 5) },
-          userId: session.user.id,
+          id: { in: ids.slice(0, 5) },
+          userId: auth.id,
           conversationId: id,
         },
         select: {
@@ -137,123 +198,174 @@ export async function POST(
         }
       }
     }
+  }
 
-    // Pack user message immediately
-    const userSequence = conversation.messageCount;
-    const userAppend = await appendMessage(
-      conversation.messageTokens,
-      content,
-      "user",
-      userSequence,
-      convKey,
-      intKey
-    );
-
-    // SSE streaming response
-    const encoder = new TextEncoder();
-    const aiModel = model || conversation.model;
-
-    const readable = new ReadableStream({
-      async start(controller) {
-        let fullResponse = "";
-
-        try {
-          // Stream AI tokens — pass images for vision if available
-          const stream = streamAIResponse(context, content, aiModel, {
-            temperature,
-            top_p,
-            max_tokens,
-            systemPrompt,
-            images: images.length > 0 ? images : undefined,
-          });
-
-          for await (const token of stream) {
-            fullResponse += token;
-            controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ token })}\n\n`)
-            );
-          }
-
-          // Pack AI response
-          const assistantSequence = userSequence + 1;
-          const finalAppend = await appendMessage(
-            userAppend.newTokens,
-            fullResponse,
-            "assistant",
-            assistantSequence,
-            convKey,
-            intKey
-          );
-
-          // Auto-title from first message
-          let title = conversation.title;
-          if (conversation.messageCount === 0) {
-            try {
-              title = await generateTitle(content);
-            } catch {
-              title = content.slice(0, 50) + (content.length > 50 ? "..." : "");
-            }
-          }
-
-          // Update database
-          await prisma.sCCAConversation.update({
-            where: { id },
-            data: {
-              messageTokens: finalAppend.newTokens,
-              messageCount: assistantSequence + 1,
-              merkleRoot: finalAppend.merkleRoot,
-              title,
-            },
-          });
-
-          // Audit log
-          await createAuditLog({
-            userId: session.user.id,
-            conversationId: id,
-            action: "send",
-            details: {
-              promptLength: content.length,
-              responseLength: fullResponse.length,
-              messageCount: assistantSequence + 1,
-            },
-          });
-
-          // Send done event
-          controller.enqueue(
-            encoder.encode(
-              `data: ${JSON.stringify({
-                done: true,
-                messageCount: assistantSequence + 1,
-                title,
-              })}\n\n`
-            )
-          );
-
-          controller.close();
-        } catch (error: any) {
-          controller.enqueue(
-            encoder.encode(
-              `data: ${JSON.stringify({ error: error.message })}\n\n`
-            )
-          );
-          controller.close();
-        }
-      },
-    });
-
-    return new NextResponse(readable, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache, no-transform",
-        Connection: "keep-alive",
-        "X-Accel-Buffering": "no",
-      },
-    });
-  } catch (error: any) {
-    console.error("POST /api/scca/conversations/[id]/messages error:", error);
+  // ── Persist the user message BEFORE streaming ──
+  const userPersist = await appendMessageAtomically(id, content, "user", convKey, intKey);
+  if (!userPersist) {
     return NextResponse.json(
-      { error: error.message || "Failed to send message" },
-      { status: 500 }
+      { error: "Concurrent modification — please retry" },
+      { status: 409 }
     );
   }
+  const userSequence = userPersist.sequence;
+
+  // ── SSE streaming response ──
+  const encoder = new TextEncoder();
+  const contextChars = context.reduce((n, m) => n + m.content.length, 0);
+  const isFirstExchange = conversation.messageCount === 0;
+
+  const upstream = new AbortController();
+  const onRequestAbort = () => upstream.abort();
+  if (request.signal) {
+    request.signal.addEventListener("abort", onRequestAbort, { once: true });
+  }
+
+  const readable = new ReadableStream({
+    async start(controller) {
+      const send = (obj: unknown) => {
+        try {
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify(obj)}\n\n`)
+          );
+        } catch {
+          // Client disconnected — stream already closed
+        }
+      };
+
+      let fullResponse = "";
+      let usage: { promptTokens: number; completionTokens: number } | null =
+        null;
+
+      const record = (statusCode: number) => {
+        recordUsage({
+          userId: auth.id,
+          endpoint: "/api/scca/conversations/[id]/messages",
+          method: "POST",
+          statusCode,
+          requestTokens: usage?.promptTokens ?? Math.ceil((contextChars + content.length) / 4),
+          responseTokens: usage?.completionTokens ?? estimateTokens(fullResponse),
+          bytesIn: content.length,
+          bytesOut: fullResponse.length,
+          latencyMs: Date.now() - startTime,
+          tier: billing.tier,
+        }).catch((err) => console.error("[messages] recordUsage failed:", err));
+      };
+
+      try {
+        const stream = streamAIResponse(context, content, aiModel, {
+          temperature: temperature as number | undefined,
+          top_p: top_p as number | undefined,
+          max_tokens: max_tokens as number | undefined,
+          systemPrompt: systemPrompt as string | undefined,
+          images: images.length > 0 ? images : undefined,
+          signal: upstream.signal,
+          onUsage: (u) => {
+            usage = u;
+          },
+        });
+
+        for await (const token of stream) {
+          fullResponse += token;
+          send({ token });
+        }
+
+        // Client cancelled — discard the partial response
+        if (upstream.signal.aborted) {
+          record(499);
+          try {
+            controller.close();
+          } catch {
+            /* already closed */
+          }
+          return;
+        }
+
+        // ── Persist assistant response ──
+        const assistantPersist = await appendMessageAtomically(
+          id,
+          fullResponse,
+          "assistant",
+          convKey,
+          intKey
+        );
+        if (!assistantPersist) {
+          record(500);
+          send({ error: "Failed to save the response — please retry" });
+          try {
+            controller.close();
+          } catch {
+            /* already closed */
+          }
+          return;
+        }
+
+        // Auto-title from first message
+        let title = conversation.title;
+        if (isFirstExchange) {
+          try {
+            title = await generateTitle(content);
+          } catch {
+            title = content.slice(0, 50) + (content.length > 50 ? "..." : "");
+          }
+          await prisma.sCCAConversation.update({
+            where: { id },
+            data: { title },
+          });
+        }
+
+        await createAuditLog({
+          userId: auth.id,
+          conversationId: id,
+          action: "send",
+          details: {
+            promptLength: content.length,
+            responseLength: fullResponse.length,
+            messageCount: assistantPersist.sequence + 1,
+          },
+        });
+
+        record(200);
+
+        send({
+          done: true,
+          messageCount: assistantPersist.sequence + 1,
+          title,
+        });
+
+        try {
+          controller.close();
+        } catch {
+          /* already closed */
+        }
+      } catch (error: any) {
+        const aborted =
+          upstream.signal.aborted || error?.name === "AbortError";
+        if (!aborted) {
+          console.error("[messages] stream error:", error);
+          record(500);
+          send({ error: "AI request failed — please try again" });
+        } else {
+          record(499);
+        }
+        try {
+          controller.close();
+        } catch {
+          /* already closed */
+        }
+      }
+    },
+    cancel() {
+      upstream.abort();
+    },
+  });
+
+  return new NextResponse(readable, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+    },
+  });
 }

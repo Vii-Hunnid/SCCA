@@ -6,6 +6,7 @@
  */
 
 import { Polar } from "@polar-sh/sdk";
+import { TIER_LIMITS } from "@/lib/rate-limit";
 
 let polarClient: Polar | null = null;
 
@@ -29,7 +30,7 @@ export function getPolarClient(): Polar {
  * Use explicit sandbox vs production endpoints (was confusing before).
  */
 export function getPolarApiBase(): string {
-  const env = process.env.POLAR_ENVIRONMENT || "sandbox";
+  const env = (process.env.POLAR_ENVIRONMENT || "sandbox").toLowerCase();
   // production -> official API; sandbox -> sandbox API
   return env === "production"
     ? "https://api.polar.sh/v1"
@@ -57,5 +58,78 @@ export function mapProductToTier(productId: string, metadata?: Record<string, st
     // Invalid JSON, fall through
   }
 
-  return "tier_1"; // Default fallback
+  return "free"; // Default fallback
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// ORDER.PAID DECISION LOGIC (pure)
+// ═════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Billing account fields relevant to the order.paid decision.
+ * `null` represents an account that doesn't exist yet (upsert create path).
+ */
+export interface OrderPaidBillingSnapshot {
+  totalSpendMicro: bigint;
+  monthlySpendMicro: bigint;
+  tier: string;
+  autoUpgrade: boolean;
+}
+
+export interface OrderPaidSpendUpdates {
+  totalSpendMicro: bigint;
+  monthlySpendMicro: bigint;
+}
+
+export interface OrderPaidUpdate {
+  /** True when this delivery must record spend (i.e. the invoice is new). */
+  shouldRecordSpend: boolean;
+  /** Absolute spend values for the upsert create path (undefined on retries). */
+  spendUpdates?: OrderPaidSpendUpdates;
+  /** Highest tier unlocked by post-increment spend (only when autoUpgrade). */
+  upgradedTier?: string;
+}
+
+/**
+ * Pure decision logic for the order.paid webhook handler.
+ *
+ * Polar retries webhook deliveries, so spend may only be recorded when the
+ * invoice for this order doesn't exist yet. Auto-upgrade is evaluated against
+ * the POST-increment spend (current total + this order's amount), never
+ * double-adding amountMicro.
+ */
+export function computeOrderPaidUpdate(
+  currentBilling: OrderPaidBillingSnapshot | null,
+  amountMicro: number,
+  invoiceExists: boolean
+): OrderPaidUpdate {
+  const shouldRecordSpend = !invoiceExists;
+  const result: OrderPaidUpdate = { shouldRecordSpend };
+
+  const currentTotal = currentBilling ? Number(currentBilling.totalSpendMicro) : 0;
+  const currentMonthly = currentBilling ? Number(currentBilling.monthlySpendMicro) : 0;
+
+  // What totalSpendMicro will be AFTER this delivery is applied.
+  // On retries no increment is applied, so it stays at the current total.
+  const postTotalSpend = currentTotal + (shouldRecordSpend ? amountMicro : 0);
+
+  if (shouldRecordSpend) {
+    result.spendUpdates = {
+      totalSpendMicro: BigInt(currentTotal + amountMicro),
+      monthlySpendMicro: BigInt(currentMonthly + amountMicro),
+    };
+  }
+
+  if (currentBilling?.autoUpgrade) {
+    const tierOrder = ["free", "tier_1", "tier_2", "tier_3", "tier_4"];
+    const currentIdx = tierOrder.indexOf(currentBilling.tier);
+    for (let i = currentIdx + 1; i < tierOrder.length; i++) {
+      const nextTier = TIER_LIMITS[tierOrder[i]];
+      if (nextTier && postTotalSpend >= nextTier.upgradeThresholdMicro) {
+        result.upgradedTier = tierOrder[i];
+      }
+    }
+  }
+
+  return result;
 }

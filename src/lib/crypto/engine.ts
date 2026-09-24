@@ -15,9 +15,10 @@
 import {
   createCipheriv,
   createDecipheriv,
-  randomBytes,
   createHash,
   createHmac,
+  randomBytes,
+  timingSafeEqual,
 } from "crypto";
 import { promisify } from "util";
 import { deflate, inflate } from "zlib";
@@ -29,7 +30,9 @@ const inflateAsync = promisify(inflate);
 // CONSTANTS
 // ═════════════════════════════════════════════════════════════════════════════
 
-const VERSION = 1;
+const VERSION_1 = 1;
+const VERSION_2 = 2;
+const SUPPORTED_VERSIONS = new Set([VERSION_1, VERSION_2]);
 const HEADER_SIZE = 10; // version(1) + role(1) + sequence(4) + timestamp(4)
 const NONCE_SIZE = 16; // 128 bits for AES-GCM
 const TAG_SIZE = 16; // 128 bits authentication tag
@@ -161,14 +164,18 @@ export function deriveIntegrityKey(
 /**
  * Pack a message into encrypted binary format.
  *
- * Binary Format:
- * [0]      version        (1 byte)  = 0x01
+ * Binary Format v2 (current):
+ * [0]      version        (1 byte)  = 0x02
  * [1]      role           (1 byte)  = 0x00 (user), 0x01 (assistant), 0x02 (system)
  * [2-5]    sequence       (4 bytes) = uint32 big-endian
  * [6-9]    timestamp      (4 bytes) = uint32 Unix time big-endian
- * [10-11]  ciphertext_len (2 bytes) = uint16 big-endian
- * [12..n]  ciphertext     (variable) = AES-256-GCM(zlib(content)) + auth tag
+ * [10-13]  ciphertext_len (4 bytes) = uint32 big-endian
+ * [14..n]  ciphertext     (variable) = AES-256-GCM(zlib(content)) + auth tag
  * [n+1..m] nonce          (16 bytes)
+ *
+ * Format v1 (legacy, still readable):
+ * same layout but ciphertext_len is 2 bytes at [10-11], limiting
+ * ciphertext to 64KB.
  */
 export async function packMessage(
   content: string,
@@ -191,7 +198,7 @@ export async function packMessage(
 
   // Build header (10 bytes)
   const header = Buffer.alloc(HEADER_SIZE);
-  header.writeUInt8(VERSION, 0);
+  header.writeUInt8(VERSION_2, 0);
   header.writeUInt8(ROLE_MAP[role], 1);
   header.writeUInt32BE(sequence, 2);
   header.writeUInt32BE(Math.floor(ts.getTime() / 1000), 6);
@@ -211,9 +218,9 @@ export async function packMessage(
   // Combine encrypted data + auth tag
   const ciphertext = Buffer.concat([encrypted, authTag]);
 
-  // Build length prefix
-  const lengthBuf = Buffer.alloc(2);
-  lengthBuf.writeUInt16BE(ciphertext.length, 0);
+  // Build length prefix (uint32, format v2)
+  const lengthBuf = Buffer.alloc(4);
+  lengthBuf.writeUInt32BE(ciphertext.length, 0);
 
   // Final assembly: header + length + ciphertext + nonce
   const blob = Buffer.concat([header, lengthBuf, ciphertext, nonce]);
@@ -248,8 +255,8 @@ export async function unpackMessage(
 
   // Parse header
   const version = blob.readUInt8(0);
-  if (version !== VERSION) {
-    throw new Error(`Unsupported version: ${version}. Expected ${VERSION}.`);
+  if (!SUPPORTED_VERSIONS.has(version)) {
+    throw new Error(`Unsupported version: ${version}`);
   }
 
   const roleByte = blob.readUInt8(1);
@@ -266,9 +273,21 @@ export async function unpackMessage(
     );
   }
 
-  // Parse ciphertext length
-  const ciphertextLen = blob.readUInt16BE(HEADER_SIZE);
-  const ciphertextStart = HEADER_SIZE + 2;
+  // Parse ciphertext length — v1 uses uint16, v2 uses uint32
+  let ciphertextLen: number;
+  let ciphertextStart: number;
+
+  if (version === VERSION_1) {
+    ciphertextLen = blob.readUInt16BE(HEADER_SIZE);
+    ciphertextStart = HEADER_SIZE + 2;
+  } else {
+    if (blob.length < HEADER_SIZE + 4 + TAG_SIZE + NONCE_SIZE) {
+      throw new Error(`Blob too small for v2: ${blob.length} bytes`);
+    }
+    ciphertextLen = blob.readUInt32BE(HEADER_SIZE);
+    ciphertextStart = HEADER_SIZE + 4;
+  }
+
   const ciphertextEnd = ciphertextStart + ciphertextLen;
 
   if (ciphertextEnd > blob.length - NONCE_SIZE) {
@@ -386,15 +405,45 @@ export function computeMerkleRoot(
 }
 
 /**
+ * Compute the next Merkle root after appending a single token.
+ * O(1) equivalent of computeMerkleRoot([...tokens, token]) — the chain is
+ * HMAC(prevRoot || tokenBytes), starting from HMAC("") for an empty chain.
+ * Pass null as prevRoot for the first message of a conversation.
+ */
+export function computeNextMerkleRoot(
+  prevRoot: string | null,
+  token: string,
+  integrityKey: Buffer
+): string {
+  const hasher = (data: Buffer) =>
+    createHmac("sha256", integrityKey).update(data).digest();
+
+  const current = prevRoot
+    ? Buffer.from(prevRoot, "hex")
+    : hasher(Buffer.alloc(0));
+
+  return hasher(Buffer.concat([current, Buffer.from(token, "base64url")])).toString(
+    "hex"
+  );
+}
+
+/**
  * Verify that stored merkle root matches recomputed value.
+ * Uses constant-time comparison.
  */
 export function verifyMerkleRoot(
   tokens: string[],
   storedRoot: string | null,
   integrityKey: Buffer
 ): boolean {
+  if (!storedRoot) return tokens.length === 0;
   const computed = computeMerkleRoot(tokens, integrityKey);
-  return computed === storedRoot;
+  const computedBuf = Buffer.from(computed, "hex");
+  const storedBuf = Buffer.from(storedRoot, "hex");
+  return (
+    computedBuf.length === storedBuf.length &&
+    timingSafeEqual(computedBuf, storedBuf)
+  );
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -404,6 +453,8 @@ export function verifyMerkleRoot(
 /**
  * Append a new message to the conversation tokens array.
  * Returns the updated tokens array and new merkle root.
+ * The root is computed incrementally from the previous root — O(1) instead
+ * of re-chaining the whole conversation on every append.
  */
 export async function appendMessage(
   tokens: string[],
@@ -411,11 +462,15 @@ export async function appendMessage(
   role: "user" | "assistant" | "system",
   sequence: number,
   conversationKey: Buffer,
-  integrityKey: Buffer
+  integrityKey: Buffer,
+  prevRoot?: string | null
 ): Promise<{ newTokens: string[]; merkleRoot: string }> {
   const packed = await packMessage(content, role, sequence, conversationKey);
   const newTokens = [...tokens, packed];
-  const merkleRoot = computeMerkleRoot(newTokens, integrityKey);
+  const merkleRoot =
+    prevRoot !== undefined
+      ? computeNextMerkleRoot(prevRoot, packed, integrityKey)
+      : computeMerkleRoot(newTokens, integrityKey);
   return { newTokens, merkleRoot };
 }
 
@@ -547,10 +602,10 @@ export async function verifyIntegrity(
   const errors: string[] = [];
 
   // Check merkle root
-  const computedRoot = computeMerkleRoot(tokens, integrityKey);
-  if (storedMerkleRoot && computedRoot !== storedMerkleRoot) {
+  if (!verifyMerkleRoot(tokens, storedMerkleRoot, integrityKey)) {
+    const computedRoot = computeMerkleRoot(tokens, integrityKey);
     errors.push(
-      `Merkle root mismatch: computed ${computedRoot.slice(0, 16)}..., stored ${storedMerkleRoot.slice(0, 16)}...`
+      `Merkle root mismatch: computed ${computedRoot.slice(0, 16)}..., stored ${(storedMerkleRoot || "").slice(0, 16)}...`
     );
   }
 

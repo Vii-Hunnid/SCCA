@@ -17,6 +17,9 @@ import {
   Quote,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import ReactMarkdown, { type Components } from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
 import type { SCCAMessage } from '@/types/chat';
 
 interface SCCAMessageBubbleProps {
@@ -30,116 +33,133 @@ interface SCCAMessageBubbleProps {
   showTimestamp?: boolean;
 }
 
-// Simple markdown-like parser for code blocks and inline code
-function formatContent(content: string): React.ReactNode {
-  const parts: React.ReactNode[] = [];
-  let remaining = content;
-  let key = 0;
-
-  // Handle code blocks (```language\ncode```)
-  const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
-  let lastIndex = 0;
-  let match;
-
-  while ((match = codeBlockRegex.exec(content)) !== null) {
-    // Add text before code block
-    if (match.index > lastIndex) {
-      parts.push(
-        <span key={key++}>{processInlineFormatting(content.slice(lastIndex, match.index))}</span>
-      );
+// Markdown renderer with component overrides matching the dark neon theme.
+// rehype-sanitize strips any HTML in the source, so message content can
+// never inject markup — this replaces the old hand-rolled regex parser.
+const markdownComponents: Components = {
+  pre: ({ children }) => <>{children}</>,
+  code: ({ className, children }) => {
+    const language = /language-(\w+)/.exec(className || '')?.[1];
+    const raw = String(children ?? '').replace(/\n$/, '');
+    if (language || raw.includes('\n')) {
+      return <CodeBlock language={language ?? 'text'} code={raw} />;
     }
-
-    const language = match[1] || 'text';
-    const code = match[2];
-
-    parts.push(
-      <CodeBlock key={key++} language={language} code={code} />
+    return (
+      <code
+        className="px-1.5 py-0.5 rounded text-xs font-mono"
+        style={{
+          backgroundColor: 'color-mix(in srgb, var(--neon-cyan) 15%, transparent)',
+          color: 'var(--neon-cyan)',
+        }}
+      >
+        {children}
+      </code>
     );
+  },
+  blockquote: ({ children }) => (
+    <div
+      className="flex gap-2 my-2 px-3 py-2 rounded border-l-2"
+      style={{
+        backgroundColor: 'color-mix(in srgb, var(--bg-tertiary) 50%, transparent)',
+        borderLeftColor: 'var(--neon-cyan)',
+      }}
+    >
+      <Quote className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: 'var(--neon-cyan)', opacity: 0.6 }} />
+      <div className="min-w-0 italic text-[var(--text-secondary)]">{children}</div>
+    </div>
+  ),
+  p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+  ul: ({ children }) => (
+    <ul className="list-disc ml-5 my-2 space-y-1">{children}</ul>
+  ),
+  ol: ({ children }) => (
+    <ol className="list-decimal ml-5 my-2 space-y-1">{children}</ol>
+  ),
+  li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+  a: ({ children, href }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="underline underline-offset-2 break-all"
+      style={{ color: 'var(--neon-cyan)' }}
+    >
+      {children}
+    </a>
+  ),
+  h1: ({ children }) => (
+    <h1 className="text-lg font-semibold mt-3 mb-2 first:mt-0" style={{ color: 'var(--text-primary)' }}>
+      {children}
+    </h1>
+  ),
+  h2: ({ children }) => (
+    <h2 className="text-base font-semibold mt-3 mb-2 first:mt-0" style={{ color: 'var(--text-primary)' }}>
+      {children}
+    </h2>
+  ),
+  h3: ({ children }) => (
+    <h3 className="text-sm font-semibold mt-2 mb-1.5 first:mt-0" style={{ color: 'var(--text-primary)' }}>
+      {children}
+    </h3>
+  ),
+  h4: ({ children }) => (
+    <h4 className="text-sm font-semibold mt-2 mb-1.5 first:mt-0" style={{ color: 'var(--text-primary)' }}>
+      {children}
+    </h4>
+  ),
+  hr: () => (
+    <hr className="my-3" style={{ borderColor: 'var(--border-color)' }} />
+  ),
+  table: ({ children }) => (
+    <div
+      className="my-3 overflow-x-auto rounded-lg"
+      style={{ border: '1px solid var(--border-color)' }}
+    >
+      <table className="w-full text-xs">{children}</table>
+    </div>
+  ),
+  th: ({ children }) => (
+    <th
+      className="px-3 py-2 text-left text-[10px] font-medium uppercase tracking-wider"
+      style={{
+        color: 'var(--text-secondary)',
+        backgroundColor: 'color-mix(in srgb, var(--bg-tertiary) 50%, transparent)',
+        borderBottom: '1px solid var(--border-color)',
+      }}
+    >
+      {children}
+    </th>
+  ),
+  td: ({ children }) => (
+    <td className="px-3 py-2 align-top" style={{ borderBottom: '1px solid var(--border-color)' }}>
+      {children}
+    </td>
+  ),
+  img: ({ src, alt }) => (
+    <img
+      src={src}
+      alt={alt ?? ''}
+      className="max-w-full h-auto rounded-lg my-2"
+      style={{ border: '1px solid var(--border-color)' }}
+    />
+  ),
+  strong: ({ children }) => (
+    <strong className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+      {children}
+    </strong>
+  ),
+};
 
-    lastIndex = match.index + match[0].length;
-  }
-
-  // Add remaining text
-  if (lastIndex < content.length) {
-    parts.push(
-      <span key={key++}>{processInlineFormatting(content.slice(lastIndex))}</span>
-    );
-  }
-
-  return parts.length > 0 ? parts : processInlineFormatting(content);
-}
-
-// Process inline formatting (bold, italic, code, quotes)
-function processInlineFormatting(text: string): React.ReactNode {
-  const parts: React.ReactNode[] = [];
-  let remaining = text;
-  let key = 0;
-
-  // Split by newlines and process each line
-  const lines = remaining.split('\n');
-
-  return lines.map((line, idx) => {
-    // Handle blockquotes (> text)
-    if (line.startsWith('> ')) {
-      return (
-        <div
-          key={idx}
-          className="flex gap-2 my-2 px-3 py-2 rounded border-l-2"
-          style={{
-            backgroundColor: 'color-mix(in srgb, var(--bg-tertiary) 50%, transparent)',
-            borderLeftColor: 'var(--neon-cyan)',
-          }}
-        >
-          <Quote className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: 'var(--neon-cyan)', opacity: 0.6 }} />
-          <span className="italic text-[var(--text-secondary)]">{line.slice(2)}</span>
-        </div>
-      );
-    }
-
-    // Handle inline code (`code`)
-    const elements: React.ReactNode[] = [];
-    let lastIndex = 0;
-    const inlineCodeRegex = /`([^`]+)`/g;
-    let match;
-
-    while ((match = inlineCodeRegex.exec(line)) !== null) {
-      if (match.index > lastIndex) {
-        elements.push(<span key={`text-${lastIndex}`}>{processBoldItalic(line.slice(lastIndex, match.index))}</span>);
-      }
-      elements.push(
-        <code
-          key={`code-${match.index}`}
-          className="px-1.5 py-0.5 rounded text-xs font-mono"
-          style={{
-            backgroundColor: 'color-mix(in srgb, var(--neon-cyan) 15%, transparent)',
-            color: 'var(--neon-cyan)',
-          }}
-        >
-          {match[1]}
-        </code>
-      );
-      lastIndex = match.index + match[0].length;
-    }
-
-    if (lastIndex < line.length) {
-      elements.push(<span key={`text-${lastIndex}`}>{processBoldItalic(line.slice(lastIndex))}</span>);
-    }
-
-    return <div key={idx}>{elements.length > 0 ? elements : line}</div>;
-  });
-}
-
-// Process bold and italic
-function processBoldItalic(text: string): React.ReactNode {
-  // Bold (**text** or __text__)
-  text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  text = text.replace(/__(.+?)__/g, '<strong>$1</strong>');
-  
-  // Italic (*text* or _text_)
-  text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
-  text = text.replace(/_(.+?)_/g, '<em>$1</em>');
-
-  return <span dangerouslySetInnerHTML={{ __html: text }} />;
+function MarkdownContent({ content }: { content: string }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      rehypePlugins={[rehypeSanitize]}
+      components={markdownComponents}
+    >
+      {content}
+    </ReactMarkdown>
+  );
 }
 
 // Code block component
@@ -401,7 +421,7 @@ export const SCCAMessageBubble = memo(function SCCAMessageBubble({
             />
           ) : (
             <div className="break-words">
-              {formatContent(message.content)}
+              <MarkdownContent content={message.content} />
               {isStreaming && isLastAssistant && <InlineStreamingCursor />}
             </div>
           )}

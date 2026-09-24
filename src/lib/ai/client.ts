@@ -29,6 +29,45 @@ export interface ImageAttachment {
 // Vision-capable model for multimodal requests
 const VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
+// Models clients may explicitly request. Values stored on existing
+// conversations outside this set fall back to the default rather than
+// failing. Override/extend via GROQ_EXTRA_MODELS (comma-separated).
+export const ALLOWED_MODELS: ReadonlySet<string> = new Set([
+  "llama-3.3-70b-versatile",
+  "llama-3.1-8b-instant",
+  VISION_MODEL,
+]);
+
+export const DEFAULT_MODEL =
+  process.env.DEFAULT_MODEL || "llama-3.3-70b-versatile";
+
+export function isAllowedModel(model: string): boolean {
+  if (ALLOWED_MODELS.has(model)) return true;
+  const extra = (process.env.GROQ_EXTRA_MODELS || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return extra.includes(model);
+}
+
+/** Resolve a stored/provided model to one Groq will accept. */
+export function resolveModel(model?: string | null): string {
+  if (model && isAllowedModel(model)) return model;
+  return DEFAULT_MODEL;
+}
+
+const MAX_SYSTEM_PROMPT_LENGTH = 8000;
+
+function clampNumber(
+  value: number | undefined,
+  min: number,
+  max: number,
+  fallback: number
+): number {
+  if (typeof value !== "number" || Number.isNaN(value)) return fallback;
+  return Math.min(max, Math.max(min, value));
+}
+
 /**
  * Stream AI response tokens.
  * Returns an async generator yielding string tokens.
@@ -36,17 +75,23 @@ const VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
  * When `images` is provided, automatically switches to a vision model
  * and sends the images as base64 data URIs alongside the text.
  */
+export interface StreamOptions {
+  temperature?: number;
+  top_p?: number;
+  max_tokens?: number;
+  systemPrompt?: string;
+  images?: ImageAttachment[];
+  /** Abort the upstream Groq request (e.g. client disconnected) */
+  signal?: AbortSignal;
+  /** Called with real token usage when Groq reports it (final stream chunk) */
+  onUsage?: (usage: { promptTokens: number; completionTokens: number }) => void;
+}
+
 export async function* streamAIResponse(
   context: ChatMessage[],
   userMessage: string,
-  model: string = "llama-3.3-70b-versatile",
-  options: {
-    temperature?: number;
-    top_p?: number;
-    max_tokens?: number;
-    systemPrompt?: string;
-    images?: ImageAttachment[];
-  } = {}
+  model: string = DEFAULT_MODEL,
+  options: StreamOptions = {}
 ): AsyncGenerator<string> {
   const hasImages = options.images && options.images.length > 0;
   const actualModel = hasImages ? VISION_MODEL : model;
@@ -54,9 +99,12 @@ export async function* streamAIResponse(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const messages: any[] = [];
 
-  // Add system prompt if provided
+  // Add system prompt if provided (capped)
   if (options.systemPrompt) {
-    messages.push({ role: "system", content: options.systemPrompt });
+    messages.push({
+      role: "system",
+      content: options.systemPrompt.slice(0, MAX_SYSTEM_PROMPT_LENGTH),
+    });
   }
 
   // Add conversation context (text-only for history)
@@ -87,16 +135,30 @@ export async function* streamAIResponse(
     messages.push({ role: "user", content: userMessage });
   }
 
-  const stream = await getGroqClient().chat.completions.create({
-    model: actualModel,
-    messages,
-    temperature: options.temperature ?? 0.7,
-    top_p: options.top_p ?? 1,
-    max_tokens: options.max_tokens ?? 8192,
-    stream: true,
-  });
+  const stream = (await getGroqClient().chat.completions.create(
+    {
+      model: actualModel,
+      messages,
+      temperature: clampNumber(options.temperature, 0, 2, 0.7),
+      top_p: clampNumber(options.top_p, 0, 1, 1),
+      max_tokens: clampNumber(options.max_tokens, 1, 32768, 8192),
+      stream: true,
+      stream_options: { include_usage: true },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    { signal: options.signal } as any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  )) as unknown as AsyncIterable<any>;
 
   for await (const chunk of stream) {
+    const usage = (chunk as any).usage;
+    if (usage && options.onUsage) {
+      options.onUsage({
+        promptTokens: usage.prompt_tokens || 0,
+        completionTokens: usage.completion_tokens || 0,
+      });
+    }
     const token = chunk.choices[0]?.delta?.content;
     if (token) {
       yield token;

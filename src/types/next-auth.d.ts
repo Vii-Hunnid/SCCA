@@ -6,8 +6,11 @@ declare module "next-auth" {
       id: string;
       email: string;
       name?: string | null;
-      masterKey: string;
-      masterKeySalt: string;
+      // Epoch seconds of JWT issuance — used to invalidate sessions
+      // issued before the last password change. The master encryption key
+      // is deliberately NOT carried in the session; it is derived
+      // server-side per request in src/lib/session.ts.
+      sessionIssuedAt?: number;
     };
   }
 
@@ -15,8 +18,6 @@ declare module "next-auth" {
     id: string;
     email: string;
     name?: string | null;
-    masterKey?: string;
-    masterKeySalt?: string;
   }
 }
 
@@ -25,7 +26,5 @@ declare module "next-auth/jwt" {
     sub: string;
     email: string;
     name?: string | null;
-    masterKey?: string;
-    masterKeySalt?: string;
   }
 }

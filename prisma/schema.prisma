@@ -29,6 +29,13 @@ model User {
   // Encryption - 16 byte random salt, base64 encoded
   masterKeySalt String    @map("master_key_salt")
 
+  // Set on every password change — sessions issued before this timestamp
+  // are rejected (see src/lib/session.ts)
+  passwordChangedAt DateTime? @map("password_changed_at")
+
+  // Soft deletion — deleted users lose API and session access immediately
+  deletedAt     DateTime? @map("deleted_at")
+
   // Relations
   conversations SCCAConversation[]
   sessions      Session[]

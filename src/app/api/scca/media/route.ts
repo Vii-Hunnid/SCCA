@@ -12,8 +12,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions, getMasterKeyFromSession } from "@/lib/auth";
+import { requireUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import {
   deriveUserKey,
@@ -26,12 +25,13 @@ import {
   getMediaCategory,
   getMaxFileSize,
   isSupported,
+  sniffMimeType,
 } from "@/lib/media/processor";
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const auth = await requireUser();
+    if (!auth) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     // Verify conversation ownership
     const conversation = await prisma.sCCAConversation.findFirst({
-      where: { id: conversationId, userId: session.user.id, deletedAt: null },
+      where: { id: conversationId, userId: auth.id, deletedAt: null },
       select: { id: true },
     });
     if (!conversation) {
@@ -62,8 +62,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Detect and validate mime type
-    const mimeType = file.type || getMimeFromFilename(file.name);
+    // Read file into buffer first — needed for magic-byte sniffing
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Detect and validate mime type — magic bytes win over the
+    // client-supplied Content-Type; fall back to the declared type
+    // when no known signature matches (e.g. plain text)
+    const declaredType = file.type || getMimeFromFilename(file.name);
+    const mimeType = sniffMimeType(buffer) || declaredType;
     if (!isSupported(mimeType)) {
       return NextResponse.json(
         {
@@ -85,13 +92,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Read file into buffer
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
     // Derive conversation encryption key
-    const masterKey = getMasterKeyFromSession(session);
-    const userKey = deriveUserKey(masterKey, session.user.masterKeySalt);
+    const userKey = deriveUserKey(auth.masterKey, auth.masterKeySalt);
     const convKey = deriveConversationKey(userKey, conversationId);
 
     // Process through SCCA media pipeline
@@ -105,7 +107,7 @@ export async function POST(request: NextRequest) {
     const attachment = await prisma.mediaAttachment.create({
       data: {
         conversationId,
-        userId: session.user.id,
+        userId: auth.id,
         originalName: file.name,
         mimeType,
         originalSize: buffer.length,
@@ -115,7 +117,10 @@ export async function POST(request: NextRequest) {
         checksum: result.checksum,
         category: getMediaCategory(mimeType),
         encryptedData: sccaBuffer.toString("base64"),
-        messageSequence: messageSequence ? parseInt(messageSequence) : null,
+        messageSequence:
+          messageSequence && Number.isInteger(Number(messageSequence))
+            ? Number(messageSequence)
+            : null,
       },
     });
 
@@ -141,8 +146,8 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const auth = await requireUser();
+    if (!auth) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -158,7 +163,7 @@ export async function GET(request: NextRequest) {
 
     // Verify ownership
     const conversation = await prisma.sCCAConversation.findFirst({
-      where: { id: conversationId, userId: session.user.id, deletedAt: null },
+      where: { id: conversationId, userId: auth.id, deletedAt: null },
       select: { id: true },
     });
     if (!conversation) {
@@ -169,7 +174,7 @@ export async function GET(request: NextRequest) {
     }
 
     const attachments = await prisma.mediaAttachment.findMany({
-      where: { conversationId, userId: session.user.id },
+      where: { conversationId, userId: auth.id },
       select: {
         id: true,
         originalName: true,

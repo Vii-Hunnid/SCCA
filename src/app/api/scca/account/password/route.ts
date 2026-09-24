@@ -1,28 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { pbkdf2Sync, randomBytes, timingSafeEqual } from 'crypto';
-
-const PBKDF2_ITERATIONS = 100000;
-const SALT_LENGTH = 16;
-const KEY_LENGTH = 64;
+import { requireUser } from '@/lib/session';
+import { verifyPassword, hashPassword } from '@/lib/auth';
+import { createAuditLog } from '@/lib/db/client';
 
 /**
  * POST /api/scca/account/password
- * Change user password
+ * Change user password.
+ *
+ * Uses the shared hash helpers from src/lib/auth.ts and stamps
+ * passwordChangedAt so all older sessions are rejected (see
+ * src/lib/session.ts).
  */
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const authUser = await requireUser();
+    if (!authUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await req.json();
-    const { currentPassword, newPassword } = body;
+    const body = await req.json().catch(() => null);
+    const { currentPassword, newPassword } = body || {};
 
-    // Validate inputs
     if (!currentPassword || !newPassword) {
       return NextResponse.json(
         { error: 'Current password and new password are required' },
@@ -30,16 +29,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (newPassword.length < 8) {
+    if (typeof newPassword !== 'string' || newPassword.length < 8) {
       return NextResponse.json(
         { error: 'New password must be at least 8 characters' },
         { status: 400 }
       );
     }
 
-    // Get user with password hash
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: authUser.id },
       select: {
         id: true,
         passwordHash: true,
@@ -66,55 +64,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Parse stored hash (format: iterations:salt:hash)
-    const [storedIter, storedSalt, storedHash] = user.passwordHash.split(':');
-    if (!storedIter || !storedSalt || !storedHash) {
-      return NextResponse.json(
-        { error: 'Invalid password format' },
-        { status: 500 }
-      );
-    }
-
-    // Verify current password
-    const currentKey = pbkdf2Sync(
-      currentPassword,
-      Buffer.from(storedSalt, 'hex'),
-      parseInt(storedIter, 10),
-      KEY_LENGTH,
-      'sha512'
-    );
-
-    const storedHashBuffer = Buffer.from(storedHash, 'hex');
-    if (!timingSafeEqual(currentKey, storedHashBuffer)) {
+    const valid = await verifyPassword(currentPassword, user.passwordHash);
+    if (!valid) {
       return NextResponse.json(
         { error: 'Current password is incorrect' },
         { status: 401 }
       );
     }
 
-    // Generate new salt and hash
-    const newSalt = randomBytes(SALT_LENGTH);
-    const newKey = pbkdf2Sync(
-      newPassword,
-      newSalt,
-      PBKDF2_ITERATIONS,
-      KEY_LENGTH,
-      'sha512'
-    );
+    const passwordHash = await hashPassword(newPassword);
 
-    const newPasswordHash = `${PBKDF2_ITERATIONS}:${newSalt.toString('hex')}:${newKey.toString('hex')}`;
-
-    // Update password
     await prisma.user.update({
-      where: { id: session.user.id },
-      data: { passwordHash: newPasswordHash },
+      where: { id: user.id },
+      data: { passwordHash, passwordChangedAt: new Date() },
     });
+
+    createAuditLog({
+      userId: user.id,
+      action: 'password_change',
+      ipAddress: req.headers.get('x-forwarded-for') || undefined,
+    }).catch(() => {});
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Password change error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to change password' },
+      { error: 'Failed to change password' },
       { status: 500 }
     );
   }
