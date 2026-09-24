@@ -1,7 +1,10 @@
 import type { NextConfig } from 'next';
+import path from 'node:path';
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ['@prisma/client'],
+  // Pin the workspace root so the stray lockfile in $HOME isn't picked up
+  outputFileTracingRoot: path.join(__dirname),
   headers: async () => [
     {
       source: '/(.*)',

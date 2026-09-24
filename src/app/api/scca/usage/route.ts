@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
         // Time-bucketed timeline, aggregated in SQL
         prisma.$queryRaw<
           Array<{
-            bucket: number;
+            bucket: bigint;
             requests: number;
             tokens: bigint;
             cost_micro: bigint;
@@ -150,7 +150,7 @@ export async function GET(request: NextRequest) {
     };
 
     const timelineOut = timeline.map((row) => ({
-      timestamp: new Date(row.bucket * 1000).toISOString(),
+      timestamp: new Date(Number(row.bucket) * 1000).toISOString(),
       requests: row.requests,
       tokens: Number(row.tokens),
       costMicro: Number(row.cost_micro),
