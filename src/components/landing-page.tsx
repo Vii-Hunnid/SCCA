@@ -216,7 +216,7 @@ export function LandingPage() {
       {/* Footer */}
       <footer className="border-t py-4" style={{ borderColor: 'var(--border-color)' }}>
         <div className="max-w-6xl mx-auto px-6 flex items-center justify-between text-xs text-[var(--text-secondary)]">
-          <span>Secure Compact Chat Architecture v1.0</span>
+          <span>Secure Compact Chat Architecture v2.0</span>
           <span style={{ color: 'var(--neon-green)' }}>All systems operational</span>
         </div>
       </footer>

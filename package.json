@@ -1,6 +1,6 @@
 {
   "name": "scca",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Secure Compact Chat Architecture - Privacy-first, storage-efficient chat with AES-256-GCM encryption",
   "private": true,
   "license": "MIT",
