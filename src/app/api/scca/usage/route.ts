@@ -2,13 +2,13 @@
  * GET /api/scca/usage — Get usage analytics for the authenticated user
  *
  * Query params:
- *   - period: "1h" | "24h" | "7d" | "30d" (default: "24h")
+ *   - period: "1h" | "24h" | "7d" | "30d" | "90d" | "all" (default: "24h")
  *
  * Response:
  *   { period, since, summary, timeline[], byEndpoint[], byApiKey[], rateLimits }
  *
- * Row volume is capped (RECORD_CAP) — summary/timeline are computed over the
- * most recent records in the period when the cap is hit.
+ * All aggregations run in the database — no usage rows are loaded into the
+ * server, so 90-day and all-time views stay fast regardless of volume.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -20,8 +20,30 @@ import {
   TIER_LIMITS,
 } from "@/lib/rate-limit";
 
-// Bound per-request row load; dashboards aggregate, they don't need raw rows
-const RECORD_CAP = 100_000;
+const PERIODS: Record<string, number | null> = {
+  "1h": 3_600_000,
+  "24h": 86_400_000,
+  "7d": 7 * 86_400_000,
+  "30d": 30 * 86_400_000,
+  "90d": 90 * 86_400_000,
+  all: null, // no lower bound
+};
+
+// Timeline bucket width per period (seconds)
+function bucketSeconds(period: string): number {
+  switch (period) {
+    case "1h":
+      return 300; // 5 minutes
+    case "24h":
+      return 3_600; // 1 hour
+    case "7d":
+      return 86_400; // 1 day
+    case "30d":
+      return 86_400; // 1 day
+    default:
+      return 7 * 86_400; // 1 week for 90d / all
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,147 +54,135 @@ export async function GET(request: NextRequest) {
 
     const userId = auth.id;
     const { searchParams } = new URL(request.url);
-    const period = searchParams.get("period") || "24h";
+    const periodParam = searchParams.get("period") || "24h";
+    const period = periodParam in PERIODS ? periodParam : "24h";
+    const windowMs = PERIODS[period];
 
-    // Calculate time window
-    const now = new Date();
-    let since: Date;
-    switch (period) {
-      case "1h":
-        since = new Date(now.getTime() - 3_600_000);
-        break;
-      case "7d":
-        since = new Date(now.getTime() - 7 * 86_400_000);
-        break;
-      case "30d":
-        since = new Date(now.getTime() - 30 * 86_400_000);
-        break;
-      default: // 24h
-        since = new Date(now.getTime() - 86_400_000);
-    }
+    const since =
+      windowMs === null ? new Date(0) : new Date(Date.now() - windowMs);
+    const where =
+      windowMs === null
+        ? { userId }
+        : { userId, createdAt: { gte: since } };
 
     // Fetch data in parallel — rate limit checked once, with the real tier
-    const [billing, records, apiKeys] = await Promise.all([
-      getOrCreateBillingAccount(userId),
-      prisma.usageRecord.findMany({
-        where: { userId, createdAt: { gte: since } },
-        orderBy: { createdAt: "desc" },
-        take: RECORD_CAP,
-        select: {
-          endpoint: true,
-          method: true,
-          statusCode: true,
-          requestTokens: true,
-          responseTokens: true,
-          totalTokens: true,
-          bytesIn: true,
-          bytesOut: true,
-          costMicro: true,
-          latencyMs: true,
-          apiKeyId: true,
-          createdAt: true,
-        },
-      }),
-      prisma.apiKey.findMany({
-        where: { userId, revokedAt: null },
-        select: { id: true, name: true, keyPrefix: true },
-      }),
-    ]);
+    const [billing, summaryAgg, statusGroups, endpointGroups, keyGroups, apiKeys, timeline] =
+      await Promise.all([
+        getOrCreateBillingAccount(userId),
+        prisma.usageRecord.aggregate({
+          where,
+          _count: { _all: true },
+          _sum: {
+            totalTokens: true,
+            bytesIn: true,
+            bytesOut: true,
+            costMicro: true,
+          },
+          _avg: { latencyMs: true },
+        }),
+        prisma.usageRecord.groupBy({
+          by: ["statusCode"],
+          where,
+          _count: { _all: true },
+        }),
+        prisma.usageRecord.groupBy({
+          by: ["endpoint"],
+          where,
+          _count: { _all: true },
+          _sum: { totalTokens: true, costMicro: true },
+          _avg: { latencyMs: true },
+        }),
+        prisma.usageRecord.groupBy({
+          by: ["apiKeyId"],
+          where,
+          _count: { _all: true },
+          _sum: { totalTokens: true, costMicro: true },
+        }),
+        prisma.apiKey.findMany({
+          where: { userId, revokedAt: null },
+          select: { id: true, name: true, keyPrefix: true },
+        }),
+        // Time-bucketed timeline, aggregated in SQL
+        prisma.$queryRaw<
+          Array<{
+            bucket: number;
+            requests: number;
+            tokens: bigint;
+            cost_micro: bigint;
+            errors: number;
+          }>
+        >`
+          SELECT
+            floor(extract(epoch FROM "created_at") / ${bucketSeconds(period)})::bigint
+              * ${bucketSeconds(period)} AS bucket,
+            count(*)::int AS requests,
+            COALESCE(sum("total_tokens"), 0)::bigint AS tokens,
+            COALESCE(sum("cost_micro"), 0)::bigint AS cost_micro,
+            count(*) FILTER (WHERE "status_code" >= 400)::int AS errors
+          FROM "usage_records"
+          WHERE "user_id" = ${userId}
+            AND "created_at" >= ${since}
+          GROUP BY 1
+          ORDER BY 1
+        `,
+      ]);
 
     const actualRateLimit = await checkRateLimit(userId, billing.tier);
-    const truncated = records.length >= RECORD_CAP;
 
-    // Build summary
+    const totalRequests = summaryAgg._count._all;
+    const errorCount = statusGroups
+      .filter((g) => g.statusCode >= 400)
+      .reduce((s, g) => s + g._count._all, 0);
+
     const summary = {
-      totalRequests: records.length,
-      totalTokens: records.reduce((s, r) => s + r.totalTokens, 0),
-      totalBytesIn: records.reduce((s, r) => s + r.bytesIn, 0),
-      totalBytesOut: records.reduce((s, r) => s + r.bytesOut, 0),
-      totalCostMicro: records.reduce((s, r) => s + r.costMicro, 0),
-      avgLatencyMs: records.length
-        ? Math.round(records.reduce((s, r) => s + r.latencyMs, 0) / records.length)
+      totalRequests,
+      totalTokens: summaryAgg._sum.totalTokens || 0,
+      totalBytesIn: summaryAgg._sum.bytesIn || 0,
+      totalBytesOut: summaryAgg._sum.bytesOut || 0,
+      totalCostMicro: summaryAgg._sum.costMicro || 0,
+      avgLatencyMs: totalRequests
+        ? Math.round(summaryAgg._avg.latencyMs || 0)
         : 0,
-      successRate: records.length
-        ? +(
-            (records.filter((r) => r.statusCode < 400).length / records.length) *
-            100
-          ).toFixed(1)
+      successRate: totalRequests
+        ? +(((totalRequests - errorCount) / totalRequests) * 100).toFixed(1)
         : 100,
-      errorCount: records.filter((r) => r.statusCode >= 400).length,
+      errorCount,
     };
 
-    // Build timeline (bucketed by hour or day)
-    const bucketMs = period === "1h" ? 300_000 : period === "24h" ? 3_600_000 : 86_400_000;
-    const timeline: Array<{
-      timestamp: string;
-      requests: number;
-      tokens: number;
-      costMicro: number;
-      errors: number;
-    }> = [];
-
-    const buckets = new Map<number, { requests: number; tokens: number; costMicro: number; errors: number }>();
-    for (const r of records) {
-      const bucketKey = Math.floor(r.createdAt.getTime() / bucketMs) * bucketMs;
-      const existing = buckets.get(bucketKey) || { requests: 0, tokens: 0, costMicro: 0, errors: 0 };
-      existing.requests++;
-      existing.tokens += r.totalTokens;
-      existing.costMicro += r.costMicro;
-      if (r.statusCode >= 400) existing.errors++;
-      buckets.set(bucketKey, existing);
-    }
-
-    for (const [ts, data] of Array.from(buckets.entries()).sort((a, b) => a[0] - b[0])) {
-      timeline.push({
-        timestamp: new Date(ts).toISOString(),
-        ...data,
-      });
-    }
-
-    // Usage by endpoint
-    const endpointMap = new Map<string, { requests: number; tokens: number; costMicro: number; avgLatency: number; totalLatency: number }>();
-    for (const r of records) {
-      const existing = endpointMap.get(r.endpoint) || { requests: 0, tokens: 0, costMicro: 0, avgLatency: 0, totalLatency: 0 };
-      existing.requests++;
-      existing.tokens += r.totalTokens;
-      existing.costMicro += r.costMicro;
-      existing.totalLatency += r.latencyMs;
-      endpointMap.set(r.endpoint, existing);
-    }
-    const byEndpoint = Array.from(endpointMap.entries()).map(([endpoint, data]) => ({
-      endpoint,
-      requests: data.requests,
-      tokens: data.tokens,
-      costMicro: data.costMicro,
-      avgLatencyMs: Math.round(data.totalLatency / data.requests),
+    const timelineOut = timeline.map((row) => ({
+      timestamp: new Date(row.bucket * 1000).toISOString(),
+      requests: row.requests,
+      tokens: Number(row.tokens),
+      costMicro: Number(row.cost_micro),
+      errors: row.errors,
     }));
 
-    // Usage by API key
-    const keyMap = new Map<string, { requests: number; tokens: number; costMicro: number }>();
-    for (const r of records) {
-      const keyId = r.apiKeyId || "session";
-      const existing = keyMap.get(keyId) || { requests: 0, tokens: 0, costMicro: 0 };
-      existing.requests++;
-      existing.tokens += r.totalTokens;
-      existing.costMicro += r.costMicro;
-      keyMap.set(keyId, existing);
-    }
-    const byApiKey = Array.from(keyMap.entries()).map(([keyId, data]) => {
+    const byEndpoint = endpointGroups.map((g) => ({
+      endpoint: g.endpoint,
+      requests: g._count._all,
+      tokens: g._sum.totalTokens || 0,
+      costMicro: g._sum.costMicro || 0,
+      avgLatencyMs: Math.round(g._avg.latencyMs || 0),
+    }));
+
+    const byApiKey = keyGroups.map((g) => {
+      const keyId = g.apiKeyId || "session";
       const key = apiKeys.find((k) => k.id === keyId);
       return {
         keyId,
         keyName: key?.name || (keyId === "session" ? "Browser Session" : "Unknown"),
         keyPrefix: key?.keyPrefix || (keyId === "session" ? "session" : "—"),
-        ...data,
+        requests: g._count._all,
+        tokens: g._sum.totalTokens || 0,
+        costMicro: g._sum.costMicro || 0,
       };
     });
 
     return NextResponse.json({
       period,
-      since: since.toISOString(),
-      truncated,
+      since: windowMs === null ? null : since.toISOString(),
       summary,
-      timeline,
+      timeline: timelineOut,
       byEndpoint,
       byApiKey,
       rateLimits: {
