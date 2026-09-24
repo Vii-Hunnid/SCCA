@@ -3111,7 +3111,7 @@ merkleRoot = hash[N-1]`}</CodeBlock>
               <div className="flex items-center gap-2">
                 <div className="status-dot-active" />
                 <span className="text-[10px] text-terminal-dim tracking-wider">
-                  SCCA v1.0 — Open Source
+                  SCCA v2.0 — Open Source
                 </span>
               </div>
               <Link

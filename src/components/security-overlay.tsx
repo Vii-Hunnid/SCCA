@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 
 const bootSequence = [
-  { text: '> Initializing SCCA Protocol v1.0...', delay: 0 },
+  { text: '> Initializing SCCA Protocol v2.0...', delay: 0 },
   { text: '> Loading AES-256-GCM encryption module...', delay: 400 },
   { text: '> Deriving key hierarchy via HKDF-SHA256...', delay: 800 },
   { text: '> Merkle integrity chain verified', delay: 1200 },
