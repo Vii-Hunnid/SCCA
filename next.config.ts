@@ -1,6 +1,12 @@
 import type { NextConfig } from 'next';
 import path from 'node:path';
 
+// Next.js dev mode needs eval for React Fast Refresh; production doesn't.
+const scriptSrc =
+  process.env.NODE_ENV === 'production'
+    ? "script-src 'self' 'unsafe-inline'"
+    : "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
+
 const nextConfig: NextConfig = {
   serverExternalPackages: ['@prisma/client'],
   // Pin the workspace root so the stray lockfile in $HOME isn't picked up
@@ -11,7 +17,7 @@ const nextConfig: NextConfig = {
       headers: [
         {
           key: 'Content-Security-Policy',
-          value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://api.polar.sh https://sandbox-api.polar.sh; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+          value: `default-src 'self'; ${scriptSrc}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://api.polar.sh https://sandbox-api.polar.sh; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`,
         },
         { key: 'X-Frame-Options', value: 'DENY' },
         { key: 'X-Content-Type-Options', value: 'nosniff' },
