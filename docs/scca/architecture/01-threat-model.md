@@ -10,19 +10,18 @@
 
 **Protection:**
 - All message content encrypted with AES-256-GCM
-- Encryption keys derived from user passwords, not stored in database
-- Attacker sees only encrypted blobs and metadata (timestamps, counts)
-- Without user passwords, decryption is computationally infeasible
+- Keys derived from a server-held master secret (`MASTER_KEY_SECRET` env var) + per-user salt — neither stored in the database
+- Attacker sees only encrypted blobs and metadata (timestamps, counts, roles)
+- Decryption additionally requires compromising the application environment to obtain `MASTER_KEY_SECRET`
 
 ### 2. Server Compromise
 
 **Threat:** Attacker gains code execution on application server.
 
-**Protection:**
-- Master keys exist only in memory during active sessions
-- No plaintext key storage on disk
-- Compromised server can only decrypt conversations of **currently active** users
-- Audit logging helps detect compromise
+**Impact (honest):**
+- The server necessarily holds `MASTER_KEY_SECRET` (it decrypts messages to build AI context), so full code execution can decrypt all conversations
+- Mitigations: keep `MASTER_KEY_SECRET` in a secrets manager, rotate it on compromise (re-encrypts nothing by itself — see key rotation notes), audit logging aids detection, and sessions/tokens no longer carry key material
+- This is the fundamental tradeoff of server-side AI: end-to-end encryption would require client-side context building
 
 ### 3. Network Eavesdropping
 
@@ -62,4 +61,4 @@
 
 ## Known Tradeoff
 
-SCCA is **not** end-to-end encrypted like Signal. The server must decrypt messages to build AI context. This is an intentional tradeoff: server processes AI requests (must decrypt), but user controls the keys. A fully compromised server can only access conversations of currently active sessions.
+SCCA is **not** end-to-end encrypted like Signal. The server must decrypt messages to build AI context, and keys are derived from a server-held master secret (`MASTER_KEY_SECRET`) combined with each user's salt. This is an intentional tradeoff: server-processed AI requires server-side decryption, in exchange for compact encrypted storage and a small attack surface at rest (database alone yields only ciphertext). True zero-knowledge would require client-side key derivation and server-blind context building — a different architecture.

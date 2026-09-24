@@ -61,3 +61,45 @@ docs/scca/
 
 - **Architecture Spec:** `Secure Compact Chat Architecture (SCCA).md` (plain text, philosophy-first)
 - **Implementation Guide:** `Gunther AI: Secure Compact Chat Architecture (SCCA).md` (~4000 lines, literate specification)
+
+---
+
+## Implementation Addendum (codebase, September 2026)
+
+The frozen spec above describes the architecture; this addendum records deliberate
+implementation decisions in the v2 codebase that extend or tighten it. Spec text
+takes precedence where they conflict; these are engineering choices, not spec changes.
+
+1. **Binary format v2** — the length field is uint32 (4 bytes) instead of uint16.
+   v1's 64KB ciphertext cap caused 500s on large incompressible messages. Writers
+   emit v2 (`version = 0x02`); readers accept v1 and v2. No data migration required.
+
+2. **Encryption posture is at-rest, not zero-knowledge** — the master key is derived
+   per request from `MASTER_KEY_SECRET` + the user's salt (`src/lib/session.ts`).
+   It is never placed in the JWT. The server decrypts messages to build AI context.
+   See `architecture/01-threat-model.md`.
+
+3. **Session revocation** — `users.password_changed_at` rejects sessions issued
+   before the last password change; `users.deleted_at` revokes all access
+   immediately (sessions and API keys alike).
+
+4. **Concurrency** — appends use atomic `updateMany` with an optimistic
+   `messageCount` check (`appendMessageAtomically`); destructive edits replace the
+   token array with the same check. Conflicts return 409, never silent loss.
+   The Merkle root is extended incrementally (`computeNextMerkleRoot`), O(1) per
+   append, rather than re-chained over the whole conversation.
+
+5. **Durability ordering** — the user message is persisted before the AI stream
+   starts; the assistant token is persisted only after a complete stream. Client
+   aborts propagate to the upstream Groq request and discard partial responses.
+
+6. **Metering** — chat endpoints are rate-limited and usage-metered like the vault.
+   Usage cost accrues to `usage_spend_micro`; `total_spend_micro` tracks
+   subscription payments and drives auto-upgrade. Monthly budgets are enforced in
+   `checkRateLimit`; billing cycles roll over lazily.
+
+7. **Webhook idempotency** — Polar events dedupe by `polarOrderId` before any
+   spend mutation; auto-upgrade evaluates post-increment spend exactly once.
+
+8. **Media safety** — uploaded MIME types are re-derived from magic bytes; SVG is
+   served as `attachment` only; filenames are sanitized into Content-Disposition.

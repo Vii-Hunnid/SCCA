@@ -10,6 +10,23 @@ Article on X: https://x.com/Viihunnid/status/2021224979421888587
 
 ---
 
+## What's New in v2.0
+
+Security and robustness hardening across the stack (branch `v2`):
+
+- **Encryption format v2** — uint32 ciphertext length (v1 500'd on >64KB of incompressible text). All v1 packets remain readable; no data migration needed.
+- **Honest security model** — master key removed from the JWT (derived per request instead); fixed false "zero-knowledge"/"E2E" claims. SCCA is encryption-at-rest: the server must decrypt to build AI context. See [Threat Model](docs/scca/architecture/01-threat-model.md).
+- **Session revocation** — password change invalidates older sessions immediately; soft-deleted users lose all access at once.
+- **No more lost messages** — user messages persist before streaming; concurrent sends can't clobber each other (atomic appends with optimistic concurrency); client aborts propagate upstream and discard partial responses; the SSE parser buffers partial lines so tokens aren't dropped at chunk boundaries.
+- **Metered chat** — chat endpoints are rate-limited and usage-metered by billing tier (they were wide open); monthly budgets and per-tier API-key/size limits are actually enforced; Polar webhooks are idempotent under retries.
+- **XSS eliminated** — markdown renders through react-markdown + rehype-sanitize (the old `dangerouslySetInnerHTML` sink is gone); CSP and security headers added; SVG media served as attachment.
+- **Resilient AI client** — context trimmed to fit the model window on long conversations, 429/5xx retries with backoff, 60s timeout.
+- **Tests: 39 → 81** — engine format suites, messages-route flow (ordering, failure, abort), webhook idempotency, SSE framing, session revocation.
+
+Migration note: v2 adds `password_changed_at` and `deleted_at` (users) plus `usage_spend_micro` (billing_accounts). Run `npx prisma db push` after pulling.
+
+---
+
 ## Table of Contents
 
 - [Core Architecture](#core-architecture)
@@ -55,8 +72,8 @@ MASTER_KEY_SECRET (env, 32 bytes)
 
 - **Single-row storage** — An entire conversation (messages, metadata, integrity hash) lives in one PostgreSQL row as an encrypted token array. 1,000 messages in ~85 KB.
 - **Destructive editing** — Editing message #5 permanently deletes messages 6-N. No versioning, no branches, no ghost data. Linear timeline only.
-- **Zero-knowledge server** — The server cannot read message content. A database breach yields only encrypted blobs.
-- **Compact binary format** — 10-byte header + zlib compression + AES-256-GCM ciphertext. ~24 bytes overhead per message vs 200-300 bytes for traditional JSON storage.
+- **Encryption at rest** — Every message is AES-256-GCM encrypted with per-conversation keys before it touches the database. A database breach alone yields only encrypted blobs. Note: SCCA is **not** end-to-end encrypted — the server derives keys from a master secret to build AI context. See [Threat Model](docs/scca/architecture/01-threat-model.md).
+- **Compact binary format** — 10-byte header + zlib compression + AES-256-GCM ciphertext. ~36 bytes overhead per message vs 200-300 bytes for traditional JSON storage.
 
 ---
 
@@ -79,7 +96,8 @@ MASTER_KEY_SECRET (env, 32 bytes)
 | **Multi-Auth** | Email/password (PBKDF2), GitHub OAuth, Google OAuth via NextAuth.js. |
 | **Audit Logging** | Immutable action logs with IP/user agent tracking for compliance. |
 | **Usage Analytics** | Per-request metering (tokens, bytes, latency, cost) with dashboard visualizations. |
-| **Security Headers** | X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy. |
+| **Security Headers** | CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy. |
+| **Session Revocation** | Password change invalidates older sessions instantly; deleted users lose access immediately. |
 
 ---
 
@@ -283,33 +301,40 @@ Integrity Key (32 bytes)        -> Merkle-HMAC chain
 
 ![Binary Format](public/images/scca-binary-format.svg)
 
+Format v2 (current); v1 packets remain readable:
+
 ```
-+------------------------------------------------+
-| Header (10 bytes)                              |
-|  [version:1][role:1][sequence:2][timestamp:4]  |
-|  [flags:2]                                     |
-+------------------------------------------------+
-| Nonce (12 bytes) — random, never reused        |
-+------------------------------------------------+
-| Ciphertext (variable)                          |
-|  AES-256-GCM(key, nonce, zlib.deflate(content))|
-+------------------------------------------------+
-| Auth Tag (16 bytes) — GCM authentication       |
-+------------------------------------------------+
++--------------------------------------------------+
+| Header (10 bytes)                                |
+|  [version:1][role:1][sequence:4][timestamp:4]    |
++--------------------------------------------------+
+| Ciphertext length (4 bytes, uint32 big-endian)   |
++--------------------------------------------------+
+| Ciphertext (variable)                            |
+|  AES-256-GCM(key, nonce, zlib.deflate(content))  |
+|  auth tag (16 bytes) appended to ciphertext      |
++--------------------------------------------------+
+| Nonce (16 bytes) — random, never reused          |
++--------------------------------------------------+
 ```
+
+v1 differs only in the length field: 2 bytes (uint16) at the same offset,
+which capped ciphertext at ~64KB and threw on larger incompressible content.
+
 
 ### Operations
 
 | Operation | Description |
 |-----------|-------------|
-| `packMessage` | Plaintext -> binary header + zlib compress + AES encrypt -> base64 token |
-| `unpackMessage` | Base64 token -> AES decrypt + decompress -> plaintext + metadata |
-| `appendMessage` | Pack and add to conversation token array |
+| `packMessage` | Plaintext -> binary header + zlib compress + AES encrypt -> base64 token (format v2) |
+| `unpackMessage` | Base64 token -> AES decrypt + decompress -> plaintext + metadata (reads v1 and v2) |
+| `appendMessage` | Pack and add to conversation token array (O(1) incremental Merkle root) |
+| `computeNextMerkleRoot` | Extend the stored root with one token without re-chaining the conversation |
 | `destructiveEdit` | Replace message at sequence N, permanently delete all messages after N |
 | `destructiveDelete` | Remove message and all subsequent messages |
 | `computeMerkleRoot` | HMAC-SHA256 chain across all tokens -> single integrity hash |
-| `verifyConversation` | Recompute Merkle root and compare to stored value |
-| `peekMessageHeader` | Read 10-byte header without decrypting content |
+| `verifyMerkleRoot` | Recompute and constant-time-compare against the stored root |
+| `peekMessageHeader` | Read header without decrypting content |
 
 ### Merkle Integrity Chain
 
