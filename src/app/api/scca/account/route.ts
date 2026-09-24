@@ -84,7 +84,7 @@ export async function GET() {
   } catch (error: any) {
     console.error('Account GET error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch account' },
+      { error: 'Failed to fetch account' },
       { status: 500 }
     );
   }
@@ -129,7 +129,7 @@ export async function PATCH(req: NextRequest) {
   } catch (error: any) {
     console.error('Account PATCH error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to update profile' },
+      { error: 'Failed to update profile' },
       { status: 500 }
     );
   }
@@ -155,7 +155,7 @@ export async function DELETE() {
   } catch (error: any) {
     console.error('Account DELETE error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to delete account' },
+      { error: 'Failed to delete account' },
       { status: 500 }
     );
   }

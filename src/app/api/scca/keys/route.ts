@@ -8,6 +8,9 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { generateApiKey } from "@/lib/api-key-auth";
 import { prisma } from "@/lib/prisma";
+import { getUserTier, TIER_LIMITS } from "@/lib/rate-limit";
+
+const MAX_KEY_AGE_DAYS = 365;
 
 export async function GET() {
   try {
@@ -63,14 +66,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Limit keys per user
+    // Limit keys per user by billing tier
+    const tier = await getUserTier(session.user.id);
+    const maxKeys = TIER_LIMITS[tier]?.maxApiKeys ?? TIER_LIMITS.free.maxApiKeys;
+
     const existingCount = await prisma.apiKey.count({
       where: { userId: session.user.id, revokedAt: null },
     });
 
-    if (existingCount >= 10) {
+    if (existingCount >= maxKeys) {
       return NextResponse.json(
-        { error: "Maximum 10 active API keys per account" },
+        { error: `Maximum ${maxKeys} active API keys on the ${TIER_LIMITS[tier]?.displayName || tier} plan` },
         { status: 400 }
       );
     }
@@ -78,11 +84,12 @@ export async function POST(request: NextRequest) {
     // Generate the key
     const { rawKey, keyHash, keyPrefix } = generateApiKey();
 
-    // Calculate expiry
+    // Calculate expiry (capped — no immortal keys)
     let expiresAt: Date | null = null;
     if (expiresInDays && typeof expiresInDays === "number" && expiresInDays > 0) {
+      const days = Math.min(Math.floor(expiresInDays), MAX_KEY_AGE_DAYS);
       expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+      expiresAt.setDate(expiresAt.getDate() + days);
     }
 
     // Store in DB

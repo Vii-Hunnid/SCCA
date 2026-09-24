@@ -51,7 +51,7 @@ export async function DELETE(
   } catch (error: any) {
     console.error('Session revoke error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to revoke session' },
+      { error: 'Failed to revoke session' },
       { status: 500 }
     );
   }

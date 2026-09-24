@@ -115,6 +115,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ url: checkout.url });
   } catch (err: any) {
     console.error("[billing/checkout] unexpected error:", err);
-    return NextResponse.json({ error: err.message || "Failed to create checkout" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to create checkout" }, { status: 500 });
   }
 }

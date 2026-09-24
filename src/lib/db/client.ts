@@ -8,7 +8,6 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import { randomBytes } from "crypto";
 import {
   packMessage,
   computeNextMerkleRoot,
@@ -187,24 +186,3 @@ export async function createAuditLog(data: {
 // ═════════════════════════════════════════════════════════════════════════════
 // USER HELPERS
 // ═════════════════════════════════════════════════════════════════════════════
-
-/**
- * Ensure a user has a master key salt. Generates one if missing.
- */
-export async function ensureUserMasterKeySalt(userId: string): Promise<string> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { masterKeySalt: true },
-  });
-
-  if (user?.masterKeySalt) {
-    return user.masterKeySalt;
-  }
-
-  const salt = randomBytes(16).toString("base64");
-  await prisma.user.update({
-    where: { id: userId },
-    data: { masterKeySalt: salt },
-  });
-  return salt;
-}

@@ -622,7 +622,7 @@ export function ChatInput({
               style={{ color: 'var(--text-secondary)' }}
             >
               <Lock className="w-3 h-3" />
-              End-to-end encrypted
+              Encrypted at rest · AES-256-GCM
             </span>
             {attachments.length > 0 && (
               <span 

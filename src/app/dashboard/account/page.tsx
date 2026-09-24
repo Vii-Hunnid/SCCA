@@ -40,18 +40,9 @@ interface UserProfile {
   } | null;
 }
 
-interface SessionInfo {
-  id: string;
-  ipAddress: string | null;
-  userAgent: string | null;
-  createdAt: string;
-  isCurrent: boolean;
-}
-
 export default function AccountPage() {
   const { data: session, update: updateSession } = useSession();
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -74,7 +65,6 @@ export default function AccountPage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
       setProfile(json.user);
-      setSessions(json.sessions);
       setNameInput(json.user.name || '');
     } catch (err: any) {
       setError(err.message);
@@ -148,23 +138,6 @@ export default function AccountPage() {
       setError(err.message);
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleRevokeSession = async (sessionId: string) => {
-    try {
-      const res = await fetch(`/api/scca/account/sessions/${sessionId}`, {
-        method: 'DELETE',
-      });
-      if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json.error);
-      }
-      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
-      setSuccess('Session revoked');
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err: any) {
-      setError(err.message);
     }
   };
 
@@ -435,78 +408,25 @@ export default function AccountPage() {
             </div>
           </motion.div>
 
-          {/* Active Sessions */}
+          {/* Sessions */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
             className="cyber-card p-6"
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <RefreshCw className="w-4 h-4" style={{ color: 'var(--neon-cyan)' }} />
-                <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-                  Active Sessions
-                </h3>
-              </div>
-              <span className="text-[10px] text-[var(--text-secondary)]">
-                {sessions.length} active
-              </span>
+            <div className="flex items-center gap-2 mb-4">
+              <RefreshCw className="w-4 h-4" style={{ color: 'var(--neon-cyan)' }} />
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+                Sessions
+              </h3>
             </div>
-
-            <div className="space-y-2 max-h-[300px] overflow-y-auto">
-              {sessions.map((sess) => (
-                <div
-                  key={sess.id}
-                  className="p-3 rounded-lg flex items-center justify-between"
-                  style={{ 
-                    backgroundColor: sess.isCurrent 
-                      ? 'color-mix(in srgb, var(--neon-green) 5%, var(--bg-secondary))' 
-                      : 'var(--bg-secondary)',
-                    border: sess.isCurrent 
-                      ? '1px solid color-mix(in srgb, var(--neon-green) 30%, transparent)' 
-                      : '1px solid transparent'
-                  }}
-                >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-[var(--text-primary)]">
-                        {sess.userAgent ? parseUserAgent(sess.userAgent) : 'Unknown Device'}
-                      </span>
-                      {sess.isCurrent && (
-                        <span 
-                          className="px-1.5 py-0.5 rounded text-[9px]"
-                          style={{ 
-                            backgroundColor: 'color-mix(in srgb, var(--neon-green) 15%, transparent)',
-                            color: 'var(--neon-green)'
-                          }}
-                        >
-                          Current
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-[10px] text-[var(--text-secondary)] mt-0.5">
-                      {sess.ipAddress || 'Unknown IP'} • {new Date(sess.createdAt).toLocaleDateString()}
-                    </div>
-                  </div>
-                  {!sess.isCurrent && (
-                    <button
-                      onClick={() => handleRevokeSession(sess.id)}
-                      className="p-1.5 rounded transition-colors hover:bg-[var(--neon-red)]/10"
-                      style={{ color: 'var(--neon-red)' }}
-                      title="Revoke session"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              ))}
-              {sessions.length === 0 && (
-                <div className="text-center py-4 text-[var(--text-secondary)] text-xs">
-                  No active sessions found
-                </div>
-              )}
-            </div>
+            <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+              Sessions are signed tokens rather than server-side records, so
+              there is no list to manage here. Changing your password
+              immediately invalidates every session issued before the change,
+              and deleting your account revokes access at once.
+            </p>
           </motion.div>
         </div>
 

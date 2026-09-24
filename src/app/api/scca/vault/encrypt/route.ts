@@ -28,6 +28,7 @@ import {
   getRateLimitHeaders,
   estimateTokens,
   buildRateLimitExceededResponse,
+  TIER_LIMITS,
 } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
@@ -97,10 +98,10 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      if (items[i].length > 100000) {
+      if (items[i].length > TIER_LIMITS[billing.tier]?.maxBytesPerRequest) {
         return NextResponse.json(
           {
-            error: `Item at index ${i} exceeds maximum size (100KB)`,
+            error: `Item at index ${i} exceeds the per-item size limit for your plan`,
           },
           { status: 400 }
         );
@@ -170,7 +171,7 @@ export async function POST(request: NextRequest) {
   } catch (err: any) {
     console.error("[vault/encrypt]", err);
     return NextResponse.json(
-      { error: err.message || "Encryption failed" },
+      { error: "Encryption failed" },
       { status: 500 }
     );
   }

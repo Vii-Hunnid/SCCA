@@ -144,11 +144,49 @@ export interface RateLimitResult {
     tpd: number;
   };
   retryAfterMs?: number;
+  /** Which limit rejected the request: rpm | rpd | tpm | tpd | monthly_budget */
+  reason?: string;
+  monthlySpendMicro?: number;
+  monthlyBudgetMicro?: number;
+}
+
+/**
+ * Reset monthly spend when the calendar month rolls over. Lazy — runs on
+ * usage reads/writes rather than needing a scheduler.
+ */
+export async function rolloverBillingCycleIfNeeded(billing: {
+  id: string;
+  billingCycleStart: Date;
+}): Promise<void> {
+  const start = billing.billingCycleStart;
+  const now = new Date();
+  const rolled =
+    now.getFullYear() > start.getFullYear() ||
+    (now.getFullYear() === start.getFullYear() &&
+      now.getMonth() > start.getMonth());
+
+  if (rolled) {
+    await prisma.billingAccount.update({
+      where: { id: billing.id },
+      data: { monthlySpendMicro: 0, billingCycleStart: now },
+    });
+  }
+}
+
+function msUntilNextMonth(): number {
+  const now = new Date();
+  return (
+    new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime() -
+    now.getTime()
+  );
 }
 
 /**
  * Check if a request is within rate limits.
  * Uses sliding window counters from UsageRecord table.
+ *
+ * Also enforces the user's monthly budget (monthlyBudgetMicro, 0 = uncapped)
+ * and lazily rolls the billing cycle when the calendar month changes.
  */
 export async function checkRateLimit(
   userId: string,
@@ -160,7 +198,7 @@ export async function checkRateLimit(
   const oneDayAgo = new Date(now.getTime() - 86_400_000);
 
   // Query sliding window counts in parallel
-  const [minuteStats, dayStats] = await Promise.all([
+  const [minuteStats, dayStats, billing] = await Promise.all([
     prisma.usageRecord.aggregate({
       where: {
         userId,
@@ -177,7 +215,24 @@ export async function checkRateLimit(
       _count: { id: true },
       _sum: { totalTokens: true },
     }),
+    prisma.billingAccount.findUnique({
+      where: { userId },
+      select: {
+        id: true,
+        monthlySpendMicro: true,
+        monthlyBudgetMicro: true,
+        billingCycleStart: true,
+      },
+    }),
   ]);
+
+  let monthlySpendMicro = 0;
+  let monthlyBudgetMicro = 0;
+  if (billing) {
+    await rolloverBillingCycleIfNeeded(billing);
+    monthlySpendMicro = Number(billing.monthlySpendMicro);
+    monthlyBudgetMicro = Number(billing.monthlyBudgetMicro);
+  }
 
   const current = {
     rpm: minuteStats._count.id,
@@ -193,23 +248,48 @@ export async function checkRateLimit(
     tpd: Math.max(0, limits.tpd - current.tpd),
   };
 
+  const budgetExceeded =
+    monthlyBudgetMicro > 0 && monthlySpendMicro >= monthlyBudgetMicro;
+
   const allowed =
+    !budgetExceeded &&
     current.rpm < limits.rpm &&
     current.rpd < limits.rpd &&
     current.tpm < limits.tpm &&
     current.tpd < limits.tpd;
 
   let retryAfterMs: number | undefined;
+  let reason: string | undefined;
   if (!allowed) {
-    // If RPM is exceeded, suggest retrying after the oldest request in the window expires
-    if (current.rpm >= limits.rpm) {
+    if (budgetExceeded) {
+      reason = "monthly_budget";
+      retryAfterMs = msUntilNextMonth();
+    } else if (current.rpm >= limits.rpm) {
+      reason = "rpm";
       retryAfterMs = 60_000; // worst case: wait a full minute
     } else if (current.rpd >= limits.rpd) {
+      reason = "rpd";
+      retryAfterMs = 86_400_000;
+    } else if (current.tpm >= limits.tpm) {
+      reason = "tpm";
+      retryAfterMs = 60_000;
+    } else if (current.tpd >= limits.tpd) {
+      reason = "tpd";
       retryAfterMs = 86_400_000;
     }
   }
 
-  return { allowed, tier, limits, current, remaining, retryAfterMs };
+  return {
+    allowed,
+    tier,
+    limits,
+    current,
+    remaining,
+    retryAfterMs,
+    reason,
+    monthlySpendMicro,
+    monthlyBudgetMicro,
+  };
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -232,6 +312,10 @@ export interface UsageEvent {
 
 /**
  * Record a usage event and update billing.
+ *
+ * Usage cost accrues to usageSpendMicro (lifetime usage) and monthlySpendMicro
+ * (current month, drives budget enforcement). It does NOT touch
+ * totalSpendMicro, which tracks subscription payments only (auto-upgrade).
  */
 export async function recordUsage(event: UsageEvent): Promise<void> {
   const limits = TIER_LIMITS[event.tier] || TIER_LIMITS.free;
@@ -265,22 +349,37 @@ export async function recordUsage(event: UsageEvent): Promise<void> {
 
   // Update billing spend (fire-and-forget)
   if (costMicro > 0) {
-    await prisma.billingAccount
-      .upsert({
+    const billing = await prisma.billingAccount
+      .findUnique({
         where: { userId: event.userId },
-        create: {
-          userId: event.userId,
-          tier: event.tier,
-          totalSpendMicro: costMicro,
-          monthlySpendMicro: costMicro,
-        },
-        update: {
-          totalSpendMicro: { increment: costMicro },
-          monthlySpendMicro: { increment: costMicro },
-        },
+        select: { id: true, billingCycleStart: true },
       })
-      .catch(() => {});
+      .catch(() => null);
+
+    if (billing) {
+      await rolloverBillingCycleIfNeeded(billing).catch(() => {});
+      await prisma.billingAccount
+        .update({
+          where: { id: billing.id },
+          data: {
+            usageSpendMicro: { increment: costMicro },
+            monthlySpendMicro: { increment: costMicro },
+          },
+        })
+        .catch(() => {});
+    }
   }
+}
+
+/**
+ * Resolve a user's billing tier (defaults to free).
+ */
+export async function getUserTier(userId: string): Promise<string> {
+  const billing = await prisma.billingAccount.findUnique({
+    where: { userId },
+    select: { tier: true },
+  });
+  return billing?.tier || "free";
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -340,11 +439,14 @@ export function buildRateLimitExceededResponse(
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "";
   const upgradeUrl = appUrl ? `${appUrl}/dashboard/billing` : "/dashboard/billing";
 
+  const isBudget = result.reason === "monthly_budget";
+
   return {
     body: {
-      error: "Rate limit exceeded",
-      message:
-        result.tier === "free"
+      error: isBudget ? "Monthly budget reached" : "Rate limit exceeded",
+      message: isBudget
+        ? `You've reached your monthly budget of ${formatMicrodollars(result.monthlyBudgetMicro || 0)}. It resets at the start of the next month, or raise it from your billing settings.`
+        : result.tier === "free"
           ? "You've hit the free tier rate limit. Upgrade your plan for higher limits."
           : `You've exceeded your ${TIER_LIMITS[result.tier]?.displayName || result.tier} rate limits. Wait or upgrade for higher limits.`,
       tier: result.tier,

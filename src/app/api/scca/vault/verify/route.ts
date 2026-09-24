@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
   } catch (err: any) {
     console.error("[vault/verify]", err);
     return NextResponse.json(
-      { error: err.message || "Verification failed" },
+      { error: "Verification failed" },
       { status: 500 }
     );
   }

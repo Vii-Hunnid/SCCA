@@ -70,6 +70,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Per-token size cap — base64 of a 1MB blob ≈ 1.4M chars. Beyond this
+    // we're just buffering attacker-controlled data.
+    const MAX_TOKEN_CHARS = 1_400_000;
+    for (let i = 0; i < tokens.length; i++) {
+      if (
+        typeof tokens[i] !== "string" ||
+        tokens[i].length === 0 ||
+        tokens[i].length > MAX_TOKEN_CHARS
+      ) {
+        return NextResponse.json(
+          { error: `Token at index ${i} is missing or exceeds the size limit` },
+          { status: 400 }
+        );
+      }
+    }
+
     // Derive the same encryption key using context
     const userKey = deriveUserKey(user.masterKey, user.masterKeySalt);
     const encryptionKey = deriveConversationKey(userKey, context);
@@ -83,13 +99,6 @@ export async function POST(request: NextRequest) {
     }[] = [];
 
     for (let i = 0; i < tokens.length; i++) {
-      if (typeof tokens[i] !== "string") {
-        return NextResponse.json(
-          { error: `Token at index ${i} must be a string` },
-          { status: 400 }
-        );
-      }
-
       try {
         const msg = await unpackMessage(tokens[i], encryptionKey);
         data.push({
@@ -98,10 +107,10 @@ export async function POST(request: NextRequest) {
           timestamp: msg.timestamp.toISOString(),
           contentHash: msg.contentHash,
         });
-      } catch (err: any) {
+      } catch {
         return NextResponse.json(
           {
-            error: `Failed to decrypt token at index ${i}: ${err.message}`,
+            error: `Failed to decrypt token at index ${i} — wrong key, wrong context, or tampered data`,
             index: i,
           },
           { status: 422 }
@@ -134,7 +143,7 @@ export async function POST(request: NextRequest) {
   } catch (err: any) {
     console.error("[vault/decrypt]", err);
     return NextResponse.json(
-      { error: err.message || "Decryption failed" },
+      { error: "Decryption failed" },
       { status: 500 }
     );
   }

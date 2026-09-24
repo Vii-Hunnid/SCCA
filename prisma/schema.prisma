@@ -239,8 +239,9 @@ model BillingAccount {
   tier             String   @default("free")
 
   // Spend tracking (microdollars)
-  totalSpendMicro  BigInt   @default(0) @map("total_spend_micro")   // lifetime spend
-  monthlySpendMicro BigInt  @default(0) @map("monthly_spend_micro") // current billing period
+  totalSpendMicro  BigInt   @default(0) @map("total_spend_micro")   // lifetime subscription payments (drives auto-upgrade)
+  usageSpendMicro  BigInt   @default(0) @map("usage_spend_micro")   // lifetime usage-based accrual (separate from subscriptions)
+  monthlySpendMicro BigInt  @default(0) @map("monthly_spend_micro") // current billing period (usage + payments; drives budget)
   monthlyBudgetMicro BigInt @default(0) @map("monthly_budget_micro") // user-set monthly cap (0 = no cap)
 
   // Billing period
