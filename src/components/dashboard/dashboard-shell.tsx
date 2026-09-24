@@ -37,6 +37,9 @@ interface DashboardShellProps {
   onNewChat?: () => void;
   onSelectConversation?: (id: string) => void;
   activeConversationId?: string;
+  conversationsLoading?: boolean;
+  conversationsError?: string | null;
+  onRetryConversations?: () => void;
 }
 
 export function DashboardShell({
@@ -45,6 +48,9 @@ export function DashboardShell({
   onNewChat,
   onSelectConversation,
   activeConversationId,
+  conversationsLoading = false,
+  conversationsError = null,
+  onRetryConversations,
 }: DashboardShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const pathname = usePathname();
@@ -95,11 +101,40 @@ export function DashboardShell({
 
             {/* Conversations */}
             <div className="flex-1 overflow-y-auto">
-              <ConversationList
-                conversations={conversations}
-                activeId={activeConversationId}
-                onSelect={onSelectConversation}
-              />
+              {conversationsLoading ? (
+                <div className="px-3 py-2 space-y-2" aria-label="Loading conversations">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="h-10 rounded animate-pulse"
+                      style={{
+                        backgroundColor: 'color-mix(in srgb, var(--bg-tertiary) 60%, transparent)',
+                        animationDelay: `${i * 120}ms`,
+                      }}
+                    />
+                  ))}
+                </div>
+              ) : conversationsError ? (
+                <div className="px-4 py-6 text-center">
+                  <p className="text-xs text-[var(--text-secondary)] mb-3">
+                    Couldn't load conversations
+                  </p>
+                  {onRetryConversations && (
+                    <button
+                      onClick={onRetryConversations}
+                      className="text-xs px-3 py-1.5 rounded cyber-btn"
+                    >
+                      Retry
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <ConversationList
+                  conversations={conversations}
+                  activeId={activeConversationId}
+                  onSelect={onSelectConversation}
+                />
+              )}
             </div>
 
             {/* Sidebar Footer */}
@@ -199,7 +234,7 @@ export function DashboardShell({
               </Link>
               <div className="flex items-center gap-2 px-3 py-2 text-xs text-[var(--neon-green)]">
                 <Lock className="w-3 h-3" />
-                <span>E2E Encrypted</span>
+                <span>Encrypted at rest</span>
               </div>
               <button
                 onClick={() => signOut({ callbackUrl: '/' })}

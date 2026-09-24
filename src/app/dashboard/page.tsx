@@ -32,6 +32,8 @@ export default function DashboardPage() {
     isStreaming,
     error,
     streamingContent,
+    sendFailure,
+    rateLimitRemaining,
     fetchConversations,
     createConversation,
     loadConversation,
@@ -42,12 +44,13 @@ export default function DashboardPage() {
     editMessage,
     deleteMessage,
     regenerateLastResponse,
+    retrySend,
+    dismissSendFailure,
   } = useScca();
 
   const {
     activeConversationId,
     setActiveConversationId,
-    useSCCA,
     systemPrompt,
     temperature,
   } = useChatStore();
@@ -62,9 +65,69 @@ export default function DashboardPage() {
   // Media stats
   const [mediaStats, setMediaStats] = useState<MediaStatsData | null>(null);
 
-  useEffect(() => {
-    fetchConversations();
+  // Upload progress + failures (honest attachment reporting)
+  const [uploadProgress, setUploadProgress] = useState<{
+    name: string;
+    percent: number;
+  } | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Upload one file with progress events (fetch can't report upload progress)
+  const uploadFile = useCallback(
+    (file: File, convId: string, messageSequence: number) =>
+      new Promise<string | null>((resolve) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/scca/media');
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            setUploadProgress({
+              name: file.name,
+              percent: Math.round((e.loaded / e.total) * 100),
+            });
+          }
+        };
+        xhr.onload = () => {
+          setUploadProgress(null);
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              resolve(JSON.parse(xhr.responseText).id ?? null);
+            } catch {
+              resolve(null);
+            }
+          } else {
+            resolve(null);
+          }
+        };
+        xhr.onerror = () => {
+          setUploadProgress(null);
+          resolve(null);
+        };
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('conversationId', convId);
+        formData.append('messageSequence', String(messageSequence));
+        xhr.send(formData);
+      }),
+    []
+  );
+
+  // Conversation-list loading/error state (distinct from message loading)
+  const [conversationsLoading, setConversationsLoading] = useState(true);
+  const [conversationsError, setConversationsError] = useState<string | null>(
+    null
+  );
+
+  const refreshConversations = useCallback(async () => {
+    setConversationsLoading(true);
+    setConversationsError(null);
+    const ok = await fetchConversations();
+    setConversationsLoading(false);
+    if (!ok) setConversationsError("Couldn't load conversations");
   }, [fetchConversations]);
+
+  useEffect(() => {
+    refreshConversations();
+  }, [refreshConversations]);
 
   // Fetch media stats when conversation changes
   useEffect(() => {
@@ -118,6 +181,7 @@ export default function DashboardPage() {
   const handleSendMessage = useCallback(
     async (content: string, attachments?: File[]) => {
       let convId = activeConversationId;
+      setUploadError(null);
 
       if (!convId) {
         const id = await createConversation();
@@ -126,29 +190,36 @@ export default function DashboardPage() {
         setActiveConversationId(id);
       }
 
-      // Upload attachments first if any — collect IDs for vision
+      // Upload attachments first if any — collect IDs for vision.
+      // Only files that actually upload are recorded in the message text.
       const attachmentIds: string[] = [];
+      const uploadedNames: string[] = [];
+      const failedNames: string[] = [];
+
       if (attachments && attachments.length > 0) {
         for (const file of attachments) {
-          try {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('conversationId', convId);
-            formData.append('messageSequence', String(messages.length));
-            const res = await fetch('/api/scca/media', { method: 'POST', body: formData });
-            if (res.ok) {
-              const data = await res.json();
-              if (data.id) attachmentIds.push(data.id);
-            }
-          } catch (err) {
-            console.error('Media upload failed:', err);
+          const id = await uploadFile(file, convId, messages.length);
+          if (id) {
+            attachmentIds.push(id);
+            uploadedNames.push(file.name);
+          } else {
+            failedNames.push(file.name);
           }
         }
 
+        if (failedNames.length > 0) {
+          setUploadError(
+            `Couldn't upload: ${failedNames.join(', ')} — sent without ${
+              failedNames.length === 1 ? 'it' : 'them'
+            }.`
+          );
+        }
+
         // Prepend attachment names so the text record shows what was attached
-        const names = attachments.map((f) => f.name).join(', ');
-        const prefix = `[Attached: ${names}]\n\n`;
-        content = content ? prefix + content : prefix.trim();
+        if (uploadedNames.length > 0) {
+          const prefix = `[Attached: ${uploadedNames.join(', ')}]\n\n`;
+          content = content ? prefix + content : prefix.trim();
+        }
       }
 
       if (content) {
@@ -167,6 +238,7 @@ export default function DashboardPage() {
       systemPrompt,
       temperature,
       messages.length,
+      uploadFile,
     ]
   );
 
@@ -241,6 +313,9 @@ export default function DashboardPage() {
       activeConversationId={activeConversationId || undefined}
       onNewChat={handleNewChat}
       onSelectConversation={handleSelectConversation}
+      conversationsLoading={conversationsLoading}
+      conversationsError={conversationsError}
+      onRetryConversations={refreshConversations}
     >
       {activeConversationId ? (
         <div className="flex h-full overflow-hidden">
@@ -347,12 +422,36 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {error && (
-              <div 
-                className="px-4 py-2 border-b"
+            {(error || uploadError) && (
+              <div
+                className="flex items-center justify-between gap-3 px-4 py-2 border-b"
                 style={{ backgroundColor: 'color-mix(in srgb, var(--neon-red) 5%, transparent)', borderColor: 'color-mix(in srgb, var(--neon-red) 20%, transparent)' }}
               >
-                <span className="text-xs" style={{ color: 'var(--neon-red)' }}>{error}</span>
+                <span className="text-xs" style={{ color: 'var(--neon-red)' }}>
+                  {uploadError || error}
+                </span>
+                {sendFailure && (
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <button
+                      onClick={retrySend}
+                      disabled={isStreaming}
+                      className="text-[11px] font-semibold px-2 py-0.5 rounded disabled:opacity-50"
+                      style={{
+                        color: 'var(--neon-cyan)',
+                        border: '1px solid color-mix(in srgb, var(--neon-cyan) 40%, transparent)',
+                      }}
+                    >
+                      Retry
+                    </button>
+                    <button
+                      onClick={dismissSendFailure}
+                      className="text-[11px]"
+                      style={{ color: 'var(--text-secondary)' }}
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -365,11 +464,41 @@ export default function DashboardPage() {
               onRegenerate={handleRegenerate}
             />
 
+            {uploadProgress && (
+              <div
+                className="px-4 py-1.5 flex items-center gap-3"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--neon-cyan) 5%, transparent)',
+                  borderTop: '1px solid var(--border-color)',
+                }}
+              >
+                <span className="text-[11px] truncate" style={{ color: 'var(--text-secondary)' }}>
+                  Encrypting & uploading {uploadProgress.name}
+                </span>
+                <div className="flex-1 h-1 rounded overflow-hidden" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+                  <div
+                    className="h-full transition-all"
+                    style={{ width: `${uploadProgress.percent}%`, backgroundColor: 'var(--neon-cyan)' }}
+                  />
+                </div>
+                <span className="text-[11px] tabular-nums" style={{ color: 'var(--neon-cyan)' }}>
+                  {uploadProgress.percent}%
+                </span>
+              </div>
+            )}
+
             <ChatInput
               onSend={handleSendMessage}
               onStop={stopStreaming}
               isStreaming={isStreaming}
               disabled={isLoading}
+              quotaWarning={
+                rateLimitRemaining &&
+                rateLimitRemaining.limit > 0 &&
+                rateLimitRemaining.rpm / rateLimitRemaining.limit < 0.2
+                  ? `${rateLimitRemaining.rpm} request${rateLimitRemaining.rpm === 1 ? '' : 's'} left this minute`
+                  : undefined
+              }
             />
           </div>
 
@@ -377,7 +506,7 @@ export default function DashboardPage() {
           <SCCAPreviewPanel
             messages={displayMessages}
             isStreaming={isStreaming}
-            useSCCA={useSCCA}
+            useSCCA={true}
             mediaStats={mediaStats || undefined}
           />
         </div>

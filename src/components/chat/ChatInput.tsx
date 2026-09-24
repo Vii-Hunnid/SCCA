@@ -36,6 +36,8 @@ interface ChatInputProps {
   disabled?: boolean;
   placeholder?: string;
   onVoiceInput?: (transcript: string) => void;
+  /** Shown in the footer when remaining quota runs low */
+  quotaWarning?: string;
 }
 
 const ACCEPT = '.png,.jpg,.jpeg,.webp,.gif,.svg,.mp4,.webm,.mov,.mp3,.wav,.ogg,.m4a,.flac,.pdf,.txt,.md,.json';
@@ -92,6 +94,7 @@ export function ChatInput({
   disabled,
   placeholder = 'Enter message... (encrypted with AES-256-GCM)',
   onVoiceInput,
+  quotaWarning,
 }: ChatInputProps) {
   const [content, setContent] = useState('');
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
@@ -624,6 +627,15 @@ export function ChatInput({
               <Lock className="w-3 h-3" />
               Encrypted at rest · AES-256-GCM
             </span>
+            {quotaWarning && (
+              <span
+                className="text-[10px] flex items-center gap-1"
+                style={{ color: 'var(--neon-yellow)' }}
+                role="status"
+              >
+                {quotaWarning}
+              </span>
+            )}
             {attachments.length > 0 && (
               <span 
                 className="text-[10px] flex items-center gap-1"

@@ -427,8 +427,8 @@ export const SCCAMessageBubble = memo(function SCCAMessageBubble({
           )}
         </div>
 
-        {/* Actions */}
-        <div className="flex gap-1 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        {/* Actions — visible on hover/focus; always visible on touch devices */}
+        <div className="flex gap-1 mt-1.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity [@media(hover:none)]:opacity-100">
           <ActionButton
             onClick={handleCopy}
             title={copied ? 'Copied!' : 'Copy message'}
@@ -487,14 +487,15 @@ function ActionButton({ onClick, title, icon: Icon, active, danger }: ActionButt
             : 'hover:text-[var(--neon-cyan)] hover:bg-[var(--neon-cyan)]/10'
         }
       `}
-      style={{ 
-        color: active 
-          ? 'var(--neon-green)' 
-          : danger 
-            ? 'var(--text-secondary)' 
+      style={{
+        color: active
+          ? 'var(--neon-green)'
+          : danger
+            ? 'var(--text-secondary)'
             : 'var(--text-secondary)'
       }}
       title={title}
+      aria-label={title}
     >
       <Icon className="w-3.5 h-3.5" />
     </button>

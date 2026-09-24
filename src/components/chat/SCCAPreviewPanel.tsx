@@ -42,14 +42,14 @@ interface SCCAPreviewPanelProps {
   mediaStats?: MediaStats;
 }
 
-// Estimate token size with SCCA compression
+// Estimate token size with SCCA compression (v2 packet format)
 function estimateTokenSize(content: string) {
   const rawBytes = new TextEncoder().encode(content).length;
   // Compression is better for longer content
   const compressionRatio = rawBytes < 50 ? 0.9 : rawBytes < 200 ? 0.55 : 0.45;
   const compressedBytes = Math.max(10, Math.round(rawBytes * compressionRatio));
-  // Header (10) + Compressed + Nonce (12) + AuthTag (16)
-  const encryptedBytes = 10 + compressedBytes + 12 + 16;
+  // Actual v2 layout: header (10) + length (4) + compressed + authTag (16) + nonce (16)
+  const encryptedBytes = 10 + 4 + compressedBytes + 16 + 16;
 
   return { rawBytes, compressedBytes, encryptedBytes, compressionRatio: rawBytes / compressedBytes };
 }
@@ -144,7 +144,7 @@ export function SCCAPreviewPanel({
               SCCA Metrics
             </span>
             <span className="text-[9px] block" style={{ color: 'var(--text-secondary)' }}>
-              Real-time encryption stats
+              Estimated storage savings
             </span>
           </div>
         </div>

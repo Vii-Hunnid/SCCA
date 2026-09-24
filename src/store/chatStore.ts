@@ -19,8 +19,6 @@ interface ChatState {
   setSystemPrompt: (prompt: string) => void;
   temperature: number;
   setTemperature: (temp: number) => void;
-  useSCCA: boolean;
-  setUseSCCA: (enabled: boolean) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -34,6 +32,4 @@ export const useChatStore = create<ChatState>((set) => ({
   setSystemPrompt: (prompt) => set({ systemPrompt: prompt }),
   temperature: 0.7,
   setTemperature: (temp) => set({ temperature: temp }),
-  useSCCA: true,
-  setUseSCCA: (enabled) => set({ useSCCA: enabled }),
 }));

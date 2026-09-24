@@ -26,9 +26,22 @@ interface UseSccaReturn {
   isStreaming: boolean;
   error: string | null;
   streamingContent: string;
+  /** Set when the last send failed — server kept the message; user can retry */
+  sendFailure: {
+    conversationId: string;
+    content: string;
+    options?: {
+      temperature?: number;
+      systemPrompt?: string;
+      model?: string;
+      attachmentIds?: string[];
+    };
+  } | null;
+  /** Remaining requests this minute (from X-RateLimit-* headers), when known */
+  rateLimitRemaining: { rpm: number; limit: number } | null;
 
   // Conversation operations
-  fetchConversations: () => Promise<void>;
+  fetchConversations: () => Promise<boolean>;
   createConversation: (title?: string, model?: string) => Promise<string | null>;
   loadConversation: (id: string) => Promise<void>;
   deleteConversation: (id: string) => Promise<void>;
@@ -58,6 +71,9 @@ interface UseSccaReturn {
     conversationId: string,
     options?: { temperature?: number; systemPrompt?: string }
   ) => Promise<void>;
+  /** Retry the failed send, if any */
+  retrySend: () => Promise<void>;
+  dismissSendFailure: () => void;
 }
 
 export function useScca(): UseSccaReturn {
@@ -69,10 +85,23 @@ export function useScca(): UseSccaReturn {
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [streamingContent, setStreamingContent] = useState("");
+  const [sendFailure, setSendFailure] = useState<UseSccaReturn["sendFailure"]>(
+    null
+  );
+  const [rateLimitRemaining, setRateLimitRemaining] =
+    useState<UseSccaReturn["rateLimitRemaining"]>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  const captureRateLimitHeaders = (res: Response) => {
+    const rpm = res.headers.get("X-RateLimit-Remaining-RPM");
+    const limit = res.headers.get("X-RateLimit-Limit-RPM");
+    if (rpm !== null && limit !== null) {
+      setRateLimitRemaining({ rpm: Number(rpm), limit: Number(limit) });
+    }
+  };
+
   // ── Fetch all conversations ──
-  const fetchConversations = useCallback(async () => {
+  const fetchConversations = useCallback(async (): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     try {
@@ -80,8 +109,10 @@ export function useScca(): UseSccaReturn {
       if (!res.ok) throw new Error("Failed to fetch conversations");
       const data = await res.json();
       setConversations(data);
+      return true;
     } catch (err: any) {
       setError(err.message);
+      return false;
     } finally {
       setIsLoading(false);
     }
@@ -97,6 +128,7 @@ export function useScca(): UseSccaReturn {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ title, model }),
         });
+        captureRateLimitHeaders(res);
         if (!res.ok) {
           const errData = await res
             .json()
@@ -205,6 +237,7 @@ export function useScca(): UseSccaReturn {
       setError(null);
       setIsStreaming(true);
       setStreamingContent("");
+      setSendFailure(null);
 
       // Optimistic: add user message to UI immediately
       const userMsg: SCCAMessage = {
@@ -242,6 +275,7 @@ export function useScca(): UseSccaReturn {
             .catch(() => ({ error: "Request failed" }));
           throw new Error(errData.error || "Request failed");
         }
+        captureRateLimitHeaders(res);
 
         let accumulated = "";
 
@@ -290,6 +324,7 @@ export function useScca(): UseSccaReturn {
       } catch (err: any) {
         if (err.name !== "AbortError") {
           setError(err.message);
+          setSendFailure({ conversationId, content, options });
           // The server persists the user message before streaming, so on
           // failure our local state may be behind — resync with the DB.
           await loadConversation(conversationId);
@@ -467,6 +502,20 @@ export function useScca(): UseSccaReturn {
     [messages, editMessage]
   );
 
+  // ── Retry a failed send ──
+  const retrySend = useCallback(async () => {
+    if (!sendFailure) return;
+    const failure = sendFailure;
+    setSendFailure(null);
+    setError(null);
+    await sendMessage(failure.conversationId, failure.content, failure.options);
+  }, [sendFailure, sendMessage]);
+
+  const dismissSendFailure = useCallback(() => {
+    setSendFailure(null);
+    setError(null);
+  }, []);
+
   return {
     conversations,
     currentConversation,
@@ -475,6 +524,8 @@ export function useScca(): UseSccaReturn {
     isStreaming,
     error,
     streamingContent,
+    sendFailure,
+    rateLimitRemaining,
     fetchConversations,
     createConversation,
     loadConversation,
@@ -485,5 +536,7 @@ export function useScca(): UseSccaReturn {
     editMessage,
     deleteMessage,
     regenerateLastResponse,
+    retrySend,
+    dismissSendFailure,
   };
 }
