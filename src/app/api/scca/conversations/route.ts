@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { after } from "next/server";
 import { requireUser } from "@/lib/session";
 import {
   createSCCAConversation,
@@ -86,14 +87,17 @@ export async function POST(request: NextRequest) {
 
     const conversation = await createSCCAConversation(auth.id, title, model);
 
-    recordUsage({
-      userId: auth.id,
-      endpoint: "/api/scca/conversations",
-      method: "POST",
-      statusCode: 201,
-      latencyMs: Date.now() - startTime,
-      tier: billing.tier,
-    }).catch((err) => console.error("[conversations] recordUsage failed:", err));
+    // after() keeps the insert alive on serverless past the response
+    after(() =>
+      recordUsage({
+        userId: auth.id,
+        endpoint: "/api/scca/conversations",
+        method: "POST",
+        statusCode: 201,
+        latencyMs: Date.now() - startTime,
+        tier: billing.tier,
+      }).catch((err) => console.error("[conversations] recordUsage failed:", err))
+    );
 
     await createAuditLog({
       userId: auth.id,

@@ -58,6 +58,35 @@ export function resolveModel(model?: string | null): string {
 
 const MAX_SYSTEM_PROMPT_LENGTH = 8000;
 
+// Approximate context budget in characters (~1 token ≈ 4 chars). Kept well
+// under the 128k-token window of the supported models so conversations can
+// keep responding indefinitely.
+const CONTEXT_BUDGET_CHARS = 120_000;
+
+const TRIM_NOTICE =
+  "[Earlier messages were trimmed to fit the context window. Continue based on the recent conversation.]";
+
+/**
+ * Trim conversation context to a character budget by dropping the oldest
+ * turns. Exported for testing.
+ */
+export function trimContextToBudget(
+  context: ChatMessage[],
+  budgetChars: number = CONTEXT_BUDGET_CHARS
+): { messages: ChatMessage[]; trimmed: boolean } {
+  const total = context.reduce((n, m) => n + m.content.length, 0);
+  if (total <= budgetChars) return { messages: context, trimmed: false };
+
+  const kept: ChatMessage[] = [];
+  let chars = 0;
+  for (let i = context.length - 1; i >= 0; i--) {
+    chars += context[i].content.length;
+    if (chars > budgetChars && kept.length > 0) break;
+    kept.unshift(context[i]);
+  }
+  return { messages: kept, trimmed: true };
+}
+
 function clampNumber(
   value: number | undefined,
   min: number,
@@ -66,6 +95,32 @@ function clampNumber(
 ): number {
   if (typeof value !== "number" || Number.isNaN(value)) return fallback;
   return Math.min(max, Math.max(min, value));
+}
+
+const RETRYABLE_STATUS = new Set([408, 409, 429, 500, 502, 503, 504]);
+const MAX_RETRIES = 2;
+const BASE_RETRY_DELAY_MS = 1_000;
+const REQUEST_TIMEOUT_MS = 60_000;
+
+function isRetryable(err: unknown): boolean {
+  const status = (err as any)?.status ?? (err as any)?.statusCode;
+  if (status && RETRYABLE_STATUS.has(Number(status))) return true;
+  const name = (err as any)?.name;
+  return name === "APIConnectionError" || name === "ConnectionError";
+}
+
+async function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(t);
+      reject(new DOMException("Aborted", "AbortError"));
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
 }
 
 /**
@@ -107,8 +162,12 @@ export async function* streamAIResponse(
     });
   }
 
-  // Add conversation context (text-only for history)
-  messages.push(...context);
+  // Cap the context so long conversations keep fitting the model window
+  const { messages: trimmedContext, trimmed } = trimContextToBudget(context);
+  if (trimmed) {
+    messages.push({ role: "system", content: TRIM_NOTICE });
+  }
+  messages.push(...trimmedContext);
 
   // Build the user message — multimodal if images present
   if (hasImages) {
@@ -135,23 +194,52 @@ export async function* streamAIResponse(
     messages.push({ role: "user", content: userMessage });
   }
 
-  const stream = (await getGroqClient().chat.completions.create(
-    {
-      model: actualModel,
-      messages,
-      temperature: clampNumber(options.temperature, 0, 2, 0.7),
-      top_p: clampNumber(options.top_p, 0, 1, 1),
-      max_tokens: clampNumber(options.max_tokens, 1, 32768, 8192),
-      stream: true,
-      stream_options: { include_usage: true },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any,
+  const params = {
+    model: actualModel,
+    messages,
+    temperature: clampNumber(options.temperature, 0, 2, 0.7),
+    top_p: clampNumber(options.top_p, 0, 1, 1),
+    max_tokens: clampNumber(options.max_tokens, 1, 32768, 8192),
+    stream: true,
+    stream_options: { include_usage: true },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    { signal: options.signal } as any
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  )) as unknown as AsyncIterable<any>;
+  } as any;
 
-  for await (const chunk of stream) {
+  // Establish the stream with retries + timeout. Mid-stream failures are
+  // NOT retried — resuming would duplicate content in the UI.
+  let stream: AsyncIterable<any>;
+  for (let attempt = 0; ; attempt++) {
+    if (options.signal?.aborted) {
+      throw new DOMException("Aborted", "AbortError");
+    }
+    try {
+      const timeoutSignal = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+      const signal = options.signal
+        ? combineSignals([options.signal, timeoutSignal])
+        : timeoutSignal;
+      stream = (await getGroqClient().chat.completions.create(
+        params,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        { signal } as any
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      )) as unknown as AsyncIterable<any>;
+      break;
+    } catch (err) {
+      const aborted =
+        options.signal?.aborted ||
+        (err as any)?.name === "AbortError" ||
+        (err as any)?.name === "TimeoutError";
+      if (aborted || !isRetryable(err) || attempt >= MAX_RETRIES) {
+        throw err;
+      }
+      await sleep(BASE_RETRY_DELAY_MS * 2 ** attempt, options.signal);
+    }
+  }
+
+  for await (const chunk of stream!) {
+    if (options.signal?.aborted) {
+      throw new DOMException("Aborted", "AbortError");
+    }
     const usage = (chunk as any).usage;
     if (usage && options.onUsage) {
       options.onUsage({
@@ -164,6 +252,24 @@ export async function* streamAIResponse(
       yield token;
     }
   }
+}
+
+function combineSignals(signals: AbortSignal[]): AbortSignal {
+  const anySignal = (AbortSignal as any).any;
+  if (typeof anySignal === "function") {
+    return anySignal.call(AbortSignal, signals) as AbortSignal;
+  }
+  const controller = new AbortController();
+  for (const s of signals) {
+    if (s.aborted) {
+      controller.abort(s.reason);
+      break;
+    }
+    s.addEventListener("abort", () => controller.abort(s.reason), {
+      once: true,
+    });
+  }
+  return controller.signal;
 }
 
 /**

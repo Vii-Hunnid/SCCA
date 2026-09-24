@@ -12,6 +12,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { after } from "next/server";
 import { authenticateRequest } from "@/lib/api-key-auth";
 import {
   deriveUserKey,
@@ -150,20 +151,22 @@ export async function POST(request: NextRequest) {
     const responseStr = JSON.stringify(responseBody);
     const bodyStr = JSON.stringify(body);
 
-    // Record usage (fire-and-forget — don't block the response)
-    recordUsage({
-      userId: user.id,
-      apiKeyId: user.apiKeyId,
-      endpoint: "vault/encrypt",
-      method: "POST",
-      statusCode: 200,
-      requestTokens: estimateTokens(bodyStr),
-      responseTokens: estimateTokens(responseStr),
-      bytesIn: Buffer.byteLength(bodyStr, "utf-8"),
-      bytesOut: Buffer.byteLength(responseStr, "utf-8"),
-      latencyMs: Date.now() - startTime,
-      tier: billing.tier,
-    }).catch((e) => console.error("[vault/encrypt] usage recording failed:", e));
+    // Record usage after the response is sent so it survives serverless
+    after(() =>
+      recordUsage({
+        userId: user.id,
+        apiKeyId: user.apiKeyId,
+        endpoint: "vault/encrypt",
+        method: "POST",
+        statusCode: 200,
+        requestTokens: estimateTokens(bodyStr),
+        responseTokens: estimateTokens(responseStr),
+        bytesIn: Buffer.byteLength(bodyStr, "utf-8"),
+        bytesOut: Buffer.byteLength(responseStr, "utf-8"),
+        latencyMs: Date.now() - startTime,
+        tier: billing.tier,
+      }).catch((e) => console.error("[vault/encrypt] usage recording failed:", e))
+    );
 
     return NextResponse.json(responseBody, {
       headers: getRateLimitHeaders(rateLimit),

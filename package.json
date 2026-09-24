@@ -15,7 +15,8 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "db:retention": "tsx prisma/retention.ts"
   },
   "dependencies": {
     "@polar-sh/nextjs": "^0.9.3",

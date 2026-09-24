@@ -3,15 +3,16 @@
  *
  * Query params:
  *   - period: "1h" | "24h" | "7d" | "30d" (default: "24h")
- *   - groupBy: "hour" | "day" (default: auto based on period)
  *
  * Response:
- *   { summary, timeline[], byEndpoint[], byApiKey[], rateLimits }
+ *   { period, since, summary, timeline[], byEndpoint[], byApiKey[], rateLimits }
+ *
+ * Row volume is capped (RECORD_CAP) — summary/timeline are computed over the
+ * most recent records in the period when the cap is hit.
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { requireUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import {
   getOrCreateBillingAccount,
@@ -19,14 +20,17 @@ import {
   TIER_LIMITS,
 } from "@/lib/rate-limit";
 
+// Bound per-request row load; dashboards aggregate, they don't need raw rows
+const RECORD_CAP = 100_000;
+
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const auth = await requireUser();
+    if (!auth) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = session.user.id;
+    const userId = auth.id;
     const { searchParams } = new URL(request.url);
     const period = searchParams.get("period") || "24h";
 
@@ -47,13 +51,13 @@ export async function GET(request: NextRequest) {
         since = new Date(now.getTime() - 86_400_000);
     }
 
-    // Fetch data in parallel
-    const [billing, rateLimitStatus, records, apiKeys] = await Promise.all([
+    // Fetch data in parallel — rate limit checked once, with the real tier
+    const [billing, records, apiKeys] = await Promise.all([
       getOrCreateBillingAccount(userId),
-      checkRateLimit(userId, "free"), // will be re-checked with actual tier
       prisma.usageRecord.findMany({
         where: { userId, createdAt: { gte: since } },
-        orderBy: { createdAt: "asc" },
+        orderBy: { createdAt: "desc" },
+        take: RECORD_CAP,
         select: {
           endpoint: true,
           method: true,
@@ -75,10 +79,8 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
-    // Re-check rate limits with actual tier
-    const actualRateLimit = billing.tier !== "free"
-      ? await checkRateLimit(userId, billing.tier)
-      : rateLimitStatus;
+    const actualRateLimit = await checkRateLimit(userId, billing.tier);
+    const truncated = records.length >= RECORD_CAP;
 
     // Build summary
     const summary = {
@@ -168,6 +170,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       period,
       since: since.toISOString(),
+      truncated,
       summary,
       timeline,
       byEndpoint,

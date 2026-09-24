@@ -308,8 +308,10 @@ export async function POST(
       let usage: { promptTokens: number; completionTokens: number } | null =
         null;
 
-      const record = (statusCode: number) => {
-        recordUsage({
+      const record = async (statusCode: number) => {
+        // Awaited so the insert lands before a serverless function can
+        // freeze after the stream closes.
+        await recordUsage({
           userId: auth.id,
           endpoint: "/api/scca/conversations/[id]/edit",
           method: "POST",
@@ -346,7 +348,7 @@ export async function POST(
         }
 
         if (upstream.signal.aborted) {
-          record(499);
+          void record(499);
           try {
             controller.close();
           } catch {
@@ -364,8 +366,8 @@ export async function POST(
           intKey
         );
         if (!assistantPersist) {
-          record(500);
           send({ error: "Failed to save the response — please retry" });
+          await record(500);
           try {
             controller.close();
           } catch {
@@ -386,12 +388,12 @@ export async function POST(
           },
         });
 
-        record(200);
-
         send({
           done: true,
           messageCount: assistantPersist.sequence + 1,
         });
+
+        await record(200);
 
         try {
           controller.close();
@@ -403,10 +405,10 @@ export async function POST(
           upstream.signal.aborted || error?.name === "AbortError";
         if (!aborted) {
           console.error("[edit] stream error:", error);
-          record(500);
           send({ error: "AI request failed — please try again" });
+          await record(500);
         } else {
-          record(499);
+          void record(499);
         }
         try {
           controller.close();
