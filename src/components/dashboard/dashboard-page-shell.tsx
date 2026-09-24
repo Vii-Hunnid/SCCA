@@ -166,7 +166,7 @@ export function DashboardPageShell({
               </Link>
               <div className="flex items-center gap-2 px-3 py-2 text-xs text-[var(--neon-green)]">
                 <Lock className="w-3 h-3" />
-                <span>E2E Encrypted</span>
+                <span>Encrypted at rest</span>
               </div>
               <button
                 onClick={() => signOut({ callbackUrl: '/' })}

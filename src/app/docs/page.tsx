@@ -254,12 +254,12 @@ export default function DocsPage() {
                 {
                   icon: Lock,
                   title: 'AES-256-GCM Encryption',
-                  desc: 'Every message encrypted with unique per-conversation keys. Server cannot read content without the master key.',
+                  desc: 'Every message encrypted with unique per-conversation keys. Encryption happens before data reaches the database.',
                 },
                 {
                   icon: Database,
                   title: 'Single-Row Storage',
-                  desc: '~24 bytes overhead per message vs 200-300 bytes traditional. 1,000 messages in ~85 KB.',
+                  desc: '~46 bytes overhead per message vs 200-300 bytes traditional. 1,000 messages in ~85 KB.',
                 },
                 {
                   icon: Key,
@@ -292,8 +292,8 @@ export default function DocsPage() {
                   desc: 'Compact binary format with zlib compression. Every byte counts.',
                 },
                 {
-                  name: 'User-Controlled Encryption',
-                  desc: 'The server cannot read message content. A database breach yields only encrypted blobs.',
+                  name: 'Encryption at Rest',
+                  desc: 'Messages are AES-256-GCM encrypted before storage. A database breach yields only encrypted blobs. (Not end-to-end: the server decrypts to build AI context.)',
                 },
                 {
                   name: 'Linear Timeline',

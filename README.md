@@ -73,7 +73,7 @@ MASTER_KEY_SECRET (env, 32 bytes)
 - **Single-row storage** — An entire conversation (messages, metadata, integrity hash) lives in one PostgreSQL row as an encrypted token array. 1,000 messages in ~85 KB.
 - **Destructive editing** — Editing message #5 permanently deletes messages 6-N. No versioning, no branches, no ghost data. Linear timeline only.
 - **Encryption at rest** — Every message is AES-256-GCM encrypted with per-conversation keys before it touches the database. A database breach alone yields only encrypted blobs. Note: SCCA is **not** end-to-end encrypted — the server derives keys from a master secret to build AI context. See [Threat Model](docs/scca/architecture/01-threat-model.md).
-- **Compact binary format** — 10-byte header + zlib compression + AES-256-GCM ciphertext. ~36 bytes overhead per message vs 200-300 bytes for traditional JSON storage.
+- **Compact binary format** — 10-byte header + zlib compression + AES-256-GCM ciphertext. ~46 bytes overhead per message vs 200-300 bytes for traditional JSON storage.
 
 ---
 

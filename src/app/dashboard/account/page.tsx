@@ -180,7 +180,7 @@ export default function AccountPage() {
             Account Settings
           </h1>
           <p className="text-sm text-[var(--text-secondary)]">
-            Manage your profile, security settings, and active sessions
+            Manage your profile and security settings
           </p>
         </div>
 
