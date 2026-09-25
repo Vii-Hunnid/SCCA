@@ -15,6 +15,9 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { DashboardPageShell } from '@/components/dashboard/dashboard-page-shell';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface QuickStats {
   tier: string;
@@ -109,9 +112,11 @@ export default function PlatformPage() {
           </div>
           <div className="flex items-center gap-2">
             <div className="status-dot-active" />
-            <span className="text-xs text-[var(--text-secondary)]">
-              {stats?.tierDisplay || '...'}
-            </span>
+            {stats ? (
+              <Badge tone="cyan">{stats.tierDisplay}</Badge>
+            ) : (
+              <span className="text-xs text-[var(--text-secondary)]">...</span>
+            )}
           </div>
         </div>
         {/* Title */}
@@ -129,65 +134,74 @@ export default function PlatformPage() {
         <div className="text-[var(--text-primary)]">
 
         {/* Live Rate Limits Bar */}
+        {loading && (
+          <Skeleton className="h-28 mb-8" />
+        )}
         {!loading && stats && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-8 cyber-card p-4"
+            className="mb-8"
           >
+            <Card className="p-4">
             <div className="flex items-center gap-2 mb-3">
-              <Activity className="w-3.5 h-3.5 text-neon-cyan" />
-              <span className="text-[10px] text-terminal-dim tracking-wider uppercase">
+              <Activity className="w-3.5 h-3.5" style={{ color: 'var(--neon-cyan)' }} />
+              <span className="text-[10px] font-medium text-[var(--text-tertiary)] tracking-widest uppercase">
                 Live Rate Limits
               </span>
-              <span className="ml-auto text-[10px] text-terminal-dim">
-                Tier: <span className="text-neon-cyan">{stats.tierDisplay}</span>
+              <span className="ml-auto text-[10px] text-[var(--text-secondary)]">
+                Tier: <span style={{ color: 'var(--neon-cyan)' }}>{stats.tierDisplay}</span>
               </span>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <div className="flex justify-between text-[10px] text-terminal-dim mb-1">
-                  <span>RPM (Requests/min)</span>
-                  <span>
+                <div className="flex justify-between text-[10px] text-[var(--text-secondary)] mb-1.5">
+                  <span className="tracking-wider uppercase">RPM (Requests/min)</span>
+                  <span className="font-mono tabular-nums text-[var(--text-primary)]">
                     {stats.rpm.used}/{stats.rpm.limit}
                   </span>
                 </div>
-                <div className="h-2 bg-cyber-darker rounded-full overflow-hidden">
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${stats.rpm.percent}%` }}
-                    className={`h-full rounded-full ${
-                      stats.rpm.percent > 80
-                        ? 'bg-neon-red'
-                        : stats.rpm.percent > 50
-                        ? 'bg-neon-yellow'
-                        : 'bg-neon-cyan'
-                    }`}
+                    className="h-full rounded-full"
+                    style={{
+                      backgroundColor:
+                        stats.rpm.percent > 80
+                          ? 'var(--neon-red)'
+                          : stats.rpm.percent > 50
+                          ? 'var(--neon-yellow)'
+                          : 'var(--neon-cyan)',
+                    }}
                   />
                 </div>
               </div>
               <div>
-                <div className="flex justify-between text-[10px] text-terminal-dim mb-1">
-                  <span>RPD (Requests/day)</span>
-                  <span>
+                <div className="flex justify-between text-[10px] text-[var(--text-secondary)] mb-1.5">
+                  <span className="tracking-wider uppercase">RPD (Requests/day)</span>
+                  <span className="font-mono tabular-nums text-[var(--text-primary)]">
                     {stats.rpd.used}/{stats.rpd.limit}
                   </span>
                 </div>
-                <div className="h-2 bg-cyber-darker rounded-full overflow-hidden">
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${stats.rpd.percent}%` }}
-                    className={`h-full rounded-full ${
-                      stats.rpd.percent > 80
-                        ? 'bg-neon-red'
-                        : stats.rpd.percent > 50
-                        ? 'bg-neon-yellow'
-                        : 'bg-neon-green'
-                    }`}
+                    className="h-full rounded-full"
+                    style={{
+                      backgroundColor:
+                        stats.rpd.percent > 80
+                          ? 'var(--neon-red)'
+                          : stats.rpd.percent > 50
+                          ? 'var(--neon-yellow)'
+                          : 'var(--neon-green)',
+                    }}
                   />
                 </div>
               </div>
             </div>
+            </Card>
           </motion.div>
         )}
 
@@ -201,18 +215,23 @@ export default function PlatformPage() {
               transition={{ delay: i * 0.1 }}
             >
               <Link href={card.href}>
-                <div className="cyber-card p-5 h-full hover:border-[var(--neon-cyan)] transition-colors group cursor-pointer">
+                <div className="cyber-card-hover p-5 h-full group cursor-pointer">
                   <div className="flex items-start justify-between mb-3">
-                    <card.icon className="w-5 h-5" style={{ color: `var(--${card.color})` }} />
-                    <ArrowRight className="w-3.5 h-3.5 text-[var(--text-secondary)] group-hover:text-[var(--neon-cyan)] transition-colors" />
+                    <div
+                      className="w-9 h-9 rounded-lg flex items-center justify-center"
+                      style={{ backgroundColor: `color-mix(in srgb, var(--${card.color}) 10%, transparent)` }}
+                    >
+                      <card.icon className="w-[18px] h-[18px]" style={{ color: `var(--${card.color})` }} />
+                    </div>
+                    <ArrowRight className="w-3.5 h-3.5 text-[var(--text-tertiary)] group-hover:text-[var(--neon-cyan)] transition-colors" />
                   </div>
                   <h3 className="text-sm text-[var(--text-primary)] font-semibold mb-1">
                     {card.title}
                   </h3>
-                  <p className="text-[10px] text-[var(--text-secondary)] leading-relaxed mb-3">
+                  <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed mb-3">
                     {card.description}
                   </p>
-                  <div className="text-xs" style={{ color: 'var(--neon-cyan)' }}>{card.stat}</div>
+                  <div className="text-xs font-mono tabular-nums" style={{ color: `var(--${card.color})` }}>{card.stat}</div>
                 </div>
               </Link>
             </motion.div>
@@ -237,15 +256,15 @@ export default function PlatformPage() {
             based on cumulative spend, similar to OpenAI and Anthropic usage tiers.
           </p>
           <div className="overflow-x-auto">
-            <table className="w-full text-[10px]">
+            <table className="w-full text-[11px]">
               <thead>
-                <tr className="text-[var(--text-secondary)] border-b" style={{ borderColor: 'var(--border-color)' }}>
-                  <th className="text-left py-2 pr-4">Tier</th>
-                  <th className="text-right py-2 px-3">RPM</th>
-                  <th className="text-right py-2 px-3">RPD</th>
-                  <th className="text-right py-2 px-3">TPM</th>
-                  <th className="text-right py-2 px-3">TPD</th>
-                  <th className="text-right py-2 pl-3">Unlock At</th>
+                <tr className="text-[var(--text-tertiary)] uppercase tracking-wider text-[9px] border-b" style={{ borderColor: 'var(--border-color)' }}>
+                  <th className="text-left py-2 pr-4 font-medium">Tier</th>
+                  <th className="text-right py-2 px-3 font-medium">RPM</th>
+                  <th className="text-right py-2 px-3 font-medium">RPD</th>
+                  <th className="text-right py-2 px-3 font-medium">TPM</th>
+                  <th className="text-right py-2 px-3 font-medium">TPD</th>
+                  <th className="text-right py-2 pl-3 font-medium">Unlock At</th>
                 </tr>
               </thead>
               <tbody>
@@ -259,24 +278,29 @@ export default function PlatformPage() {
                 ].map((row) => (
                   <tr
                     key={row.tier}
-                    className="border-b"
+                    className="border-b last:border-0"
                     style={{
-                      borderColor: 'var(--border-color)',
+                      borderColor: 'var(--border-light)',
                       color: stats?.tier === row.tier ? 'var(--neon-cyan)' : 'var(--text-primary)',
                       backgroundColor: stats?.tier === row.tier ? 'color-mix(in srgb, var(--neon-cyan) 5%, transparent)' : 'transparent'
                     }}
                   >
-                    <td className="py-2 pr-4 font-semibold flex items-center gap-1.5">
-                      {stats?.tier === row.tier && (
-                        <Zap className="w-2.5 h-2.5" style={{ color: 'var(--neon-cyan)' }} />
-                      )}
-                      {row.name}
+                    <td className="py-2.5 pr-4 font-semibold">
+                      <span className="inline-flex items-center gap-1.5">
+                        {stats?.tier === row.tier && (
+                          <Zap className="w-3 h-3" style={{ color: 'var(--neon-cyan)' }} />
+                        )}
+                        {row.name}
+                        {stats?.tier === row.tier && (
+                          <Badge tone="cyan">Current</Badge>
+                        )}
+                      </span>
                     </td>
-                    <td className="text-right py-2 px-3">{row.rpm}</td>
-                    <td className="text-right py-2 px-3">{row.rpd}</td>
-                    <td className="text-right py-2 px-3">{row.tpm}</td>
-                    <td className="text-right py-2 px-3">{row.tpd}</td>
-                    <td className="text-right py-2 pl-3">{row.unlock}</td>
+                    <td className="text-right py-2.5 px-3 font-mono tabular-nums">{row.rpm}</td>
+                    <td className="text-right py-2.5 px-3 font-mono tabular-nums">{row.rpd}</td>
+                    <td className="text-right py-2.5 px-3 font-mono tabular-nums">{row.tpm}</td>
+                    <td className="text-right py-2.5 px-3 font-mono tabular-nums">{row.tpd}</td>
+                    <td className="text-right py-2.5 pl-3 font-mono tabular-nums">{row.unlock}</td>
                   </tr>
                 ))}
               </tbody>

@@ -396,14 +396,17 @@ export const SCCAMessageBubble = memo(function SCCAMessageBubble({
 
         {/* Message bubble */}
         <div
-          className="rounded-lg px-4 py-3 text-sm leading-relaxed"
+          className={`px-4 py-3 text-sm leading-relaxed ${
+            isUser ? 'rounded-2xl rounded-br-md' : 'rounded-2xl rounded-bl-md'
+          }`}
           style={{
-            background: isUser 
-              ? 'linear-gradient(135deg, color-mix(in srgb, var(--neon-cyan) 8%, transparent) 0%, color-mix(in srgb, var(--neon-cyan) 4%, transparent) 100%)'
-              : 'linear-gradient(135deg, color-mix(in srgb, var(--bg-tertiary) 50%, transparent) 0%, color-mix(in srgb, var(--bg-tertiary) 30%, transparent) 100%)',
-            border: `1px solid ${isUser 
-              ? 'color-mix(in srgb, var(--neon-cyan) 20%, transparent)' 
+            background: isUser
+              ? 'linear-gradient(135deg, color-mix(in srgb, var(--neon-cyan) 14%, transparent) 0%, color-mix(in srgb, var(--neon-cyan) 8%, transparent) 100%)'
+              : 'var(--bg-card)',
+            border: `1px solid ${isUser
+              ? 'color-mix(in srgb, var(--neon-cyan) 25%, transparent)'
               : 'var(--border-color)'}`,
+            boxShadow: isUser ? 'none' : 'var(--shadow-card)',
             color: 'var(--text-primary)'
           }}
         >

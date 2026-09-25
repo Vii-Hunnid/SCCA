@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Shield,
   Key,
   Plus,
   Copy,
@@ -17,6 +16,9 @@ import {
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { DashboardPageShell } from '@/components/dashboard/dashboard-page-shell';
+import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface ApiKeyInfo {
   id: string;
@@ -48,6 +50,7 @@ export default function ApiKeysPage() {
   const [keyName, setKeyName] = useState('');
   const [expiresInDays, setExpiresInDays] = useState<number | ''>('');
   const [revoking, setRevoking] = useState<string | null>(null);
+  const [confirmRevokeId, setConfirmRevokeId] = useState<string | null>(null);
 
   const fetchKeys = useCallback(async () => {
     try {
@@ -113,6 +116,7 @@ export default function ApiKeysPage() {
       setError('Failed to revoke key');
     } finally {
       setRevoking(null);
+      setConfirmRevokeId(null);
     }
   };
 
@@ -201,13 +205,14 @@ export default function ApiKeysPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 rounded p-3 border" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-color)' }}>
+              <div className="flex items-center gap-2 rounded-lg p-3 border" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-color)' }}>
                 <code className="flex-1 text-sm break-all font-mono" style={{ color: 'var(--neon-green)' }}>
                   {newKey.key}
                 </code>
                 <button
                   onClick={() => handleCopy(newKey.key)}
-                  className="p-2 rounded transition-colors flex-shrink-0"
+                  aria-label="Copy API key"
+                  className="p-2 rounded-md transition-colors flex-shrink-0 hover:opacity-80"
                   style={{ backgroundColor: 'var(--bg-tertiary)' }}
                 >
                   {copied ? (
@@ -247,7 +252,7 @@ export default function ApiKeysPage() {
               Open API Tester →
             </Link>
           </div>
-          <div className="mt-2 rounded p-3 border overflow-x-auto" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-color)' }}>
+          <div className="mt-2 rounded-lg p-3 border overflow-x-auto" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-color)' }}>
             <code className="text-xs whitespace-pre text-[var(--text-primary)]">{`curl -X POST https://your-domain.com/api/scca/vault/encrypt \\
   -H "Authorization: Bearer scca_k_your_key_here" \\
   -H "Content-Type: application/json" \\
@@ -341,35 +346,58 @@ export default function ApiKeysPage() {
           </h3>
 
           {loading ? (
-            <div className="cyber-card p-8 text-center">
-              <Shield className="w-6 h-6 mx-auto animate-pulse mb-2" style={{ color: 'var(--neon-cyan)', opacity: 0.3 }} />
-              <span className="text-xs text-[var(--text-secondary)]">Loading keys...</span>
+            <div className="space-y-2">
+              <Skeleton className="h-[72px]" />
+              <Skeleton className="h-[72px]" />
+              <Skeleton className="h-[72px]" />
             </div>
           ) : keys.length === 0 ? (
-            <div className="cyber-card p-8 text-center">
-              <Key className="w-6 h-6 mx-auto mb-2" style={{ color: 'var(--text-secondary)', opacity: 0.3 }} />
-              <span className="text-xs text-[var(--text-secondary)]">
-                No API keys yet. Generate one to get started.
-              </span>
+            <div className="cyber-card">
+              <EmptyState
+                icon={Key}
+                title="No API keys yet"
+                description="Generate a key to authenticate against the Vault API from your own applications."
+                action={
+                  <button
+                    onClick={() => setShowCreateForm(true)}
+                    className="cyber-btn-solid text-xs py-2 px-4 inline-flex items-center gap-2"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Generate New Key
+                  </button>
+                }
+              />
             </div>
           ) : (
             <div className="space-y-2">
-              {keys.map((key) => (
+              {keys.map((key) => {
+                const isExpired = key.expiresAt !== null && new Date(key.expiresAt) < new Date();
+                return (
                 <motion.div
                   key={key.id}
                   layout
                   className="cyber-card p-4 flex items-center gap-4"
                 >
-                  <Key className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--neon-cyan)' }} />
+                  <div
+                    className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: 'color-mix(in srgb, var(--neon-cyan) 10%, transparent)' }}
+                  >
+                    <Key className="w-4 h-4" style={{ color: 'var(--neon-cyan)' }} />
+                  </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-sm font-semibold truncate text-[var(--text-primary)]">
                         {key.name}
                       </span>
-                      <code className="text-[10px] px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-secondary)' }}>
+                      <code className="text-[10px] px-1.5 py-0.5 rounded-md font-mono" style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-secondary)' }}>
                         {key.keyPrefix}
                       </code>
+                      {isExpired ? (
+                        <Badge tone="red">Expired</Badge>
+                      ) : (
+                        <Badge tone="green">Active</Badge>
+                      )}
                     </div>
                     <div className="flex items-center gap-3 text-[10px] text-[var(--text-secondary)]">
                       <span>
@@ -387,36 +415,50 @@ export default function ApiKeysPage() {
                           })}
                         </span>
                       )}
-                      {key.expiresAt && (
-                        <span
-                          className={
-                            new Date(key.expiresAt) < new Date()
-                              ? ''
-                              : ''
-                          }
-                          style={{ color: new Date(key.expiresAt) < new Date() ? 'var(--neon-red)' : 'var(--neon-yellow)' }}
-                        >
-                          {new Date(key.expiresAt) < new Date()
-                            ? 'Expired'
-                            : `Expires ${formatDistanceToNow(new Date(key.expiresAt), { addSuffix: true })}`}
+                      {key.expiresAt && !isExpired && (
+                        <span style={{ color: 'var(--neon-yellow)' }}>
+                          Expires{' '}
+                          {formatDistanceToNow(new Date(key.expiresAt), { addSuffix: true })}
                         </span>
                       )}
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => handleRevoke(key.id)}
-                    disabled={revoking === key.id}
-                    className="p-2 rounded transition-colors flex-shrink-0"
-                    style={{ color: 'var(--text-secondary)' }}
-                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--neon-red)'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
-                    title="Revoke key"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {confirmRevokeId === key.id ? (
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-[10px]" style={{ color: 'var(--neon-red)' }}>
+                        Revoke this key?
+                      </span>
+                      <button
+                        onClick={() => handleRevoke(key.id)}
+                        disabled={revoking === key.id}
+                        className="cyber-btn-danger cyber-btn-sm"
+                      >
+                        {revoking === key.id ? 'Revoking...' : 'Revoke'}
+                      </button>
+                      <button
+                        onClick={() => setConfirmRevokeId(null)}
+                        className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmRevokeId(key.id)}
+                      className="p-2 rounded-md transition-colors flex-shrink-0"
+                      style={{ color: 'var(--text-secondary)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.color = 'var(--neon-red)'}
+                      onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+                      title="Revoke key"
+                      aria-label={`Revoke key ${key.name}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </motion.div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

@@ -4,9 +4,10 @@ import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Shield, Lock, Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react';
+import { Lock, Eye, EyeOff, ArrowRight, ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { Card } from '@/components/ui/card';
 
 function GitHubIcon({ className }: { className?: string }) {
   return (
@@ -79,176 +80,175 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6">
+    <div className="min-h-screen flex items-center justify-center px-6 py-12">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="w-full max-w-sm"
+        className="w-full max-w-md"
       >
-        {/* Header */}
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 mb-6">
-            <Image
-              src="/logo.jpg"
-              alt="SCCA logo"
-              width={400}
-              height={400}
-              priority
-              className="object-contain"
-            />
-          </Link>
-          <h1 className="text-xl font-display font-semibold text-[var(--text-primary)] mb-2">
-            Authenticate
-          </h1>
-          <p className="text-xs text-[var(--text-secondary)]">
-            Enter credentials to access secure channel
-          </p>
-        </div>
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 font-mono text-xs uppercase tracking-wider text-[var(--text-secondary)] hover:text-[var(--neon-cyan)] transition-colors mb-6"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Back to home
+        </Link>
 
-        {/* OAuth Buttons */}
-        <div className="space-y-2 mb-6">
-          <button
-            onClick={() => handleOAuthSignIn('github')}
-            disabled={oauthLoading !== null}
-            className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded border text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{ 
-              borderColor: 'var(--border-color)', 
-              backgroundColor: 'color-mix(in srgb, var(--bg-secondary) 50%, transparent)', 
-              color: 'var(--text-primary)' 
-            }}
-          >
-            {oauthLoading === 'github' ? (
-              <div className="w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--text-secondary)', borderTopColor: 'var(--text-primary)' }} />
-            ) : (
-              <GitHubIcon className="w-4 h-4" />
-            )}
-            Continue with GitHub
-          </button>
-          <button
-            onClick={() => handleOAuthSignIn('google')}
-            disabled={oauthLoading !== null}
-            className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded border text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{ 
-              borderColor: 'var(--border-color)', 
-              backgroundColor: 'color-mix(in srgb, var(--bg-secondary) 50%, transparent)', 
-              color: 'var(--text-primary)' 
-            }}
-          >
-            {oauthLoading === 'google' ? (
-              <div className="w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--text-secondary)', borderTopColor: 'var(--text-primary)' }} />
-            ) : (
-              <GoogleIcon className="w-4 h-4" />
-            )}
-            Continue with Google
-          </button>
-        </div>
-
-        {/* Divider */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="flex-1 h-px" style={{ backgroundColor: 'var(--border-color)' }} />
-          <span className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase">
-            or use credentials
-          </span>
-          <div className="flex-1 h-px" style={{ backgroundColor: 'var(--border-color)' }} />
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-2 px-4 py-3 rounded border"
-              style={{ backgroundColor: 'color-mix(in srgb, var(--neon-red) 10%, transparent)', borderColor: 'color-mix(in srgb, var(--neon-red) 20%, transparent)' }}
-            >
-              <AlertCircle className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--neon-red)' }} />
-              <span className="text-xs" style={{ color: 'var(--neon-red)' }}>{error}</span>
-            </motion.div>
-          )}
-
-          <div>
-            <label className="block text-xs text-[var(--text-secondary)] mb-1.5 tracking-wider uppercase">
-              Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="cyber-input"
-              placeholder="operator@scca.dev"
-              required
-            />
+        <Card className="p-8">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <Link href="/" className="inline-block mb-6">
+              <Image
+                src="/logo.jpg"
+                alt="SCCA logo"
+                width={400}
+                height={400}
+                priority
+                className="h-12 w-auto object-contain mx-auto"
+              />
+            </Link>
+            <h1 className="text-xl font-sans font-semibold text-[var(--text-primary)] mb-2">
+              Authenticate
+            </h1>
+            <p className="text-xs text-[var(--text-secondary)]">
+              Enter credentials to access secure channel
+            </p>
           </div>
 
-          <div>
-            <label className="block text-xs text-[var(--text-secondary)] mb-1.5 tracking-wider uppercase">
-              Password
-            </label>
-            <div className="relative">
+          {/* OAuth Buttons */}
+          <div className="space-y-2 mb-6">
+            <button
+              onClick={() => handleOAuthSignIn('github')}
+              disabled={oauthLoading !== null}
+              className="w-full inline-flex items-center justify-center gap-3 px-4 py-2.5 text-sm font-medium rounded-[var(--radius-control)] border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] hover:border-[var(--border-light)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {oauthLoading === 'github' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <GitHubIcon className="w-4 h-4" />
+              )}
+              Continue with GitHub
+            </button>
+            <button
+              onClick={() => handleOAuthSignIn('google')}
+              disabled={oauthLoading !== null}
+              className="w-full inline-flex items-center justify-center gap-3 px-4 py-2.5 text-sm font-medium rounded-[var(--radius-control)] border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] hover:border-[var(--border-light)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {oauthLoading === 'google' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <GoogleIcon className="w-4 h-4" />
+              )}
+              Continue with Google
+            </button>
+          </div>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex-1 h-px bg-[var(--border-color)]" />
+            <span className="font-mono text-[10px] text-[var(--text-secondary)] tracking-wider uppercase">
+              or use credentials
+            </span>
+            <div className="flex-1 h-px bg-[var(--border-color)]" />
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2 px-4 py-3 rounded-[var(--radius-control)] border"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--neon-red) 10%, transparent)',
+                  borderColor: 'color-mix(in srgb, var(--neon-red) 25%, transparent)',
+                }}
+              >
+                <AlertCircle className="w-4 h-4 flex-shrink-0 text-[var(--neon-red)]" />
+                <span className="text-xs text-[var(--neon-red)]">{error}</span>
+              </motion.div>
+            )}
+
+            <div>
+              <label className="block font-mono text-xs text-[var(--text-secondary)] mb-1.5 tracking-wider uppercase">
+                Email
+              </label>
               <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="cyber-input pr-10"
-                placeholder="Enter passphrase"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="cyber-input"
+                placeholder="operator@scca.dev"
                 required
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
-                style={{ color: 'var(--text-secondary)' }}
-                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--neon-cyan)'}
-                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
-              >
-                {showPassword ? (
-                  <EyeOff className="w-4 h-4" />
-                ) : (
-                  <Eye className="w-4 h-4" />
-                )}
-              </button>
             </div>
-          </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full cyber-btn-solid py-3 flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <>
-                <div className="w-4 h-4 border-2 border-[var(--neon-cyan)]/30 border-t-[var(--neon-cyan)] rounded-full animate-spin" />
-                Authenticating...
-              </>
-            ) : (
-              <>
-                <Lock className="w-4 h-4" />
-                Access System
-                <ArrowRight className="w-4 h-4" />
-              </>
-            )}
-          </button>
-        </form>
+            <div>
+              <label className="block font-mono text-xs text-[var(--text-secondary)] mb-1.5 tracking-wider uppercase">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="cyber-input pr-10"
+                  placeholder="Enter passphrase"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-[var(--neon-cyan)] transition-colors"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+            </div>
 
-        {/* Footer */}
-        <div className="mt-6 text-center">
-          <p className="text-xs text-[var(--text-secondary)]">
-            No account?{' '}
-            <Link
-              href="/auth/register"
-              className="transition-colors hover:opacity-80"
-              style={{ color: 'var(--neon-cyan)' }}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full cyber-btn-solid py-3"
             >
-              Register
-            </Link>
-          </p>
-        </div>
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Authenticating...
+                </>
+              ) : (
+                <>
+                  <Lock className="w-4 h-4" />
+                  Access System
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Footer */}
+          <div className="mt-6 text-center">
+            <p className="text-xs text-[var(--text-secondary)]">
+              No account?{' '}
+              <Link
+                href="/auth/register"
+                className="text-[var(--neon-cyan)] transition-opacity hover:opacity-80"
+              >
+                Register
+              </Link>
+            </p>
+          </div>
+        </Card>
 
         {/* Security Badge */}
-        <div className="mt-8 flex items-center justify-center gap-2">
+        <div className="mt-6 flex items-center justify-center gap-2">
           <div className="status-dot-active" />
-          <span className="text-[10px] text-[var(--text-secondary)] tracking-wider">
+          <span className="font-mono text-[10px] text-[var(--text-secondary)] tracking-wider">
             AES-256-GCM ENCRYPTED SESSION
           </span>
         </div>

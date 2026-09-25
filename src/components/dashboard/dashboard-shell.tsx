@@ -66,7 +66,7 @@ export function DashboardShell({
             animate={{ width: 280, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="flex flex-col border-r border-[var(--border-color)] bg-[var(--bg-secondary)] overflow-hidden"
+            className="flex flex-col border-r border-[var(--border-color)] bg-[var(--bg-card)] overflow-hidden"
           >
             {/* Sidebar Header */}
             <div className="flex items-center justify-between p-4 border-b border-[var(--border-color)]">
@@ -82,7 +82,8 @@ export function DashboardShell({
               </Link>
               <button
                 onClick={() => setSidebarOpen(false)}
-                className="text-[var(--text-secondary)] hover:text-[var(--neon-cyan)] transition-colors p-1"
+                className="text-[var(--text-secondary)] hover:text-[var(--neon-cyan)] transition-colors p-1 rounded-lg hover:bg-[var(--bg-tertiary)]"
+                aria-label="Close sidebar"
               >
                 <PanelLeftClose className="w-4 h-4" />
               </button>
@@ -92,7 +93,7 @@ export function DashboardShell({
             <div className="p-3">
               <button
                 onClick={onNewChat}
-                className="w-full cyber-btn text-xs py-2 flex items-center justify-center gap-2"
+                className="w-full cyber-btn-solid text-xs py-2.5 flex items-center justify-center gap-2"
               >
                 <Plus className="w-3.5 h-3.5" />
                 New Conversation
@@ -252,18 +253,25 @@ export function DashboardShell({
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 bg-[var(--bg-primary)]">
         {/* Top Bar */}
-        <header className="flex items-center gap-3 px-4 py-3 border-b border-[var(--border-color)] bg-[var(--bg-secondary)]">
+        <header
+          className="flex items-center gap-3 px-4 py-3 border-b"
+          style={{
+            borderColor: 'var(--border-color)',
+            backgroundColor: 'var(--bg-card)',
+          }}
+        >
           {!sidebarOpen && (
             <button
               onClick={() => setSidebarOpen(true)}
-              className="text-[var(--text-secondary)] hover:text-[var(--neon-cyan)] transition-colors p-1"
+              className="text-[var(--text-secondary)] hover:text-[var(--neon-cyan)] transition-colors p-1 rounded-lg hover:bg-[var(--bg-tertiary)]"
+              aria-label="Open sidebar"
             >
               <PanelLeft className="w-4 h-4" />
             </button>
           )}
           <div className="flex items-center gap-2">
-            <MessageSquare className="w-4 h-4 text-[var(--text-secondary)]" />
-            <span className="text-sm text-[var(--text-secondary)]">
+            <MessageSquare className="w-4 h-4 text-[var(--text-tertiary)]" />
+            <span className="text-sm font-medium text-[var(--text-secondary)]">
               {activeConversationId ? 'Secure Channel' : 'Dashboard'}
             </span>
           </div>

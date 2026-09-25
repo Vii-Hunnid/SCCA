@@ -497,7 +497,7 @@ export function ChatInput({
             whileTap={{ scale: 0.95 }}
             onClick={() => fileInputRef.current?.click()}
             disabled={disabled || isStreaming || isMicActive}
-            className="flex-shrink-0 p-2.5 rounded-lg transition-all disabled:opacity-50"
+            className="flex-shrink-0 p-2.5 rounded-xl transition-all disabled:opacity-50"
             style={{ border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}
             onMouseEnter={(e) => {
               if (!disabled && !isStreaming && !isMicActive) {
@@ -537,10 +537,11 @@ export function ChatInput({
                   placeholder={placeholder}
                   disabled={disabled}
                   rows={1}
-                  className="w-full py-3 px-4 pr-10 rounded-lg resize-none max-h-[200px] text-sm leading-relaxed"
+                  className="w-full py-3 px-4 pr-10 rounded-xl resize-none max-h-[200px] text-sm leading-relaxed font-sans"
                   style={{
-                    backgroundColor: 'color-mix(in srgb, var(--bg-primary) 50%, transparent)',
+                    backgroundColor: 'var(--bg-card)',
                     border: '1px solid var(--border-color)',
+                    boxShadow: 'var(--shadow-card)',
                     color: 'var(--text-primary)',
                   }}
                   onFocus={(e) => {
@@ -570,7 +571,7 @@ export function ChatInput({
               whileTap={{ scale: voicePhase === 'transcribing' ? 1 : 0.95 }}
               onClick={handleMicClick}
               disabled={disabled || isStreaming || voicePhase === 'transcribing'}
-              className="relative p-2.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="relative p-2.5 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
                 border: `1px solid ${voicePhase === 'recording' ? 'rgba(16,185,129,0.6)' : 'var(--border-color)'}`,
                 color: voicePhase === 'recording' ? '#10b981' : 'var(--text-secondary)',
@@ -588,7 +589,7 @@ export function ChatInput({
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={onStop}
-              className="flex-shrink-0 p-2.5 rounded-lg transition-all hover:opacity-80 flex items-center gap-2"
+              className="flex-shrink-0 p-2.5 rounded-xl transition-all hover:opacity-80 flex items-center gap-2"
               style={{
                 border: '1px solid color-mix(in srgb, var(--neon-red) 50%, transparent)',
                 color: 'var(--neon-red)',
@@ -604,7 +605,7 @@ export function ChatInput({
               whileTap={{ scale: canSend ? 0.95 : 1 }}
               onClick={handleSend}
               disabled={!canSend || isMicActive}
-              className="flex-shrink-0 p-2.5 rounded-lg border transition-all disabled:cursor-not-allowed flex items-center gap-2"
+              className="flex-shrink-0 p-2.5 rounded-xl border transition-all disabled:cursor-not-allowed flex items-center gap-2"
               style={{
                 borderColor: canSend && !isMicActive ? 'color-mix(in srgb, var(--neon-cyan) 50%, transparent)' : 'var(--border-color)',
                 color: canSend && !isMicActive ? 'var(--neon-cyan)' : 'var(--text-secondary)',

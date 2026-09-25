@@ -27,6 +27,8 @@ import {
   Cell,
 } from 'recharts';
 import { DashboardPageShell } from '@/components/dashboard/dashboard-page-shell';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface UsageData {
   period: string;
@@ -89,13 +91,24 @@ function formatCost(micro: number): string {
 }
 
 const PERIOD_OPTIONS = [
-  { value: '1h', label: '1 Hour' },
-  { value: '24h', label: '24 Hours' },
-  { value: '7d', label: '7 Days' },
-  { value: '30d', label: '30 Days' },
-  { value: '90d', label: '90 Days' },
-  { value: 'all', label: 'All Time' },
+  { value: '1h', label: '1H' },
+  { value: '24h', label: '24H' },
+  { value: '7d', label: '7D' },
+  { value: '30d', label: '30D' },
+  { value: '90d', label: '90D' },
+  { value: 'all', label: 'All' },
 ];
+
+const CHART_TICK = { fontSize: 10, fill: 'var(--text-tertiary)' } as const;
+const CHART_AXIS_LINE = { stroke: 'var(--border-light)' } as const;
+const CHART_TOOLTIP_STYLE = {
+  backgroundColor: 'var(--bg-elevated)',
+  border: '1px solid var(--border-color)',
+  borderRadius: 'var(--radius-control)',
+  boxShadow: 'var(--shadow-elevated)',
+  fontSize: '11px',
+  color: 'var(--text-primary)',
+} as const;
 
 export default function UsagePage() {
   const [data, setData] = useState<UsageData | null>(null);
@@ -144,9 +157,36 @@ export default function UsagePage() {
       errors: t.errors,
     })) || [];
 
+  const summaryCards = [
+    {
+      label: 'Total Requests',
+      value: data ? data.summary.totalRequests.toLocaleString() : '—',
+      icon: Activity,
+      color: 'var(--neon-cyan)',
+    },
+    {
+      label: 'Total Tokens',
+      value: data ? formatTokens(data.summary.totalTokens) : '—',
+      icon: Zap,
+      color: 'var(--neon-green)',
+    },
+    {
+      label: 'Avg Latency',
+      value: data ? `${data.summary.avgLatencyMs}ms` : '—',
+      icon: Clock,
+      color: 'var(--neon-yellow)',
+    },
+    {
+      label: 'Total Cost',
+      value: data ? formatCost(data.summary.totalCostMicro) : '—',
+      icon: TrendingUp,
+      color: 'var(--neon-purple)',
+    },
+  ];
+
   return (
     <DashboardPageShell>
-      <div className="max-w-5xl mx-auto px-6 py-4">
+      <div className="max-w-5xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
@@ -156,17 +196,32 @@ export default function UsagePage() {
             </span>
           </div>
           <div className="flex items-center gap-3">
-            {/* Period selector */}
-            <div className="flex gap-1 rounded p-0.5" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+            {/* Period selector — segmented pill control */}
+            <div
+              className="flex items-center gap-0.5 rounded-full p-1 border border-[var(--border-color)]"
+              style={{ backgroundColor: 'var(--bg-tertiary)' }}
+              role="group"
+              aria-label="Usage period"
+            >
               {PERIOD_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
                   onClick={() => setPeriod(opt.value)}
-                  className={`px-2.5 py-1 text-[10px] rounded transition-colors ${
+                  aria-pressed={period === opt.value}
+                  className={`px-3 py-1 text-[11px] font-medium rounded-full transition-colors ${
                     period === opt.value
-                      ? 'bg-[var(--neon-cyan)]/10 text-[var(--neon-cyan)]'
+                      ? ''
                       : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                   }`}
+                  style={
+                    period === opt.value
+                      ? {
+                          backgroundColor:
+                            'color-mix(in srgb, var(--neon-cyan) 14%, transparent)',
+                          color: 'var(--neon-cyan)',
+                        }
+                      : undefined
+                  }
                 >
                   {opt.label}
                 </button>
@@ -174,15 +229,14 @@ export default function UsagePage() {
             </div>
             <button
               onClick={fetchUsage}
+              aria-label="Refresh usage data"
               className="p-1.5 text-[var(--text-secondary)] hover:text-[var(--neon-cyan)] transition-colors"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>
-      </div>
 
-      <div className="max-w-5xl mx-auto px-6 py-8">
         {error && (
           <div className="mb-4 cyber-card p-3 flex items-center gap-2" style={{ borderColor: 'var(--neon-red)', borderWidth: '1px' }}>
             <AlertTriangle className="w-4 h-4" style={{ color: 'var(--neon-red)' }} />
@@ -190,100 +244,99 @@ export default function UsagePage() {
           </div>
         )}
 
+        {/* Loading skeletons */}
+        {loading && !data && (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-[92px]" />
+              ))}
+            </div>
+            <Skeleton className="h-32 mb-6" />
+            <Skeleton className="h-60 mb-6" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Skeleton className="h-48" />
+              <Skeleton className="h-48" />
+            </div>
+          </>
+        )}
+
         {/* Summary Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-          {[
-            {
-              label: 'Total Requests',
-              value: data?.summary.totalRequests ?? '—',
-              icon: Activity,
-              color: 'var(--neon-cyan)',
-            },
-            {
-              label: 'Total Tokens',
-              value: data ? formatTokens(data.summary.totalTokens) : '—',
-              icon: Zap,
-              color: 'var(--neon-green)',
-            },
-            {
-              label: 'Avg Latency',
-              value: data ? `${data.summary.avgLatencyMs}ms` : '—',
-              icon: Clock,
-              color: 'var(--neon-yellow)',
-            },
-            {
-              label: 'Total Cost',
-              value: data ? formatCost(data.summary.totalCostMicro) : '—',
-              icon: TrendingUp,
-              color: 'var(--neon-purple)',
-            },
-          ].map((card) => (
-            <motion.div
-              key={card.label}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="cyber-card p-4"
-            >
-              <div className="flex items-center gap-1.5 mb-2">
-                <card.icon className="w-3 h-3" style={{ color: card.color }} />
-                <span className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase">
-                  {card.label}
-                </span>
-              </div>
-              <span className="text-lg font-display text-[var(--text-primary)]">
-                {card.value}
-              </span>
-            </motion.div>
-          ))}
-        </div>
+        {(!loading || data) && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            {summaryCards.map((card) => (
+              <motion.div
+                key={card.label}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <Card className="p-4 h-full">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <card.icon className="w-3.5 h-3.5" style={{ color: card.color }} />
+                    <span className="text-[10px] font-medium text-[var(--text-tertiary)] tracking-widest uppercase">
+                      {card.label}
+                    </span>
+                  </div>
+                  <span className="text-2xl font-semibold font-mono tabular-nums text-[var(--text-primary)]">
+                    {card.value}
+                  </span>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        )}
 
         {/* Rate Limit Status */}
         {data && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="mb-6 cyber-card p-4"
+            className="mb-6"
           >
-            <div className="flex items-center gap-2 mb-3">
-              <Activity className="w-3.5 h-3.5" style={{ color: 'var(--neon-cyan)' }} />
-              <span className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase">
-                Current Rate Limits — {data.rateLimits.tierDisplay}
-              </span>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {(
-                [
-                  ['RPM', 'rpm'],
-                  ['RPD', 'rpd'],
-                  ['TPM', 'tpm'],
-                  ['TPD', 'tpd'],
-                ] as const
-              ).map(([label, key]) => {
-                const used = data.rateLimits.current[key];
-                const limit = data.rateLimits.limits[key];
-                const pct = limit > 0 ? Math.round((used / limit) * 100) : 0;
-                return (
-                  <div key={key}>
-                    <div className="flex justify-between text-[10px] text-[var(--text-secondary)] mb-1">
-                      <span>{label}</span>
-                      <span>
-                        {key.startsWith('t') ? formatTokens(used) : used}/
-                        {key.startsWith('t') ? formatTokens(limit) : limit}
-                      </span>
-                    </div>
-                    <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
-                      <div
-                        className="h-full rounded-full transition-all"
-                        style={{
-                          width: `${Math.min(100, pct)}%`,
-                          backgroundColor: pct > 80 ? 'var(--neon-red)' : pct > 50 ? 'var(--neon-yellow)' : 'var(--neon-cyan)'
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <Card>
+              <CardHeader className="py-3">
+                <CardTitle className="text-[10px] font-medium text-[var(--text-tertiary)] tracking-widest uppercase flex items-center gap-2">
+                  <Activity className="w-3.5 h-3.5" style={{ color: 'var(--neon-cyan)' }} />
+                  Current Rate Limits — {data.rateLimits.tierDisplay}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {(
+                    [
+                      ['RPM', 'rpm'],
+                      ['RPD', 'rpd'],
+                      ['TPM', 'tpm'],
+                      ['TPD', 'tpd'],
+                    ] as const
+                  ).map(([label, key]) => {
+                    const used = data.rateLimits.current[key];
+                    const limit = data.rateLimits.limits[key];
+                    const pct = limit > 0 ? Math.round((used / limit) * 100) : 0;
+                    return (
+                      <div key={key}>
+                        <div className="flex justify-between text-[10px] mb-1.5">
+                          <span className="text-[var(--text-secondary)] tracking-wider uppercase">{label}</span>
+                          <span className="font-mono tabular-nums text-[var(--text-primary)]">
+                            {key.startsWith('t') ? formatTokens(used) : used}/
+                            {key.startsWith('t') ? formatTokens(limit) : limit}
+                          </span>
+                        </div>
+                        <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{
+                              width: `${Math.min(100, pct)}%`,
+                              backgroundColor: pct > 80 ? 'var(--neon-red)' : pct > 50 ? 'var(--neon-yellow)' : 'var(--neon-cyan)'
+                            }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
           </motion.div>
         )}
 
@@ -328,7 +381,7 @@ export default function UsagePage() {
                 </div>
                 <Link
                   href="/dashboard/billing"
-                  className="flex items-center gap-1.5 px-4 py-2 text-cyber-black text-[10px] font-semibold rounded hover:opacity-90 transition-opacity whitespace-nowrap"
+                  className="flex items-center gap-1.5 px-4 py-2 text-cyber-black text-[10px] font-semibold rounded-lg hover:opacity-90 transition-opacity whitespace-nowrap"
                   style={{ background: 'linear-gradient(to right, var(--neon-purple), var(--neon-cyan))' }}
                 >
                   <ArrowUpRight className="w-3 h-3" />
@@ -345,58 +398,58 @@ export default function UsagePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.1 }}
-            className="mb-6 cyber-card p-4"
+            className="mb-6"
           >
-            <span className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase">
-              Request Timeline
-            </span>
-            <div className="mt-3 h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
-                  <defs>
-                    <linearGradient id="colorReqs" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--neon-cyan)" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="var(--neon-cyan)" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
-                  <XAxis
-                    dataKey="time"
-                    tick={{ fontSize: 10, fill: 'var(--text-secondary)' }}
-                    axisLine={{ stroke: 'var(--border-color)' }}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 10, fill: 'var(--text-secondary)' }}
-                    axisLine={{ stroke: 'var(--border-color)' }}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'var(--bg-secondary)',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '4px',
-                      fontSize: '11px',
-                      color: 'var(--text-primary)',
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="requests"
-                    stroke="var(--neon-cyan)"
-                    fillOpacity={1}
-                    fill="url(#colorReqs)"
-                    strokeWidth={2}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="errors"
-                    stroke="var(--neon-red)"
-                    fillOpacity={0.1}
-                    fill="var(--neon-red)"
-                    strokeWidth={1}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+            <Card>
+              <CardHeader className="py-3">
+                <CardTitle className="text-[10px] font-medium text-[var(--text-tertiary)] tracking-widest uppercase">
+                  Request Timeline
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData}>
+                      <defs>
+                        <linearGradient id="colorReqs" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="var(--neon-cyan)" stopOpacity={0.12} />
+                          <stop offset="95%" stopColor="var(--neon-cyan)" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
+                      <XAxis
+                        dataKey="time"
+                        tick={CHART_TICK}
+                        axisLine={CHART_AXIS_LINE}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tick={CHART_TICK}
+                        axisLine={CHART_AXIS_LINE}
+                        tickLine={false}
+                      />
+                      <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+                      <Area
+                        type="monotone"
+                        dataKey="requests"
+                        stroke="var(--neon-cyan)"
+                        fillOpacity={1}
+                        fill="url(#colorReqs)"
+                        strokeWidth={2}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="errors"
+                        stroke="var(--neon-red)"
+                        fillOpacity={0.08}
+                        fill="var(--neon-red)"
+                        strokeWidth={1}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
           </motion.div>
         )}
 
@@ -406,42 +459,44 @@ export default function UsagePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.15 }}
-            className="mb-6 cyber-card p-4"
+            className="mb-6"
           >
-            <span className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase">
-              Token Consumption
-            </span>
-            <div className="mt-3 h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
-                  <XAxis
-                    dataKey="time"
-                    tick={{ fontSize: 10, fill: 'var(--text-secondary)' }}
-                    axisLine={{ stroke: 'var(--border-color)' }}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 10, fill: 'var(--text-secondary)' }}
-                    axisLine={{ stroke: 'var(--border-color)' }}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'var(--bg-secondary)',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '4px',
-                      fontSize: '11px',
-                      color: 'var(--text-primary)',
-                    }}
-                    formatter={(value: number) => [formatTokens(value), 'Tokens']}
-                  />
-                  <Bar dataKey="tokens" radius={[2, 2, 0, 0]}>
-                    {chartData.map((_, index) => (
-                      <Cell key={index} fill="var(--neon-green)" fillOpacity={0.6} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <Card>
+              <CardHeader className="py-3">
+                <CardTitle className="text-[10px] font-medium text-[var(--text-tertiary)] tracking-widest uppercase">
+                  Token Consumption
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
+                      <XAxis
+                        dataKey="time"
+                        tick={CHART_TICK}
+                        axisLine={CHART_AXIS_LINE}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tick={CHART_TICK}
+                        axisLine={CHART_AXIS_LINE}
+                        tickLine={false}
+                      />
+                      <Tooltip
+                        contentStyle={CHART_TOOLTIP_STYLE}
+                        formatter={(value: number) => [formatTokens(value), 'Tokens']}
+                      />
+                      <Bar dataKey="tokens" radius={[3, 3, 0, 0]}>
+                        {chartData.map((_, index) => (
+                          <Cell key={index} fill="var(--neon-green)" fillOpacity={0.55} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
           </motion.div>
         )}
 
@@ -452,39 +507,44 @@ export default function UsagePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="cyber-card p-4"
           >
-            <span className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase mb-3 block">
-              By Endpoint
-            </span>
-            {data?.byEndpoint.length ? (
-              <table className="w-full text-[10px]">
-                <thead>
-                  <tr className="text-[var(--text-secondary)] border-b" style={{ borderColor: 'var(--border-color)' }}>
-                    <th className="text-left py-1.5">Endpoint</th>
-                    <th className="text-right py-1.5">Requests</th>
-                    <th className="text-right py-1.5">Tokens</th>
-                    <th className="text-right py-1.5">Latency</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.byEndpoint.map((e) => (
-                    <tr
-                      key={e.endpoint}
-                      className="border-b"
-                      style={{ borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
-                    >
-                      <td className="py-1.5" style={{ color: 'var(--neon-cyan)' }}>{e.endpoint}</td>
-                      <td className="text-right py-1.5">{e.requests}</td>
-                      <td className="text-right py-1.5">{formatTokens(e.tokens)}</td>
-                      <td className="text-right py-1.5">{e.avgLatencyMs}ms</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <p className="text-xs text-[var(--text-secondary)]">No data for this period</p>
-            )}
+            <Card className="h-full">
+              <CardHeader className="py-3">
+                <CardTitle className="text-[10px] font-medium text-[var(--text-tertiary)] tracking-widest uppercase">
+                  By Endpoint
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {data?.byEndpoint.length ? (
+                  <table className="w-full text-[11px]">
+                    <thead>
+                      <tr className="text-[var(--text-tertiary)] uppercase tracking-wider text-[9px] border-b" style={{ borderColor: 'var(--border-color)' }}>
+                        <th className="text-left py-2 font-medium">Endpoint</th>
+                        <th className="text-right py-2 font-medium">Requests</th>
+                        <th className="text-right py-2 font-medium">Tokens</th>
+                        <th className="text-right py-2 font-medium">Latency</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.byEndpoint.map((e) => (
+                        <tr
+                          key={e.endpoint}
+                          className="border-b last:border-0"
+                          style={{ borderColor: 'var(--border-light)', color: 'var(--text-primary)' }}
+                        >
+                          <td className="py-2 font-mono" style={{ color: 'var(--neon-cyan)' }}>{e.endpoint}</td>
+                          <td className="text-right py-2 font-mono tabular-nums">{e.requests}</td>
+                          <td className="text-right py-2 font-mono tabular-nums">{formatTokens(e.tokens)}</td>
+                          <td className="text-right py-2 font-mono tabular-nums">{e.avgLatencyMs}ms</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p className="text-xs text-[var(--text-secondary)] py-4 text-center">No data for this period</p>
+                )}
+              </CardContent>
+            </Card>
           </motion.div>
 
           {/* By API Key */}
@@ -492,42 +552,47 @@ export default function UsagePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.25 }}
-            className="cyber-card p-4"
           >
-            <span className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase mb-3 block">
-              By API Key
-            </span>
-            {data?.byApiKey.length ? (
-              <table className="w-full text-[10px]">
-                <thead>
-                  <tr className="text-[var(--text-secondary)] border-b" style={{ borderColor: 'var(--border-color)' }}>
-                    <th className="text-left py-1.5">Key</th>
-                    <th className="text-right py-1.5">Requests</th>
-                    <th className="text-right py-1.5">Tokens</th>
-                    <th className="text-right py-1.5">Cost</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.byApiKey.map((k) => (
-                    <tr
-                      key={k.keyId}
-                      className="border-b"
-                      style={{ borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
-                    >
-                      <td className="py-1.5">
-                        <div style={{ color: 'var(--neon-cyan)' }}>{k.keyName}</div>
-                        <div className="text-[var(--text-secondary)]">{k.keyPrefix}</div>
-                      </td>
-                      <td className="text-right py-1.5">{k.requests}</td>
-                      <td className="text-right py-1.5">{formatTokens(k.tokens)}</td>
-                      <td className="text-right py-1.5">{formatCost(k.costMicro)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <p className="text-xs text-[var(--text-secondary)]">No data for this period</p>
-            )}
+            <Card className="h-full">
+              <CardHeader className="py-3">
+                <CardTitle className="text-[10px] font-medium text-[var(--text-tertiary)] tracking-widest uppercase">
+                  By API Key
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {data?.byApiKey.length ? (
+                  <table className="w-full text-[11px]">
+                    <thead>
+                      <tr className="text-[var(--text-tertiary)] uppercase tracking-wider text-[9px] border-b" style={{ borderColor: 'var(--border-color)' }}>
+                        <th className="text-left py-2 font-medium">Key</th>
+                        <th className="text-right py-2 font-medium">Requests</th>
+                        <th className="text-right py-2 font-medium">Tokens</th>
+                        <th className="text-right py-2 font-medium">Cost</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.byApiKey.map((k) => (
+                        <tr
+                          key={k.keyId}
+                          className="border-b last:border-0"
+                          style={{ borderColor: 'var(--border-light)', color: 'var(--text-primary)' }}
+                        >
+                          <td className="py-2">
+                            <div className="font-medium">{k.keyName}</div>
+                            <div className="font-mono text-[10px] text-[var(--text-tertiary)]">{k.keyPrefix}</div>
+                          </td>
+                          <td className="text-right py-2 font-mono tabular-nums">{k.requests}</td>
+                          <td className="text-right py-2 font-mono tabular-nums">{formatTokens(k.tokens)}</td>
+                          <td className="text-right py-2 font-mono tabular-nums">{formatCost(k.costMicro)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p className="text-xs text-[var(--text-secondary)] py-4 text-center">No data for this period</p>
+                )}
+              </CardContent>
+            </Card>
           </motion.div>
         </div>
 
@@ -537,31 +602,37 @@ export default function UsagePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="mt-4 cyber-card p-4"
+            className="mt-4"
           >
-            <span className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase mb-3 block">
-              Transfer Summary
-            </span>
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <div className="text-lg font-display text-[var(--text-primary)]">
-                  {formatBytes(data.summary.totalBytesIn)}
+            <Card>
+              <CardHeader className="py-3">
+                <CardTitle className="text-[10px] font-medium text-[var(--text-tertiary)] tracking-widest uppercase">
+                  Transfer Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <div className="text-xl font-semibold font-mono tabular-nums text-[var(--text-primary)]">
+                      {formatBytes(data.summary.totalBytesIn)}
+                    </div>
+                    <div className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase mt-1">Data In</div>
+                  </div>
+                  <div>
+                    <div className="text-xl font-semibold font-mono tabular-nums text-[var(--text-primary)]">
+                      {formatBytes(data.summary.totalBytesOut)}
+                    </div>
+                    <div className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase mt-1">Data Out</div>
+                  </div>
+                  <div>
+                    <div className="text-xl font-semibold font-mono tabular-nums" style={{ color: 'var(--neon-green)' }}>
+                      {data.summary.successRate}%
+                    </div>
+                    <div className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase mt-1">Success Rate</div>
+                  </div>
                 </div>
-                <div className="text-[10px] text-[var(--text-secondary)]">Data In</div>
-              </div>
-              <div>
-                <div className="text-lg font-display text-[var(--text-primary)]">
-                  {formatBytes(data.summary.totalBytesOut)}
-                </div>
-                <div className="text-[10px] text-[var(--text-secondary)]">Data Out</div>
-              </div>
-              <div>
-                <div className="text-lg font-display text-[var(--text-primary)]">
-                  {data.summary.successRate}%
-                </div>
-                <div className="text-[10px] text-[var(--text-secondary)]">Success Rate</div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </motion.div>
         )}
       </div>

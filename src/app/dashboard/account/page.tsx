@@ -22,6 +22,8 @@ import {
   Trash2,
 } from 'lucide-react';
 import { DashboardPageShell } from '@/components/dashboard/dashboard-page-shell';
+import { SectionHeader } from '@/components/ui/section-header';
+import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 
 interface UserProfile {
@@ -321,15 +323,9 @@ export default function AccountPage() {
                 <Mail className="w-3.5 h-3.5" />
                 {profile?.email}
                 {isOAuthUser && profile && (
-                  <span 
-                    className="ml-2 px-2 py-0.5 rounded text-[10px]"
-                    style={{ 
-                      backgroundColor: 'color-mix(in srgb, var(--neon-purple) 15%, transparent)',
-                      color: 'var(--neon-purple)'
-                    }}
-                  >
+                  <Badge tone="purple" className="ml-2 normal-case">
                     {profile.oauthProvider}
-                  </span>
+                  </Badge>
                 )}
               </div>
 
@@ -357,12 +353,11 @@ export default function AccountPage() {
             transition={{ delay: 0.1 }}
             className="cyber-card p-6"
           >
-            <div className="flex items-center gap-2 mb-4">
-              <Shield className="w-4 h-4" style={{ color: 'var(--neon-green)' }} />
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-                Security
-              </h3>
-            </div>
+            <SectionHeader
+              icon={Shield}
+              title="Security"
+              description="Encryption keys and credentials"
+            />
 
             <div className="space-y-4">
               {/* Encryption Key */}
@@ -415,12 +410,11 @@ export default function AccountPage() {
             transition={{ delay: 0.2 }}
             className="cyber-card p-6"
           >
-            <div className="flex items-center gap-2 mb-4">
-              <RefreshCw className="w-4 h-4" style={{ color: 'var(--neon-cyan)' }} />
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-                Sessions
-              </h3>
-            </div>
+            <SectionHeader
+              icon={RefreshCw}
+              title="Sessions"
+              description="How sign-in sessions work"
+            />
             <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
               Sessions are signed tokens rather than server-side records, so
               there is no list to manage here. Changing your password
@@ -436,7 +430,10 @@ export default function AccountPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
           className="cyber-card p-6 mt-6"
-          style={{ borderColor: 'color-mix(in srgb, var(--neon-red) 30%, transparent)' }}
+          style={{
+            borderColor: 'color-mix(in srgb, var(--neon-red) 35%, transparent)',
+            backgroundColor: 'color-mix(in srgb, var(--neon-red) 4%, var(--bg-card))',
+          }}
         >
           <div className="flex items-center gap-2 mb-4">
             <AlertTriangle className="w-4 h-4" style={{ color: 'var(--neon-red)' }} />
@@ -445,7 +442,7 @@ export default function AccountPage() {
             </h3>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+          <div className="flex items-center justify-between p-4 rounded-lg border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'color-mix(in srgb, var(--neon-red) 20%, transparent)' }}>
             <div>
               <h4 className="text-sm font-medium text-[var(--text-primary)]">Delete Account</h4>
               <p className="text-xs text-[var(--text-secondary)] mt-0.5">
@@ -454,12 +451,7 @@ export default function AccountPage() {
             </div>
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="px-4 py-2 rounded-lg text-xs font-medium transition-colors hover:opacity-90"
-              style={{ 
-                backgroundColor: 'color-mix(in srgb, var(--neon-red) 15%, transparent)',
-                color: 'var(--neon-red)',
-                border: '1px solid color-mix(in srgb, var(--neon-red) 40%, transparent)'
-              }}
+              className="cyber-btn-danger text-xs py-2 px-4 whitespace-nowrap"
             >
               Delete Account
             </button>
@@ -591,11 +583,7 @@ export default function AccountPage() {
                   <button
                     onClick={handleDeleteAccount}
                     disabled={saving}
-                    className="flex-1 px-4 py-2.5 rounded-lg text-xs font-medium transition-colors hover:opacity-90"
-                    style={{ 
-                      backgroundColor: 'var(--neon-red)',
-                      color: 'white'
-                    }}
+                    className="flex-1 cyber-btn-danger text-xs py-2.5 justify-center"
                   >
                     {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" /> : 'Permanently Delete Account'}
                   </button>

@@ -20,6 +20,10 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { DashboardPageShell } from '@/components/dashboard/dashboard-page-shell';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface BillingData {
   account: {
@@ -90,12 +94,12 @@ function formatCostPer(micro: number): string {
   return `$${(micro / 1_000_000).toFixed(4)}`;
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  draft: 'var(--text-secondary)',
-  pending: 'var(--neon-yellow)',
-  paid: 'var(--neon-green)',
-  overdue: 'var(--neon-red)',
-  void: 'var(--text-secondary)',
+const STATUS_TONES: Record<string, 'green' | 'yellow' | 'red' | 'neutral'> = {
+  draft: 'neutral',
+  pending: 'yellow',
+  paid: 'green',
+  overdue: 'red',
+  void: 'neutral',
 };
 
 export default function BillingPage() {
@@ -220,8 +224,15 @@ export default function BillingPage() {
   if (loading) {
     return (
       <DashboardPageShell>
-        <div className="min-h-[calc(100vh-60px)] flex items-center justify-center">
-          <CreditCard className="w-6 h-6 animate-pulse" style={{ color: 'var(--neon-purple)', opacity: 0.3 }} />
+        <div className="max-w-5xl mx-auto px-6 py-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <Skeleton className="h-28" />
+            <Skeleton className="h-28" />
+            <Skeleton className="h-28" />
+          </div>
+          <Skeleton className="h-24 mb-6" />
+          <Skeleton className="h-64 mb-6" />
+          <Skeleton className="h-48" />
         </div>
       </DashboardPageShell>
     );
@@ -286,10 +297,10 @@ export default function BillingPage() {
                   You&apos;re on the free tier (10 RPM, 200 RPD). Upgrade to unlock higher
                   rate limits, faster throughput, and priority support.
                 </p>
-                <div className="flex gap-2 mt-3 text-[10px] text-[var(--text-secondary)]">
-                  <span className="px-2 py-0.5 rounded" style={{ backgroundColor: 'var(--bg-tertiary)' }}>60+ RPM</span>
-                  <span className="px-2 py-0.5 rounded" style={{ backgroundColor: 'var(--bg-tertiary)' }}>5,000+ RPD</span>
-                  <span className="px-2 py-0.5 rounded" style={{ backgroundColor: 'var(--bg-tertiary)' }}>100K+ TPM</span>
+                <div className="flex gap-2 mt-3">
+                  <Badge tone="neutral">60+ RPM</Badge>
+                  <Badge tone="neutral">5,000+ RPD</Badge>
+                  <Badge tone="neutral">100K+ TPM</Badge>
                 </div>
               </div>
               <button
@@ -315,16 +326,15 @@ export default function BillingPage() {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="cyber-card p-5"
-              style={{ borderColor: 'var(--neon-purple)', borderWidth: '1px' }}
+              className="cyber-card p-5 border-gradient"
             >
               <div className="flex items-center gap-2 mb-3">
                 <Zap className="w-4 h-4" style={{ color: 'var(--neon-purple)' }} />
-                <span className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase">
+                <span className="text-[10px] font-medium text-[var(--text-tertiary)] tracking-widest uppercase">
                   Current Tier
                 </span>
               </div>
-              <div className="text-xl font-display" style={{ color: 'var(--neon-purple)' }}>
+              <div className="text-2xl font-semibold" style={{ color: 'var(--neon-purple)' }}>
                 {data.account.tierDisplay}
               </div>
               {data.account.subscriptionStatus && (
@@ -361,7 +371,7 @@ export default function BillingPage() {
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="w-4 h-4" style={{ color: 'var(--neon-green)' }} />
-                  <span className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase">
+                  <span className="text-[10px] font-medium text-[var(--text-tertiary)] tracking-widest uppercase">
                     Monthly Spend
                   </span>
                 </div>
@@ -369,7 +379,7 @@ export default function BillingPage() {
                   className={`w-3.5 h-3.5 transition-all duration-300 ${showSettings ? 'rotate-90 text-[var(--neon-cyan)]' : 'text-[var(--text-secondary)] group-hover:text-[var(--neon-cyan)]'}`} 
                 />
               </div>
-              <div className="text-xl font-display text-[var(--text-primary)]">
+              <div className="text-2xl font-semibold font-mono tabular-nums text-[var(--text-primary)]">
                 {data.account.monthlySpendDisplay}
               </div>
               <div 
@@ -389,11 +399,11 @@ export default function BillingPage() {
             >
               <div className="flex items-center gap-2 mb-3">
                 <CreditCard className="w-4 h-4" style={{ color: 'var(--neon-cyan)' }} />
-                <span className="text-[10px] text-[var(--text-secondary)] tracking-wider uppercase">
+                <span className="text-[10px] font-medium text-[var(--text-tertiary)] tracking-widest uppercase">
                   Lifetime Spend
                 </span>
               </div>
-              <div className="text-xl font-display text-[var(--text-primary)]">
+              <div className="text-2xl font-semibold font-mono tabular-nums text-[var(--text-primary)]">
                 {data.account.totalSpendDisplay}
               </div>
               <div className="text-[10px] text-[var(--text-secondary)] mt-1">
@@ -505,26 +515,28 @@ export default function BillingPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="mb-6 cyber-card p-5"
+            className="mb-6"
           >
-            <div className="flex items-center gap-2 mb-4">
-              <Zap className="w-4 h-4" style={{ color: 'var(--neon-purple)' }} />
-              <span className="text-sm text-[var(--text-primary)] font-semibold">
-                Tier Comparison
-              </span>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="w-4 h-4" style={{ color: 'var(--neon-purple)' }} />
+                  Tier Comparison
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
             <div className="overflow-x-auto">
-              <table className="w-full text-[10px]">
+              <table className="w-full text-[11px]">
                 <thead>
-                  <tr className="text-[var(--text-secondary)] border-b" style={{ borderColor: 'var(--border-color)' }}>
-                    <th className="text-left py-2 pr-3">Tier</th>
-                    <th className="text-right py-2 px-2">RPM</th>
-                    <th className="text-right py-2 px-2">RPD</th>
-                    <th className="text-right py-2 px-2">TPM</th>
-                    <th className="text-right py-2 px-2">TPD</th>
-                    <th className="text-right py-2 px-2">$/1M Tokens</th>
-                    <th className="text-right py-2 px-2">$/Request</th>
-                    <th className="text-right py-2 px-2">Unlock</th>
+                  <tr className="text-[var(--text-tertiary)] uppercase tracking-wider text-[9px] border-b" style={{ borderColor: 'var(--border-color)' }}>
+                    <th className="text-left py-2 pr-3 font-medium">Tier</th>
+                    <th className="text-right py-2 px-2 font-medium">RPM</th>
+                    <th className="text-right py-2 px-2 font-medium">RPD</th>
+                    <th className="text-right py-2 px-2 font-medium">TPM</th>
+                    <th className="text-right py-2 px-2 font-medium">TPD</th>
+                    <th className="text-right py-2 px-2 font-medium">$/1M Tokens</th>
+                    <th className="text-right py-2 px-2 font-medium">$/Request</th>
+                    <th className="text-right py-2 px-2 font-medium">Unlock</th>
                     <th className="text-right py-2 pl-2"></th>
                   </tr>
                 </thead>
@@ -535,55 +547,58 @@ export default function BillingPage() {
                     return (
                       <tr
                         key={tier.name}
-                        className="border-b"
+                        className="border-b last:border-0"
                         style={{
-                          borderColor: 'var(--border-color)',
+                          borderColor: 'var(--border-light)',
                           color: tier.isCurrent ? 'var(--neon-cyan)' : 'var(--text-primary)',
                           backgroundColor: tier.isCurrent ? 'color-mix(in srgb, var(--neon-cyan) 5%, transparent)' : 'transparent'
                         }}
                       >
-                        <td className="py-2 pr-3 font-semibold flex items-center gap-1">
-                          {tier.isCurrent && (
-                            <Check className="w-2.5 h-2.5" style={{ color: 'var(--neon-green)' }} />
-                          )}
-                          {tier.displayName}
+                        <td className="py-2.5 pr-3 font-semibold">
+                          <span className="inline-flex items-center gap-1.5">
+                            {tier.isCurrent && (
+                              <Check className="w-3 h-3" style={{ color: 'var(--neon-green)' }} />
+                            )}
+                            {tier.displayName}
+                          </span>
                         </td>
-                        <td className="text-right py-2 px-2">
+                        <td className="text-right py-2.5 px-2 font-mono tabular-nums">
                           {formatNumber(tier.rpm)}
                         </td>
-                        <td className="text-right py-2 px-2">
+                        <td className="text-right py-2.5 px-2 font-mono tabular-nums">
                           {formatNumber(tier.rpd)}
                         </td>
-                        <td className="text-right py-2 px-2">
+                        <td className="text-right py-2.5 px-2 font-mono tabular-nums">
                           {formatNumber(tier.tpm)}
                         </td>
-                        <td className="text-right py-2 px-2">
+                        <td className="text-right py-2.5 px-2 font-mono tabular-nums">
                           {formatNumber(tier.tpd)}
                         </td>
-                        <td className="text-right py-2 px-2">
+                        <td className="text-right py-2.5 px-2 font-mono tabular-nums">
                           {tier.costPerMillionTokens === 0
                             ? 'Free'
                             : formatCostPer(tier.costPerMillionTokens)}
                         </td>
-                        <td className="text-right py-2 px-2">
+                        <td className="text-right py-2.5 px-2 font-mono tabular-nums">
                           {tier.costPerRequest === 0
                             ? 'Free'
                             : formatCostPer(tier.costPerRequest)}
                         </td>
-                        <td className="text-right py-2 px-2">
+                        <td className="text-right py-2.5 px-2 font-mono tabular-nums">
                           {tier.upgradeThresholdDisplay}
                         </td>
-                        <td className="text-right py-2 pl-2">
+                        <td className="text-right py-2.5 pl-2">
                           {tier.isCurrent ? (
-                            <span className="text-[9px] px-2 py-0.5 rounded" style={{ color: 'var(--neon-green)', backgroundColor: 'color-mix(in srgb, var(--neon-green) 10%, transparent)' }}>
-                              Current
-                            </span>
+                            <Badge tone="green">Current</Badge>
                           ) : isUpgradeable ? (
                             <button
                               onClick={() => handleUpgrade(tier.name)}
                               disabled={checkingOut}
-                              className="text-[9px] px-2 py-0.5 rounded transition-colors hover:opacity-80"
-                              style={{ color: 'var(--neon-purple)', backgroundColor: 'color-mix(in srgb, var(--neon-purple) 10%, transparent)' }}
+                              className="cyber-btn-sm"
+                              style={{
+                                borderColor: 'color-mix(in srgb, var(--neon-purple) 45%, transparent)',
+                                color: 'var(--neon-purple)',
+                              }}
                             >
                               Upgrade
                             </button>
@@ -595,6 +610,8 @@ export default function BillingPage() {
                 </tbody>
               </table>
             </div>
+              </CardContent>
+            </Card>
           </motion.div>
         )}
 
@@ -603,30 +620,29 @@ export default function BillingPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.25 }}
-          className="cyber-card p-5"
         >
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-[var(--text-secondary)]" />
-              <span className="text-sm text-[var(--text-primary)] font-semibold">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-[var(--text-secondary)]" />
                 Invoice History
-              </span>
-            </div>
-            <Link
-              href="/dashboard/invoices"
-              className="text-[10px] hover:opacity-80 transition-colors flex items-center gap-1"
-              style={{ color: 'var(--neon-cyan)' }}
-            >
-              View All
-              <ExternalLink className="w-3 h-3" />
-            </Link>
-          </div>
+              </CardTitle>
+              <Link
+                href="/dashboard/invoices"
+                className="text-[10px] hover:opacity-80 transition-colors flex items-center gap-1"
+                style={{ color: 'var(--neon-cyan)' }}
+              >
+                View All
+                <ExternalLink className="w-3 h-3" />
+              </Link>
+            </CardHeader>
+            <CardContent>
           {data?.invoices.length ? (
             <div className="space-y-2">
               {data.invoices.map((inv) => (
                 <div
                   key={inv.id}
-                  className="p-4 rounded border"
+                  className="p-4 rounded-lg border transition-colors hover:border-[var(--border-light)]"
                   style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}
                 >
                   <div className="flex items-center justify-between">
@@ -637,7 +653,7 @@ export default function BillingPage() {
                           {new Date(inv.periodEnd).toLocaleDateString()}
                         </span>
                         {inv.billingReason && (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded" style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--bg-tertiary)' }}>
+                          <Badge tone="neutral">
                             {inv.billingReason === 'subscription_cycle'
                               ? 'Renewal'
                               : inv.billingReason === 'subscription_create'
@@ -647,10 +663,10 @@ export default function BillingPage() {
                               : inv.billingReason === 'purchase'
                               ? 'One-time'
                               : inv.billingReason}
-                          </span>
+                          </Badge>
                         )}
                       </div>
-                      <div className="text-[10px] text-[var(--text-secondary)] mt-1">
+                      <div className="text-[10px] font-mono tabular-nums text-[var(--text-secondary)] mt-1">
                         {inv.requestCount.toLocaleString()} requests |{' '}
                         {formatNumber(Number(inv.totalTokens))} tokens |{' '}
                         {inv.currency.toUpperCase()}
@@ -658,15 +674,12 @@ export default function BillingPage() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-semibold text-[var(--text-primary)]">
+                      <span className="text-sm font-semibold font-mono tabular-nums text-[var(--text-primary)]">
                         {inv.totalDisplay}
                       </span>
-                      <span
-                        className="text-[10px] uppercase tracking-wider"
-                        style={{ color: STATUS_COLORS[inv.status] || 'var(--text-secondary)' }}
-                      >
+                      <Badge tone={STATUS_TONES[inv.status] || 'neutral'}>
                         {inv.status}
-                      </span>
+                      </Badge>
 
                       {/* Invoice Actions */}
                       {inv.hasInvoice && (
@@ -710,14 +723,14 @@ export default function BillingPage() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-6">
-              <FileText className="w-6 h-6 mx-auto mb-2" style={{ color: 'var(--text-secondary)', opacity: 0.3 }} />
-              <p className="text-xs text-[var(--text-secondary)]">
-                No invoices yet. Invoices are created when payments are processed
-                through Polar.
-              </p>
-            </div>
+            <EmptyState
+              icon={FileText}
+              title="No invoices yet"
+              description="Invoices are created when payments are processed through Polar."
+            />
           )}
+            </CardContent>
+          </Card>
         </motion.div>
 
         {/* Polar Integration Info */}

@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Shield,
   Lock,
   Database,
   Key,
@@ -64,24 +63,29 @@ function CodeBlock({
   };
 
   return (
-    <div className="relative group my-4">
-      {language && (
-        <div className="absolute top-0 left-0 px-3 py-1 text-[10px] text-terminal-dim tracking-wider uppercase bg-cyber-darker rounded-tl border-b border-r border-cyber-light/20">
-          {language}
-        </div>
-      )}
-      <button
-        onClick={handleCopy}
-        className="absolute top-2 right-2 p-1.5 rounded bg-cyber-mid/50 text-terminal-dim hover:text-neon-cyan opacity-0 group-hover:opacity-100 transition-all"
-      >
-        {copied ? (
-          <Check className="w-3.5 h-3.5" />
+    <div className="relative group my-5 overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--bg-elevated)]">
+      <div className="flex items-center justify-between border-b border-[var(--border-light)] px-4 py-2">
+        {language ? (
+          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--text-tertiary)]">
+            {language}
+          </span>
         ) : (
-          <Copy className="w-3.5 h-3.5" />
+          <span />
         )}
-      </button>
-      <pre className="bg-cyber-darker border border-cyber-light/20 rounded p-4 pt-8 overflow-x-auto text-sm leading-relaxed">
-        <code className="text-terminal-text">{children}</code>
+        <button
+          onClick={handleCopy}
+          aria-label="Copy code"
+          className="p-1 rounded-[var(--radius-control)] text-[var(--text-tertiary)] hover:text-[var(--neon-cyan)] opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all"
+        >
+          {copied ? (
+            <Check className="w-3.5 h-3.5 text-[var(--neon-green)]" />
+          ) : (
+            <Copy className="w-3.5 h-3.5" />
+          )}
+        </button>
+      </div>
+      <pre className="p-4 overflow-x-auto font-mono text-[13px] leading-[1.7] scrollbar-thin">
+        <code className="text-[var(--text-primary)]">{children}</code>
       </pre>
     </div>
   );
@@ -98,26 +102,22 @@ function Endpoint({
   description: string;
   children?: React.ReactNode;
 }) {
-  const methodColor =
+  const methodBadge =
     method === 'GET'
-      ? 'text-neon-green bg-neon-green/10 border-neon-green/30'
+      ? 'badge-green'
       : method === 'POST'
-        ? 'text-neon-cyan bg-neon-cyan/10 border-neon-cyan/30'
+        ? 'badge-cyan'
         : method === 'PATCH'
-          ? 'text-neon-yellow bg-neon-yellow/10 border-neon-yellow/30'
-          : 'text-neon-red bg-neon-red/10 border-neon-red/30';
+          ? 'badge-yellow'
+          : 'badge-red';
 
   return (
-    <div className="cyber-card p-5 mb-4">
+    <div className="cyber-card p-5 mb-6">
       <div className="flex items-center gap-3 mb-2">
-        <span
-          className={`px-2 py-0.5 text-[11px] font-bold tracking-wider rounded border ${methodColor}`}
-        >
-          {method}
-        </span>
-        <code className="text-sm text-neon-cyan">{path}</code>
+        <span className={methodBadge}>{method}</span>
+        <code className="font-mono text-sm text-[var(--neon-cyan)]">{path}</code>
       </div>
-      <p className="text-xs text-terminal-dim mb-3">{description}</p>
+      <p className="text-sm leading-[1.65] text-[var(--text-secondary)] mb-3">{description}</p>
       {children}
     </div>
   );
@@ -131,19 +131,24 @@ function SectionTitle({
   children: React.ReactNode;
 }) {
   return (
-    <h2
-      id={id}
-      className="text-lg font-display font-semibold text-terminal-text tracking-wide mb-4 mt-10 first:mt-0 flex items-center gap-2"
-    >
-      <span className="text-neon-cyan">#</span> {children}
-    </h2>
+    <div className="mt-14 mb-5 first:mt-0">
+      <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--text-tertiary)] mb-1.5">
+        {id}
+      </div>
+      <h2
+        id={id}
+        className="text-xl font-sans font-bold text-[var(--text-primary)] tracking-tight scroll-mt-20 flex items-center gap-2"
+      >
+        <span className="text-[var(--neon-cyan)]">#</span> {children}
+      </h2>
+    </div>
   );
 }
 
 function SubTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-sm font-semibold text-terminal-text tracking-wide mb-3 mt-6 flex items-center gap-2">
-      <span className="text-neon-green/60">&gt;</span> {children}
+    <h3 className="text-sm font-sans font-semibold text-[var(--text-primary)] tracking-wide mb-3 mt-8 flex items-center gap-2">
+      <span className="text-[var(--neon-green)]">&gt;</span> {children}
     </h3>
   );
 }
@@ -162,12 +167,12 @@ export default function DocsPage() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-cyber-light/10 bg-cyber-black/90 backdrop-blur-md">
+      <header className="sticky top-0 z-40 border-b border-[var(--border-light)] bg-[var(--bg-primary)]/90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link
               href="/"
-              className="flex items-center gap-2 text-terminal-dim hover:text-neon-cyan transition-colors"
+              className="flex items-center gap-2 text-terminal-dim hover:text-[var(--neon-cyan)] transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               <Image
@@ -179,15 +184,15 @@ export default function DocsPage() {
                 className="object-contain"
               />
             </Link>
-            <span className="text-cyber-light/40">|</span>
-            <span className="text-xs text-terminal-dim tracking-wider uppercase">
+            <span className="text-[var(--text-tertiary)]">|</span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--text-tertiary)]">
               Documentation
             </span>
           </div>
           <div className="flex items-center gap-4">
             <Link
               href="/auth/login"
-              className="hidden sm:inline text-xs text-terminal-dim hover:text-neon-cyan transition-colors"
+              className="hidden sm:inline text-xs text-terminal-dim hover:text-[var(--neon-cyan)] transition-colors"
             >
               Sign In
             </Link>
@@ -199,7 +204,7 @@ export default function DocsPage() {
             </Link>
             <button
               onClick={() => setMobileNav(!mobileNav)}
-              className="md:hidden p-1 text-terminal-dim hover:text-neon-cyan"
+              className="md:hidden p-1 text-terminal-dim hover:text-[var(--neon-cyan)]"
             >
               {mobileNav ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -212,17 +217,17 @@ export default function DocsPage() {
         <nav
           className={`${
             mobileNav ? 'block' : 'hidden'
-          } md:block w-full md:w-56 flex-shrink-0 border-r border-cyber-light/10 bg-cyber-black/80 md:bg-transparent`}
+          } md:block w-full md:w-56 flex-shrink-0 border-r border-[var(--border-light)] bg-[var(--bg-primary)]/80 md:bg-transparent`}
         >
-          <div className="sticky top-14 p-4 space-y-1">
+          <div className="sticky top-14 max-h-[calc(100vh-3.5rem)] overflow-y-auto scrollbar-thin p-4 space-y-0.5">
             {navItems.map((nav) => (
               <button
                 key={nav.id}
                 onClick={() => scrollToSection(nav.id)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded text-xs tracking-wider transition-all ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2 font-mono text-[10px] uppercase tracking-wider border-l-2 transition-all ${
                   activeSection === nav.id
-                    ? 'bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20'
-                    : 'text-terminal-dim hover:text-terminal-text hover:bg-cyber-mid/30'
+                    ? 'border-[var(--neon-cyan)] text-[var(--neon-cyan)] bg-[color-mix(in_srgb,var(--neon-cyan)_8%,transparent)]'
+                    : 'border-transparent text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
                 }`}
               >
                 <nav.icon className="w-3.5 h-3.5" />
@@ -235,13 +240,14 @@ export default function DocsPage() {
         {/* Main Content */}
         <main className="flex-1 min-w-0 p-6 sm:p-8 md:p-10">
           <motion.div
+            className="max-w-[72ch]"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
           >
             {/* Overview */}
             <SectionTitle id="overview">Overview</SectionTitle>
-            <p className="text-sm text-terminal-dim leading-relaxed mb-4">
+            <p className="text-[15px] text-[var(--text-secondary)] leading-[1.7] mb-4">
               SCCA (Secure Compact Chat Architecture) is an open-source protocol for building
               privacy-first AI chat applications. Every message is encrypted with AES-256-GCM
               using per-conversation keys derived via HKDF-SHA256. Conversations are stored
@@ -273,9 +279,9 @@ export default function DocsPage() {
                 },
               ].map((f) => (
                 <div key={f.title} className="cyber-card p-4">
-                  <f.icon className="w-4 h-4 text-neon-cyan mb-2" />
-                  <h4 className="text-xs font-semibold text-terminal-text mb-1">{f.title}</h4>
-                  <p className="text-[11px] text-terminal-dim leading-relaxed">{f.desc}</p>
+                  <f.icon className="w-4 h-4 text-[var(--neon-cyan)] mb-2" />
+                  <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-1">{f.title}</h4>
+                  <p className="text-xs text-[var(--text-secondary)] leading-[1.65]">{f.desc}</p>
                 </div>
               ))}
             </div>
@@ -305,10 +311,10 @@ export default function DocsPage() {
                 },
               ].map((p) => (
                 <div key={p.name} className="flex gap-3">
-                  <span className="text-neon-green mt-0.5 text-xs">&#9656;</span>
+                  <span className="text-[var(--neon-green)] mt-0.5 text-xs">&#9656;</span>
                   <div>
-                    <span className="text-xs font-semibold text-terminal-text">{p.name}</span>
-                    <span className="text-xs text-terminal-dim ml-2">{p.desc}</span>
+                    <span className="text-sm font-semibold text-[var(--text-primary)]">{p.name}</span>
+                    <span className="text-sm text-[var(--text-secondary)] leading-[1.65] ml-2">{p.desc}</span>
                   </div>
                 </div>
               ))}
@@ -316,7 +322,7 @@ export default function DocsPage() {
 
             {/* Quick Start */}
             <SectionTitle id="quickstart">Quick Start</SectionTitle>
-            <p className="text-sm text-terminal-dim leading-relaxed mb-4">
+            <p className="text-[15px] text-[var(--text-secondary)] leading-[1.7] mb-4">
               Get SCCA running locally in minutes.
             </p>
 
@@ -346,9 +352,9 @@ npx prisma db push`}</CodeBlock>
 
             <SubTitle>4. Run</SubTitle>
             <CodeBlock language="bash">{`npm run dev`}</CodeBlock>
-            <p className="text-xs text-terminal-dim mb-6">
+            <p className="text-sm text-[var(--text-secondary)] leading-[1.7] mb-6">
               Open{' '}
-              <code className="text-neon-cyan bg-cyber-darker px-1.5 py-0.5 rounded">
+              <code className="font-mono text-[0.85em] text-[var(--neon-cyan)] bg-[var(--bg-elevated)] border border-[var(--border-light)] px-1.5 py-0.5 rounded-[var(--radius-control)]">
                 http://localhost:3000
               </code>{' '}
               and register an account to start.
@@ -356,14 +362,14 @@ npx prisma db push`}</CodeBlock>
 
             {/* SDK Setup */}
             <SectionTitle id="sdk">SDK Setup</SectionTitle>
-            <p className="text-sm text-terminal-dim leading-relaxed mb-4">
+            <p className="text-[15px] text-[var(--text-secondary)] leading-[1.7] mb-4">
               Integrate SCCA into your applications with our official SDKs and client libraries. 
               Whether you&apos;re building a web app with Next.js or Nuxt.js, or mobile apps with 
               React Native or Flutter, we&apos;ve got you covered.
             </p>
 
             <SubTitle>Next.js (App Router)</SubTitle>
-            <p className="text-xs text-terminal-dim leading-relaxed mb-3">
+            <p className="text-sm text-[var(--text-secondary)] leading-[1.7] mb-3">
               For Next.js applications, create a reusable SCCA client that handles authentication 
               and API calls. Install dependencies and set up the client:
             </p>
@@ -556,7 +562,7 @@ export default function ChatPage() {
 }`}</CodeBlock>
 
             <SubTitle>Nuxt.js 3</SubTitle>
-            <p className="text-xs text-terminal-dim leading-relaxed mb-3">
+            <p className="text-sm text-[var(--text-secondary)] leading-[1.7] mb-3">
               For Nuxt.js applications, create a composable that handles SCCA integration:
             </p>
             <CodeBlock language="bash">{`# Install dependencies
@@ -750,7 +756,7 @@ async function handleSend() {
 </script>`}</CodeBlock>
 
             <SubTitle>React Native</SubTitle>
-            <p className="text-xs text-terminal-dim leading-relaxed mb-3">
+            <p className="text-sm text-[var(--text-secondary)] leading-[1.7] mb-3">
               For mobile apps with React Native, use the Fetch API with AsyncStorage for session management:
             </p>
             <CodeBlock language="bash">{`# Install dependencies
@@ -1029,7 +1035,7 @@ const styles = StyleSheet.create({
 });`}</CodeBlock>
 
             <SubTitle>Flutter</SubTitle>
-            <p className="text-xs text-terminal-dim leading-relaxed mb-3">
+            <p className="text-sm text-[var(--text-secondary)] leading-[1.7] mb-3">
               For Flutter apps, use the http package with shared_preferences for session storage:
             </p>
             <CodeBlock language="yaml">{`# pubspec.yaml
@@ -1342,7 +1348,7 @@ class _ChatScreenState extends State<ChatScreen> {
 }`}</CodeBlock>
 
             <SubTitle>iOS (Swift)</SubTitle>
-            <p className="text-xs text-terminal-dim leading-relaxed mb-3">
+            <p className="text-sm text-[var(--text-secondary)] leading-[1.7] mb-3">
               For native iOS apps using Swift and URLSession:
             </p>
             <CodeBlock language="swift">{`// SCCAClient.swift
@@ -1538,7 +1544,7 @@ enum SCCAError: Error {
 }`}</CodeBlock>
 
             <SubTitle>Android (Kotlin)</SubTitle>
-            <p className="text-xs text-terminal-dim leading-relaxed mb-3">
+            <p className="text-sm text-[var(--text-secondary)] leading-[1.7] mb-3">
               For native Android apps using Kotlin and OkHttp:
             </p>
             <CodeBlock language="kotlin">{`// build.gradle.kts
@@ -1767,15 +1773,15 @@ sealed class SSEEvent {
     data class Error(val message: String) : SSEEvent()
 }`}</CodeBlock>
 
-            <div className="cyber-card p-5 mb-6 border-neon-cyan/20">
+            <div className="cyber-card p-5 mb-6 border-[color-mix(in_srgb,var(--neon-cyan)_25%,transparent)]">
               <div className="flex items-start gap-3">
-                <span className="text-neon-cyan text-sm mt-0.5">&#9881;</span>
+                <span className="text-[var(--neon-cyan)] text-sm mt-0.5">&#9881;</span>
                 <div>
-                  <span className="text-xs font-semibold text-neon-cyan">API Key Authentication</span>
-                  <p className="text-[11px] text-terminal-dim mt-1 leading-relaxed">
+                  <span className="text-xs font-semibold text-[var(--neon-cyan)]">API Key Authentication</span>
+                  <p className="text-xs text-[var(--text-secondary)] mt-1 leading-[1.65]">
                     For Vault API access (encrypt/decrypt), you can use API key authentication instead 
                     of session cookies. Generate an API key from your Dashboard, then pass it in the 
-                    <code className="text-neon-cyan">Authorization: Bearer scca_k_...</code> header. 
+                    <code className="text-[var(--neon-cyan)]">Authorization: Bearer scca_k_...</code> header. 
                     This is recommended for backend services and mobile apps that don&apos;t need full 
                     session management.
                   </p>
@@ -1785,7 +1791,7 @@ sealed class SSEEvent {
 
             {/* Vault API */}
             <SectionTitle id="vault">Vault API</SectionTitle>
-            <p className="text-sm text-terminal-dim leading-relaxed mb-4">
+            <p className="text-[15px] text-[var(--text-secondary)] leading-[1.7] mb-4">
               Use SCCA&apos;s encryption engine directly — encrypt, decrypt, and verify
               any data through the Vault API. No chat required. Store the
               encrypted tokens in your own database, pass them between services,
@@ -1794,12 +1800,12 @@ sealed class SSEEvent {
             </p>
 
             <SubTitle>Authentication with API Keys</SubTitle>
-            <p className="text-xs text-terminal-dim leading-relaxed mb-3">
+            <p className="text-sm text-[var(--text-secondary)] leading-[1.7] mb-3">
               Generate an API key from your{' '}
-              <code className="text-neon-cyan bg-cyber-darker px-1 py-0.5 rounded">
+              <code className="font-mono text-[0.85em] text-[var(--neon-cyan)] bg-[var(--bg-elevated)] border border-[var(--border-light)] px-1.5 py-0.5 rounded-[var(--radius-control)]">
                 Dashboard &gt; API Keys
               </code>{' '}
-              page. Use it in the <code className="text-neon-cyan bg-cyber-darker px-1 py-0.5 rounded">Authorization</code> header
+              page. Use it in the <code className="font-mono text-[0.85em] text-[var(--neon-cyan)] bg-[var(--bg-elevated)] border border-[var(--border-light)] px-1.5 py-0.5 rounded-[var(--radius-control)]">Authorization</code> header
               for all Vault API requests.
             </p>
             <CodeBlock language="bash">{`# All Vault API requests use Bearer auth:
@@ -1811,9 +1817,9 @@ curl -X POST https://your-scca-instance.com/api/scca/vault/encrypt \\
             <div className="cyber-card overflow-hidden mb-6">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b border-cyber-light/20 bg-cyber-darker">
-                    <th className="text-left p-3 text-terminal-dim tracking-wider uppercase">Endpoint</th>
-                    <th className="text-left p-3 text-terminal-dim tracking-wider uppercase">Description</th>
+                  <tr className="border-b border-[var(--border-color)] bg-[var(--bg-secondary)]">
+                    <th className="text-left p-3 font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)]">Endpoint</th>
+                    <th className="text-left p-3 font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)]">Description</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1821,9 +1827,12 @@ curl -X POST https://your-scca-instance.com/api/scca/vault/encrypt \\
                     ['POST /api/scca/keys', 'Generate a new API key (session auth only)'],
                     ['GET /api/scca/keys', 'List your active keys (session auth only)'],
                     ['DELETE /api/scca/keys/[id]', 'Revoke an API key (session auth only)'],
-                  ].map(([ep, desc]) => (
-                    <tr key={ep} className="border-b border-cyber-light/10">
-                      <td className="p-3"><code className="text-neon-green">{ep}</code></td>
+                  ].map(([ep, desc], i) => (
+                    <tr
+                      key={ep}
+                      className={`border-b border-[var(--border-light)] last:border-b-0 ${i % 2 === 1 ? 'bg-[var(--bg-secondary)]' : ''}`}
+                    >
+                      <td className="p-3"><code className="text-[var(--neon-green)]">{ep}</code></td>
                       <td className="p-3 text-terminal-dim">{desc}</td>
                     </tr>
                   ))}
@@ -1845,16 +1854,16 @@ curl -X POST https://your-scca-instance.com/api/scca/vault/encrypt \\
   "warning": "Save this key now. It will not be shown again."
 }`}</CodeBlock>
 
-            <div className="cyber-card p-5 mb-6 border-neon-green/20">
+            <div className="cyber-card p-5 mb-6 border-[color-mix(in_srgb,var(--neon-green)_25%,transparent)]">
               <div className="flex items-start gap-3">
-                <span className="text-neon-green text-sm mt-0.5">&#9656;</span>
+                <span className="text-[var(--neon-green)] text-sm mt-0.5">&#9656;</span>
                 <div>
-                  <span className="text-xs font-semibold text-neon-green">How it works</span>
-                  <p className="text-[11px] text-terminal-dim mt-1 leading-relaxed">
+                  <span className="text-xs font-semibold text-[var(--neon-green)]">How it works</span>
+                  <p className="text-xs text-[var(--text-secondary)] mt-1 leading-[1.65]">
                     Every authenticated user gets their own derived encryption keys.
-                    The <code className="text-neon-cyan">context</code> parameter isolates keys
-                    per project/use case — data encrypted under <code className="text-neon-cyan">&quot;billing&quot;</code> cannot
-                    be decrypted with <code className="text-neon-cyan">&quot;user-data&quot;</code>, even by the same user.
+                    The <code className="text-[var(--neon-cyan)]">context</code> parameter isolates keys
+                    per project/use case — data encrypted under <code className="text-[var(--neon-cyan)]">&quot;billing&quot;</code> cannot
+                    be decrypted with <code className="text-[var(--neon-cyan)]">&quot;user-data&quot;</code>, even by the same user.
                     The server handles all crypto. You send plaintext in, get encrypted tokens out.
                   </p>
                 </div>
@@ -2128,34 +2137,34 @@ entries = vault.decrypt(stored_tokens, "audit-logs-2026")
 for entry in entries:
     print(f"[{entry['timestamp']}] {entry['content']}")`}</CodeBlock>
 
-            <div className="cyber-card p-5 mb-6 border-neon-cyan/20">
+            <div className="cyber-card p-5 mb-6 border-[color-mix(in_srgb,var(--neon-cyan)_25%,transparent)]">
               <div className="flex items-start gap-3">
-                <span className="text-neon-cyan text-sm mt-0.5">&#9881;</span>
+                <span className="text-[var(--neon-cyan)] text-sm mt-0.5">&#9881;</span>
                 <div>
-                  <span className="text-xs font-semibold text-neon-cyan">Use Cases</span>
-                  <ul className="text-[11px] text-terminal-dim mt-2 space-y-1.5 list-none">
+                  <span className="text-xs font-semibold text-[var(--neon-cyan)]">Use Cases</span>
+                  <ul className="text-xs text-[var(--text-secondary)] mt-2 space-y-2 list-none">
                     <li className="flex gap-2">
-                      <span className="text-neon-green">&#8226;</span>
+                      <span className="text-[var(--neon-green)]">&#8226;</span>
                       <span><strong className="text-terminal-text">PII Storage</strong> — Encrypt user data (SSN, addresses, payment info) before storing in your database</span>
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-neon-green">&#8226;</span>
+                      <span className="text-[var(--neon-green)]">&#8226;</span>
                       <span><strong className="text-terminal-text">Audit Logs</strong> — Encrypt sensitive log entries with tamper-proof Merkle verification</span>
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-neon-green">&#8226;</span>
+                      <span className="text-[var(--neon-green)]">&#8226;</span>
                       <span><strong className="text-terminal-text">Internal Chat</strong> — Add encryption to your existing chat system without rebuilding it</span>
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-neon-green">&#8226;</span>
+                      <span className="text-[var(--neon-green)]">&#8226;</span>
                       <span><strong className="text-terminal-text">Config Secrets</strong> — Encrypt API keys and credentials at rest with per-project isolation</span>
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-neon-green">&#8226;</span>
+                      <span className="text-[var(--neon-green)]">&#8226;</span>
                       <span><strong className="text-terminal-text">File Metadata</strong> — Encrypt file descriptions, tags, or annotations before cloud storage</span>
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-neon-green">&#8226;</span>
+                      <span className="text-[var(--neon-green)]">&#8226;</span>
                       <span><strong className="text-terminal-text">AI Pipelines</strong> — Encrypt prompts and responses in your AI workflow, verify they weren&apos;t modified in transit</span>
                     </li>
                   </ul>
@@ -2165,14 +2174,14 @@ for entry in entries:
 
             {/* Integration Guide */}
             <SectionTitle id="integration">Integration Guide</SectionTitle>
-            <p className="text-sm text-terminal-dim leading-relaxed mb-4">
+            <p className="text-[15px] text-[var(--text-secondary)] leading-[1.7] mb-4">
               Use SCCA as the encrypted chat backend for your own application.
               Authenticate, create conversations, send messages, and handle
               streaming responses — all through the REST API.
             </p>
 
             <SubTitle>Authentication</SubTitle>
-            <p className="text-xs text-terminal-dim leading-relaxed mb-3">
+            <p className="text-sm text-[var(--text-secondary)] leading-[1.7] mb-3">
               SCCA uses NextAuth for session management. To call the API from an external
               client, first obtain a session by signing in via the credentials endpoint.
               The session cookie is used for all subsequent requests.
@@ -2191,7 +2200,7 @@ curl -s -b cookies.txt -c cookies.txt \\
 curl -b cookies.txt https://your-scca-instance.com/api/scca/conversations`}</CodeBlock>
 
             <SubTitle>Full Conversation Lifecycle (cURL)</SubTitle>
-            <p className="text-xs text-terminal-dim leading-relaxed mb-3">
+            <p className="text-sm text-[var(--text-secondary)] leading-[1.7] mb-3">
               Create a conversation, send a message, receive the streamed AI response,
               then edit a message with destructive editing.
             </p>
@@ -2230,7 +2239,7 @@ curl -N -b cookies.txt \\
   }'`}</CodeBlock>
 
             <SubTitle>JavaScript / TypeScript Client</SubTitle>
-            <p className="text-xs text-terminal-dim leading-relaxed mb-3">
+            <p className="text-sm text-[var(--text-secondary)] leading-[1.7] mb-3">
               Integrate SCCA into a Node.js backend or browser app. This example
               shows the full flow: auth, create, send, and stream.
             </p>
@@ -2376,9 +2385,9 @@ async function main() {
 }`}</CodeBlock>
 
             <SubTitle>Python Client</SubTitle>
-            <p className="text-xs text-terminal-dim leading-relaxed mb-3">
+            <p className="text-sm text-[var(--text-secondary)] leading-[1.7] mb-3">
               Integrate SCCA from a Python backend using{' '}
-              <code className="text-neon-cyan bg-cyber-darker px-1 py-0.5 rounded">requests</code>.
+              <code className="font-mono text-[0.85em] text-[var(--neon-cyan)] bg-[var(--bg-elevated)] border border-[var(--border-light)] px-1.5 py-0.5 rounded-[var(--radius-control)]">requests</code>.
             </p>
             <CodeBlock language="python">{`import requests
 import json
@@ -2468,9 +2477,9 @@ for msg in messages["messages"]:
     print(f"[{msg['role']}] {msg['content'][:80]}")`}</CodeBlock>
 
             <SubTitle>Handling SSE Streams</SubTitle>
-            <p className="text-xs text-terminal-dim leading-relaxed mb-3">
-              Both the <code className="text-neon-cyan bg-cyber-darker px-1 py-0.5 rounded">/messages</code> and{' '}
-              <code className="text-neon-cyan bg-cyber-darker px-1 py-0.5 rounded">/edit</code> endpoints
+            <p className="text-sm text-[var(--text-secondary)] leading-[1.7] mb-3">
+              Both the <code className="font-mono text-[0.85em] text-[var(--neon-cyan)] bg-[var(--bg-elevated)] border border-[var(--border-light)] px-1.5 py-0.5 rounded-[var(--radius-control)]">/messages</code> and{' '}
+              <code className="font-mono text-[0.85em] text-[var(--neon-cyan)] bg-[var(--bg-elevated)] border border-[var(--border-light)] px-1.5 py-0.5 rounded-[var(--radius-control)]">/edit</code> endpoints
               return Server-Sent Events. The format is simple:
             </p>
             <CodeBlock language="text">{`data: {"token":"Hello"}         ← AI token (append to response)
@@ -2482,26 +2491,26 @@ Error events:
 data: {"error":"Unauthorized"}  ← auth failed
 data: {"error":"Not found"}     ← conversation doesn't exist`}</CodeBlock>
 
-            <div className="cyber-card p-5 mb-6 border-neon-yellow/20">
+            <div className="cyber-card p-5 mb-6 border-[color-mix(in_srgb,var(--neon-yellow)_25%,transparent)]">
               <div className="flex items-start gap-3">
-                <span className="text-neon-yellow text-sm mt-0.5">&#9888;</span>
+                <span className="text-[var(--neon-yellow)] text-sm mt-0.5">&#9888;</span>
                 <div>
-                  <span className="text-xs font-semibold text-neon-yellow">Important Notes</span>
-                  <ul className="text-[11px] text-terminal-dim mt-2 space-y-1.5 list-none">
+                  <span className="text-xs font-semibold text-[var(--neon-yellow)]">Important Notes</span>
+                  <ul className="text-xs text-[var(--text-secondary)] mt-2 space-y-2 list-none">
                     <li className="flex gap-2">
-                      <span className="text-neon-cyan">&#8226;</span>
+                      <span className="text-[var(--neon-cyan)]">&#8226;</span>
                       <span>All encryption/decryption happens server-side. The API returns plaintext messages — you don&apos;t need to handle encryption in your client.</span>
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-neon-cyan">&#8226;</span>
+                      <span className="text-[var(--neon-cyan)]">&#8226;</span>
                       <span>Destructive edits are irreversible. Messages after the edit point are permanently deleted before the response is regenerated.</span>
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-neon-cyan">&#8226;</span>
+                      <span className="text-[var(--neon-cyan)]">&#8226;</span>
                       <span>The session cookie expires based on your NextAuth configuration. Re-authenticate if you receive 401 responses.</span>
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-neon-cyan">&#8226;</span>
+                      <span className="text-[var(--neon-cyan)]">&#8226;</span>
                       <span>Rate limiting is not enforced by default. If deploying publicly, add rate limiting middleware.</span>
                     </li>
                   </ul>
@@ -2511,7 +2520,7 @@ data: {"error":"Not found"}     ← conversation doesn't exist`}</CodeBlock>
 
             {/* API Reference */}
             <SectionTitle id="api">API Reference</SectionTitle>
-            <p className="text-sm text-terminal-dim leading-relaxed mb-4">
+            <p className="text-[15px] text-[var(--text-secondary)] leading-[1.7] mb-4">
               All endpoints require NextAuth session authentication. The user ID is extracted
               from the JWT session token.
             </p>
@@ -2565,14 +2574,14 @@ data: {"error":"Not found"}     ← conversation doesn't exist`}</CodeBlock>
               description="Retrieve conversation with decrypted messages. Supports viewport loading."
             >
               <div className="mb-3">
-                <span className="text-[10px] text-terminal-dim tracking-wider uppercase">Query Parameters</span>
+                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--text-tertiary)]">Query Parameters</span>
                 <div className="mt-1 space-y-1">
-                  <div className="flex gap-2 text-xs">
-                    <code className="text-neon-cyan">offset</code>
+                  <div className="flex gap-2 text-sm">
+                    <code className="text-[var(--neon-cyan)]">offset</code>
                     <span className="text-terminal-dim">Starting message index (optional)</span>
                   </div>
-                  <div className="flex gap-2 text-xs">
-                    <code className="text-neon-cyan">limit</code>
+                  <div className="flex gap-2 text-sm">
+                    <code className="text-[var(--neon-cyan)]">limit</code>
                     <span className="text-terminal-dim">Number of messages to return (optional)</span>
                   </div>
                 </div>
@@ -2676,25 +2685,25 @@ data: {"done":true,"messageCount":4,"title":"Quantum Computing"}`}</CodeBlock>
 
             {/* Media Pipeline */}
             <SectionTitle id="media">Media Pipeline</SectionTitle>
-            <p className="text-sm text-terminal-dim leading-relaxed mb-4">
+            <p className="text-[15px] text-[var(--text-secondary)] leading-[1.7] mb-4">
               SCCA v2 extends encryption to media files — images, video, audio, and documents.
               Each file passes through a format-aware pipeline: type detection, selective compression,
               AES-256-GCM encryption, and SCCA packet encapsulation with SHA-256 integrity verification.
             </p>
 
             <SubTitle>Format Support Matrix</SubTitle>
-            <p className="text-xs text-terminal-dim leading-relaxed mb-3">
+            <p className="text-sm text-[var(--text-secondary)] leading-[1.7] mb-3">
               Already-compressed formats (PNG, JPEG, MP4, MP3) are encrypted directly with no re-compression.
               Text-based formats (SVG, JSON, Markdown) get zlib level 9 compression before encryption for significant savings.
             </p>
             <div className="cyber-card overflow-hidden mb-6">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b border-cyber-light/20 bg-cyber-darker">
-                    <th className="text-left p-3 text-terminal-dim tracking-wider uppercase">Category</th>
-                    <th className="text-left p-3 text-terminal-dim tracking-wider uppercase">Formats</th>
-                    <th className="text-left p-3 text-terminal-dim tracking-wider uppercase">Strategy</th>
-                    <th className="text-left p-3 text-terminal-dim tracking-wider uppercase">Max Size</th>
+                  <tr className="border-b border-[var(--border-color)] bg-[var(--bg-secondary)]">
+                    <th className="text-left p-3 font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)]">Category</th>
+                    <th className="text-left p-3 font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)]">Formats</th>
+                    <th className="text-left p-3 font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)]">Strategy</th>
+                    <th className="text-right p-3 font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)]">Max Size</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2704,16 +2713,19 @@ data: {"done":true,"messageCount":4,"title":"Quantum Computing"}`}</CodeBlock>
                     ['Video', 'MP4, WebM, MOV', 'Encrypt only', '100 MB'],
                     ['Audio', 'MP3, WAV, OGG, M4A, FLAC', 'Encrypt only', '50 MB'],
                     ['Document', 'PDF, TXT, Markdown, JSON', 'zlib-9 + encrypt', '10 MB'],
-                  ].map(([cat, formats, strategy, max]) => (
-                    <tr key={`${cat}-${formats}`} className="border-b border-cyber-light/10">
-                      <td className="p-3 text-neon-cyan font-semibold">{cat}</td>
+                  ].map(([cat, formats, strategy, max], i) => (
+                    <tr
+                      key={`${cat}-${formats}`}
+                      className={`border-b border-[var(--border-light)] last:border-b-0 ${i % 2 === 1 ? 'bg-[var(--bg-secondary)]' : ''}`}
+                    >
+                      <td className="p-3 text-[var(--neon-cyan)] font-semibold">{cat}</td>
                       <td className="p-3 text-terminal-text">{formats}</td>
                       <td className="p-3">
-                        <span className={strategy === 'Encrypt only' ? 'text-neon-yellow' : 'text-neon-green'}>
+                        <span className={strategy === 'Encrypt only' ? 'text-[var(--neon-yellow)]' : 'text-[var(--neon-green)]'}>
                           {strategy}
                         </span>
                       </td>
-                      <td className="p-3 text-terminal-dim font-mono">{max}</td>
+                      <td className="p-3 text-right text-terminal-dim font-mono">{max}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -2721,7 +2733,7 @@ data: {"done":true,"messageCount":4,"title":"Quantum Computing"}`}</CodeBlock>
             </div>
 
             <SubTitle>SCCA Media Packet Format</SubTitle>
-            <p className="text-xs text-terminal-dim leading-relaxed mb-3">
+            <p className="text-sm text-[var(--text-secondary)] leading-[1.7] mb-3">
               Every media file is wrapped in a 70-byte-header SCCA v2 packet. The header is readable
               without decryption for routing and verification purposes.
             </p>
@@ -2745,7 +2757,7 @@ Type Codes:
   0x30 PDF   0x40 TXT   0x41 MD     0x42 JSON`}</CodeBlock>
 
             <SubTitle>Media Processing Pipeline</SubTitle>
-            <p className="text-xs text-terminal-dim leading-relaxed mb-3">
+            <p className="text-sm text-[var(--text-secondary)] leading-[1.7] mb-3">
               The pipeline detects format, applies selective compression, encrypts with the
               conversation key, and verifies integrity via SHA-256 checksum.
             </p>
@@ -2872,12 +2884,12 @@ curl -b cookies.txt \\
   // { id, originalName, mimeType, compressionRatio, ... }
 }`}</CodeBlock>
 
-            <div className="cyber-card p-5 mb-6 border-neon-purple/20">
+            <div className="cyber-card p-5 mb-6 border-[color-mix(in_srgb,var(--neon-purple)_25%,transparent)]">
               <div className="flex items-start gap-3">
-                <span className="text-neon-purple text-sm mt-0.5">&#9656;</span>
+                <span className="text-[var(--neon-purple)] text-sm mt-0.5">&#9656;</span>
                 <div>
-                  <span className="text-xs font-semibold text-neon-purple">Compression Strategy</span>
-                  <p className="text-[11px] text-terminal-dim mt-1 leading-relaxed">
+                  <span className="text-xs font-semibold text-[var(--neon-purple)]">Compression Strategy</span>
+                  <p className="text-xs text-[var(--text-secondary)] mt-1 leading-[1.65]">
                     Already-compressed formats (PNG, JPEG, MP4, MP3) use <strong className="text-terminal-text">encrypt-only</strong> mode
                     with ~70 bytes overhead for the SCCA header. Attempting to re-compress these formats
                     would waste CPU cycles for zero savings. Text-based formats (SVG, JSON, Markdown, PDF)
@@ -2890,7 +2902,7 @@ curl -b cookies.txt \\
 
             {/* Crypto Engine */}
             <SectionTitle id="crypto">Crypto Engine</SectionTitle>
-            <p className="text-sm text-terminal-dim leading-relaxed mb-4">
+            <p className="text-[15px] text-[var(--text-secondary)] leading-[1.7] mb-4">
               All encryption is server-side. The master key never leaves server memory.
               Keys are derived on-demand via HKDF-SHA256 and never stored.
             </p>
@@ -2929,8 +2941,8 @@ curl -b cookies.txt \\
                 },
               ].map((k) => (
                 <div key={k.fn} className="cyber-card p-4">
-                  <code className="text-xs text-neon-green">{k.fn}</code>
-                  <p className="text-[11px] text-terminal-dim mt-1">{k.desc}</p>
+                  <code className="font-mono text-xs text-[var(--neon-green)]">{k.fn}</code>
+                  <p className="text-xs text-[var(--text-secondary)] mt-1 leading-[1.65]">{k.desc}</p>
                 </div>
               ))}
             </div>
@@ -2941,7 +2953,7 @@ hash[1] = HMAC(integrityKey, hash[0] + token[1])
 hash[2] = HMAC(integrityKey, hash[1] + token[2])
 ...
 merkleRoot = hash[N-1]`}</CodeBlock>
-            <p className="text-xs text-terminal-dim mb-4">
+            <p className="text-sm text-[var(--text-secondary)] leading-[1.7] mb-4">
               If any token is modified, the entire Merkle root changes, detecting tampering.
             </p>
 
@@ -2949,9 +2961,9 @@ merkleRoot = hash[N-1]`}</CodeBlock>
             <div className="cyber-card overflow-hidden mb-6">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b border-cyber-light/20 bg-cyber-darker">
-                    <th className="text-left p-3 text-terminal-dim tracking-wider uppercase">Property</th>
-                    <th className="text-left p-3 text-terminal-dim tracking-wider uppercase">Guarantee</th>
+                  <tr className="border-b border-[var(--border-color)] bg-[var(--bg-secondary)]">
+                    <th className="text-left p-3 font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)]">Property</th>
+                    <th className="text-left p-3 font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)]">Guarantee</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2961,9 +2973,12 @@ merkleRoot = hash[N-1]`}</CodeBlock>
                     ['Integrity', 'Merkle root — any modification detected'],
                     ['Key Isolation', 'Per-conversation keys via HKDF'],
                     ['Nonce Safety', 'Random 12-byte nonce per encryption'],
-                  ].map(([prop, guarantee]) => (
-                    <tr key={prop} className="border-b border-cyber-light/10">
-                      <td className="p-3 text-neon-cyan font-semibold">{prop}</td>
+                  ].map(([prop, guarantee], i) => (
+                    <tr
+                      key={prop}
+                      className={`border-b border-[var(--border-light)] last:border-b-0 ${i % 2 === 1 ? 'bg-[var(--bg-secondary)]' : ''}`}
+                    >
+                      <td className="p-3 text-[var(--neon-cyan)] font-semibold">{prop}</td>
                       <td className="p-3 text-terminal-dim">{guarantee}</td>
                     </tr>
                   ))}
@@ -2973,10 +2988,10 @@ merkleRoot = hash[N-1]`}</CodeBlock>
 
             {/* Binary Format */}
             <SectionTitle id="binary">Binary Message Format</SectionTitle>
-            <p className="text-sm text-terminal-dim leading-relaxed mb-4">
+            <p className="text-[15px] text-[var(--text-secondary)] leading-[1.7] mb-4">
               Each message is packed into a compact binary format before encryption.
               The 10-byte header can be read without decrypting (via{' '}
-              <code className="text-neon-cyan">peekMessageHeader</code>).
+              <code className="text-[var(--neon-cyan)]">peekMessageHeader</code>).
             </p>
 
             <CodeBlock language="text">{`Binary layout of a packed message:
@@ -2998,9 +3013,9 @@ merkleRoot = hash[N-1]`}</CodeBlock>
             <div className="cyber-card overflow-hidden mb-6">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b border-cyber-light/20 bg-cyber-darker">
-                    <th className="text-left p-3 text-terminal-dim tracking-wider uppercase">Operation</th>
-                    <th className="text-left p-3 text-terminal-dim tracking-wider uppercase">Description</th>
+                  <tr className="border-b border-[var(--border-color)] bg-[var(--bg-secondary)]">
+                    <th className="text-left p-3 font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)]">Operation</th>
+                    <th className="text-left p-3 font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)]">Description</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -3010,10 +3025,13 @@ merkleRoot = hash[N-1]`}</CodeBlock>
                     ['append', 'Pack a new message and add to the conversation token array'],
                     ['truncate', 'Remove all tokens after a given sequence number'],
                     ['peek', 'Read the 10-byte header without decrypting content'],
-                  ].map(([op, desc]) => (
-                    <tr key={op} className="border-b border-cyber-light/10">
+                  ].map(([op, desc], i) => (
+                    <tr
+                      key={op}
+                      className={`border-b border-[var(--border-light)] last:border-b-0 ${i % 2 === 1 ? 'bg-[var(--bg-secondary)]' : ''}`}
+                    >
                       <td className="p-3">
-                        <code className="text-neon-green">{op}</code>
+                        <code className="text-[var(--neon-green)]">{op}</code>
                       </td>
                       <td className="p-3 text-terminal-dim">{desc}</td>
                     </tr>
@@ -3026,10 +3044,10 @@ merkleRoot = hash[N-1]`}</CodeBlock>
             <div className="cyber-card overflow-hidden mb-6">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b border-cyber-light/20 bg-cyber-darker">
-                    <th className="text-left p-3 text-terminal-dim tracking-wider uppercase">Role</th>
-                    <th className="text-left p-3 text-terminal-dim tracking-wider uppercase">Byte</th>
-                    <th className="text-left p-3 text-terminal-dim tracking-wider uppercase">Description</th>
+                  <tr className="border-b border-[var(--border-color)] bg-[var(--bg-secondary)]">
+                    <th className="text-left p-3 font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)]">Role</th>
+                    <th className="text-right p-3 font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)]">Byte</th>
+                    <th className="text-left p-3 font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)]">Description</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -3037,11 +3055,14 @@ merkleRoot = hash[N-1]`}</CodeBlock>
                     ['system', '0x00', 'System prompt / context message'],
                     ['user', '0x01', 'User-authored message'],
                     ['assistant', '0x02', 'AI-generated response'],
-                  ].map(([role, byte, desc]) => (
-                    <tr key={role} className="border-b border-cyber-light/10">
-                      <td className="p-3 text-neon-cyan font-semibold">{role}</td>
-                      <td className="p-3">
-                        <code className="text-neon-green">{byte}</code>
+                  ].map(([role, byte, desc], i) => (
+                    <tr
+                      key={role}
+                      className={`border-b border-[var(--border-light)] last:border-b-0 ${i % 2 === 1 ? 'bg-[var(--bg-secondary)]' : ''}`}
+                    >
+                      <td className="p-3 text-[var(--neon-cyan)] font-semibold">{role}</td>
+                      <td className="p-3 text-right">
+                        <code className="text-[var(--neon-green)]">{byte}</code>
                       </td>
                       <td className="p-3 text-terminal-dim">{desc}</td>
                     </tr>
@@ -3052,7 +3073,7 @@ merkleRoot = hash[N-1]`}</CodeBlock>
 
             {/* Vocabulary */}
             <SectionTitle id="vocabulary">Vocabulary</SectionTitle>
-            <p className="text-sm text-terminal-dim leading-relaxed mb-4">
+            <p className="text-[15px] text-[var(--text-secondary)] leading-[1.7] mb-4">
               These terms have exact, unambiguous meanings within SCCA.
             </p>
 
@@ -3100,23 +3121,23 @@ merkleRoot = hash[N-1]`}</CodeBlock>
                 },
               ].map((v) => (
                 <div key={v.term} className="cyber-card p-4">
-                  <span className="text-xs font-semibold text-neon-cyan">{v.term}</span>
-                  <p className="text-[11px] text-terminal-dim mt-1 leading-relaxed">{v.def}</p>
+                  <span className="text-xs font-semibold text-[var(--neon-cyan)]">{v.term}</span>
+                  <p className="text-xs text-[var(--text-secondary)] mt-1 leading-[1.65]">{v.def}</p>
                 </div>
               ))}
             </div>
 
             {/* Footer */}
-            <div className="border-t border-cyber-light/10 pt-6 mt-10 flex items-center justify-between">
+            <div className="border-t border-[var(--border-light)] pt-6 mt-10 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="status-dot-active" />
-                <span className="text-[10px] text-terminal-dim tracking-wider">
+                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--text-tertiary)]">
                   SCCA v2.0 — Open Source
                 </span>
               </div>
               <Link
                 href="/"
-                className="text-xs text-terminal-dim hover:text-neon-cyan transition-colors"
+                className="text-xs text-terminal-dim hover:text-[var(--neon-cyan)] transition-colors"
               >
                 Back to Home
               </Link>

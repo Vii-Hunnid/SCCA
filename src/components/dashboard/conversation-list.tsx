@@ -46,15 +46,18 @@ export function ConversationList({
             key={conv.id}
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.03 }}
+            transition={{ delay: Math.min(i * 0.03, 0.3) }}
             onClick={() => onSelect?.(conv.id)}
-            className="w-full text-left px-3 py-2.5 rounded group transition-all duration-200"
+            className="w-full text-left px-3 py-2.5 rounded-xl group transition-all duration-200"
             style={{
-              backgroundColor: isActive 
-                ? 'color-mix(in srgb, var(--neon-cyan) 10%, transparent)' 
+              backgroundColor: isActive
+                ? 'color-mix(in srgb, var(--neon-cyan) 10%, transparent)'
                 : 'transparent',
-              border: isActive 
-                ? '1px solid color-mix(in srgb, var(--neon-cyan) 20%, transparent)' 
+              border: isActive
+                ? '1px solid color-mix(in srgb, var(--neon-cyan) 25%, transparent)'
+                : '1px solid transparent',
+              borderLeft: isActive
+                ? '2px solid var(--neon-cyan)'
                 : '1px solid transparent',
             }}
             onMouseEnter={(e) => {

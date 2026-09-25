@@ -231,10 +231,11 @@ export function SCCAChatArea({
               </div>
 
               <div
-                className="rounded-lg px-4 py-3 text-sm leading-relaxed"
+                className="rounded-2xl rounded-bl-md px-4 py-3 text-sm leading-relaxed"
                 style={{
-                  backgroundColor: 'color-mix(in srgb, var(--bg-tertiary) 40%, transparent)',
+                  backgroundColor: 'var(--bg-card)',
                   border: '1px solid var(--border-color)',
+                  boxShadow: 'var(--shadow-card)',
                   color: 'var(--text-primary)'
                 }}
               >

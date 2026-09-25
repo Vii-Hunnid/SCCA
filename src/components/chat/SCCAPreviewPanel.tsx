@@ -38,7 +38,6 @@ interface MediaStats {
 interface SCCAPreviewPanelProps {
   messages: Message[];
   isStreaming: boolean;
-  useSCCA: boolean;
   mediaStats?: MediaStats;
 }
 
@@ -71,7 +70,6 @@ const MEDIA_CATEGORY_COLORS: Record<string, string> = {
 export function SCCAPreviewPanel({
   messages,
   isStreaming,
-  useSCCA,
   mediaStats,
 }: SCCAPreviewPanelProps) {
   const chatMessages = messages.filter((m) => m.role !== 'system');
@@ -148,7 +146,6 @@ export function SCCAPreviewPanel({
             </span>
           </div>
         </div>
-        {useSCCA && (
           <div className="flex items-center gap-1.5 px-2 py-1 rounded-full"
             style={{ 
               backgroundColor: 'color-mix(in srgb, var(--neon-green) 10%, transparent)',
@@ -163,28 +160,9 @@ export function SCCAPreviewPanel({
             />
             <span className="text-[10px] font-medium" style={{ color: 'var(--neon-green)' }}>Active</span>
           </div>
-        )}
       </div>
 
-      {!useSCCA ? (
-        <div className="flex-1 flex items-center justify-center p-6">
-          <div className="text-center">
-            <div 
-              className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3"
-              style={{ 
-                backgroundColor: 'color-mix(in srgb, var(--neon-yellow) 10%, transparent)',
-                border: '1px solid color-mix(in srgb, var(--neon-yellow) 30%, transparent)'
-              }}
-            >
-              <Lock className="w-7 h-7" style={{ color: 'var(--neon-yellow)', opacity: 0.7 }} />
-            </div>
-            <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>SCCA Disabled</p>
-            <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
-              Enable encryption to see metrics
-            </p>
-          </div>
-        </div>
-      ) : (
+
         <div className="flex-1 overflow-y-auto scrollbar-thin">
           {/* Message Metrics Grid */}
           <div className="p-3 grid grid-cols-2 gap-2">
@@ -478,7 +456,6 @@ export function SCCAPreviewPanel({
             </div>
           </div>
         </div>
-      )}
     </div>
   );
 }

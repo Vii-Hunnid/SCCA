@@ -20,6 +20,9 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { DashboardPageShell } from '@/components/dashboard/dashboard-page-shell';
+import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Invoice {
   id: string;
@@ -66,19 +69,17 @@ const getStatusIcon = (status: string) => {
   }
 };
 
-const getStatusClass = (status: string) => {
+const getStatusTone = (status: string): 'green' | 'yellow' | 'red' | 'neutral' => {
   switch (status) {
     case 'PAID':
-      return { color: 'var(--neon-green)', backgroundColor: 'color-mix(in srgb, var(--neon-green) 10%, transparent)' };
+      return 'green';
     case 'PENDING':
     case 'DRAFT':
-      return { color: 'var(--neon-yellow)', backgroundColor: 'color-mix(in srgb, var(--neon-yellow) 10%, transparent)' };
+      return 'yellow';
     case 'OVERDUE':
-      return { color: 'var(--neon-red)', backgroundColor: 'color-mix(in srgb, var(--neon-red) 10%, transparent)' };
-    case 'VOID':
-      return { color: 'var(--text-secondary)', backgroundColor: 'var(--bg-tertiary)' };
+      return 'red';
     default:
-      return { color: 'var(--text-secondary)', backgroundColor: 'var(--bg-tertiary)' };
+      return 'neutral';
   }
 };
 
@@ -252,17 +253,18 @@ function InvoicePreviewModal({
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-cyber-darker rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col border border-cyber-light/20"
+        className="rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col border border-[var(--border-color)]"
+        style={{ backgroundColor: 'var(--bg-elevated)', boxShadow: 'var(--shadow-elevated)' }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-cyber-light/10">
-          <h2 className="text-sm font-semibold text-terminal-text">Invoice Preview</h2>
+        <div className="flex items-center justify-between p-4 border-b border-[var(--border-color)]">
+          <h2 className="text-sm font-semibold text-[var(--text-primary)]">Invoice Preview</h2>
           <div className="flex items-center gap-2">
             {invoice.hasInvoice && (
               <button
                 onClick={() => onDownloadPolar(invoice.id, invoice.polarInvoiceUrl)}
                 disabled={loadingPolar}
-                className="flex items-center gap-2 px-3 py-1.5 text-xs text-neon-cyan hover:bg-neon-cyan/10 rounded-lg transition-colors border border-neon-cyan/30"
+                className="cyber-btn-sm"
               >
                 {loadingPolar ? (
                   <Loader2 size={14} className="animate-spin" />
@@ -274,14 +276,15 @@ function InvoicePreviewModal({
             )}
             <button
               onClick={handlePrint}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs bg-neon-purple text-cyber-black rounded-lg hover:bg-neon-purple/90 transition-colors font-semibold"
+              className="cyber-btn-solid cyber-btn-sm font-semibold"
             >
               <Printer size={14} />
               Print / PDF
             </button>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-cyber-mid rounded-lg transition-colors text-terminal-dim hover:text-terminal-text"
+              aria-label="Close invoice preview"
+              className="p-2 hover:bg-[var(--bg-tertiary)] rounded-lg transition-colors text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             >
               <X size={16} />
             </button>
@@ -471,8 +474,17 @@ export default function InvoicesPage() {
   if (isLoading) {
     return (
       <DashboardPageShell>
-        <div className="min-h-[calc(100vh-60px)] flex items-center justify-center">
-          <FileText className="w-6 h-6 animate-pulse" style={{ color: 'var(--neon-cyan)', opacity: 0.3 }} />
+        <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
+          <div className="grid md:grid-cols-3 gap-4">
+            <Skeleton className="h-28" />
+            <Skeleton className="h-28" />
+            <Skeleton className="h-28" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-16" />
+            <Skeleton className="h-16" />
+            <Skeleton className="h-16" />
+          </div>
         </div>
       </DashboardPageShell>
     );
@@ -540,7 +552,7 @@ export default function InvoicesPage() {
                 Total Paid (YTD)
               </span>
             </div>
-            <p className="text-xl font-display text-[var(--text-primary)] font-mono">
+            <p className="text-2xl font-semibold font-mono tabular-nums text-[var(--text-primary)]">
               ${ytdPaid.toFixed(2)}
             </p>
           </motion.div>
@@ -562,7 +574,7 @@ export default function InvoicesPage() {
                 Pending
               </span>
             </div>
-            <p className="text-xl font-display text-[var(--text-primary)] font-mono">
+            <p className="text-2xl font-semibold font-mono tabular-nums text-[var(--text-primary)]">
               ${summary.totalPending.toFixed(2)}
             </p>
           </motion.div>
@@ -584,7 +596,7 @@ export default function InvoicesPage() {
                 Next Invoice
               </span>
             </div>
-            <p className="text-lg font-display text-[var(--text-primary)]">
+            <p className="text-lg font-semibold text-[var(--text-primary)]">
               {nextInvoiceDate
                 ? nextInvoiceDate.toLocaleDateString('en-US', {
                     month: 'short',
@@ -639,18 +651,12 @@ export default function InvoicesPage() {
                           <span className="text-xs font-semibold font-mono text-[var(--text-primary)]">
                             {invoice.invoiceNumber}
                           </span>
-                          <span
-                            className="px-2 py-0.5 rounded-full text-[9px] font-medium flex items-center gap-1"
-                            style={getStatusClass(invoice.status)}
-                          >
+                          <Badge tone={getStatusTone(invoice.status)}>
                             {getStatusIcon(invoice.status)}
                             {invoice.status.toLowerCase()}
-                          </span>
+                          </Badge>
                           {invoice.billingReason && (
-                            <span 
-                              className="text-[9px] px-1.5 py-0.5 rounded"
-                              style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--bg-tertiary)' }}
-                            >
+                            <Badge tone="neutral">
                               {invoice.billingReason === 'subscription_cycle'
                                 ? 'Renewal'
                                 : invoice.billingReason === 'subscription_create'
@@ -660,7 +666,7 @@ export default function InvoicesPage() {
                                 : invoice.billingReason === 'purchase'
                                 ? 'One-time'
                                 : invoice.billingReason}
-                            </span>
+                            </Badge>
                           )}
                         </div>
                         <p className="text-[10px] mt-0.5 text-[var(--text-secondary)]">
@@ -672,7 +678,7 @@ export default function InvoicesPage() {
 
                     <div className="flex items-center gap-4">
                       <div className="text-right">
-                        <p className="text-sm font-semibold font-mono text-[var(--text-primary)]">
+                        <p className="text-sm font-semibold font-mono tabular-nums text-[var(--text-primary)]">
                           {invoice.totalDisplay}
                         </p>
                         <p className="text-[10px] text-[var(--text-secondary)]">
@@ -815,26 +821,21 @@ export default function InvoicesPage() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-16">
-              <div 
-                className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
-                style={{ backgroundColor: 'var(--bg-tertiary)' }}
-              >
-                <FileText size={28} style={{ color: 'var(--text-secondary)', opacity: 0.4 }} />
-              </div>
-              <h3 className="text-sm font-semibold mb-2 text-[var(--text-primary)]">No invoices yet</h3>
-              <p className="text-xs mb-4 max-w-sm mx-auto text-[var(--text-secondary)]">
-                Your billing history will appear here once you subscribe to a paid
-                plan. Invoices are created automatically when payments are processed through Polar.
-              </p>
-              <Link
-                href="/dashboard/billing"
-                className="inline-flex items-center gap-2 px-4 py-2 text-xs rounded-lg transition-colors font-semibold"
-                style={{ backgroundColor: 'var(--neon-purple)', color: 'var(--cyber-black)' }}
-              >
-                View Plans
-                <ChevronRight size={14} />
-              </Link>
+            <div className="cyber-card">
+              <EmptyState
+                icon={FileText}
+                title="No invoices yet"
+                description="Your billing history will appear here once you subscribe to a paid plan. Invoices are created automatically when payments are processed through Polar."
+                action={
+                  <Link
+                    href="/dashboard/billing"
+                    className="cyber-btn-solid text-xs py-2 px-4 inline-flex items-center gap-2"
+                  >
+                    View Plans
+                    <ChevronRight size={14} />
+                  </Link>
+                }
+              />
             </div>
           )}
         </div>

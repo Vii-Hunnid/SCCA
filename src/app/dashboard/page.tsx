@@ -506,7 +506,6 @@ export default function DashboardPage() {
           <SCCAPreviewPanel
             messages={displayMessages}
             isStreaming={isStreaming}
-            useSCCA={true}
             mediaStats={mediaStats || undefined}
           />
         </div>

@@ -11,12 +11,14 @@ import {
 import Link from 'next/link';
 import Image from 'next/image';
 import { useTheme } from '@/components/providers';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 const features = [
   {
     icon: Lock,
     title: 'AES-256-GCM',
-    description: 'Military-grade encryption for every message with unique per-conversation keys.',
+    description: 'Authenticated encryption for every message, with unique per-conversation keys.',
   },
   {
     icon: Database,
@@ -26,7 +28,7 @@ const features = [
   {
     icon: GitBranch,
     title: 'Merkle Integrity',
-    description: 'HMAC-based chain verification ensures tamper-proof conversation history.',
+    description: 'HMAC-based chain verification ensures tamper-evident conversation history.',
   },
   {
     icon: Zap,
@@ -39,12 +41,12 @@ const container = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
-    transition: { staggerChildren: 0.1, delayChildren: 0.3 },
+    transition: { staggerChildren: 0.08, delayChildren: 0.2 },
   },
 };
 
 const item = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 16 },
   show: { opacity: 1, y: 0 },
 };
 
@@ -54,52 +56,42 @@ export function LandingPage() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
-      <header className="border-b border-cyber-light/10">
+      <header className="border-b border-[var(--border-color)]">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative h-auto w-32">
-              <Image
-                src="/logo.jpg"
-                alt="SCCA logo"
-                width={400}
-                height={400}
-                priority
-                className="object-contain"
-              />
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
+          <Link href="/" className="flex items-center gap-3">
+            <Image
+              src="/logo.jpg"
+              alt="SCCA logo"
+              width={400}
+              height={400}
+              priority
+              className="h-9 w-auto object-contain"
+            />
+            <span className="font-mono text-xs uppercase tracking-[0.25em] text-[var(--text-secondary)]">
+              SCCA
+            </span>
+          </Link>
+          <div className="flex items-center gap-5">
             <button
               type="button"
               onClick={toggleTheme}
-              className="text-xs md:text-sm px-3 py-1.5 rounded-full border shadow-sm transition-colors"
-              style={{ 
-                borderColor: 'var(--border-color)', 
-                backgroundColor: 'color-mix(in srgb, var(--bg-secondary) 70%, transparent)', 
-                color: 'var(--text-primary)' 
-              }}
+              className="text-xs px-3 py-1.5 rounded-full border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:border-[var(--border-light)] transition-colors"
             >
               {theme === 'dark' ? 'Day mode' : 'Night mode'}
             </button>
             <Link
               href="/docs"
-              className="text-sm transition-colors"
-              style={{ color: 'var(--text-secondary)' }}
-              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--neon-cyan)'}
-              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+              className="text-sm text-[var(--text-secondary)] hover:text-[var(--neon-cyan)] transition-colors"
             >
               Docs
             </Link>
             <Link
               href="/auth/login"
-              className="text-sm transition-colors"
-              style={{ color: 'var(--text-secondary)' }}
-              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--neon-cyan)'}
-              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+              className="text-sm text-[var(--text-secondary)] hover:text-[var(--neon-cyan)] transition-colors"
             >
               Sign In
             </Link>
-            <Link href="/auth/register" className="cyber-btn text-xs py-2 px-4">
+            <Link href="/auth/register" className="cyber-btn-sm">
               Get Started
             </Link>
           </div>
@@ -110,51 +102,40 @@ export function LandingPage() {
       <main className="flex-1 flex items-center justify-center px-6">
         <div className="max-w-4xl w-full py-20">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.5 }}
             className="text-center mb-16"
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-neon-cyan/20 bg-neon-cyan/5 mb-6">
-              <div className="status-dot-active" />
-              <span className="text-xs text-neon-cyan tracking-wider">
-                ENCRYPTION ACTIVE
-              </span>
+            <div className="flex justify-center mb-8">
+              <Badge tone="green" className="gap-2">
+                <span className="status-dot-active" />
+                Encryption active
+              </Badge>
             </div>
 
-            <h1 className="text-4xl md:text-5xl font-display font-bold tracking-tight mb-4">
-              <span className="text-[var(--text-primary)]">Secure Compact</span>
-              <br />
-              <span style={{ color: 'var(--neon-cyan)' }} className="neon-text">Chat Architecture</span>
+            <h1 className="font-sans text-5xl md:text-6xl font-bold tracking-tight text-[var(--text-primary)] mb-3">
+              SCCA
             </h1>
-
-            <div className="flex items-center justify-center my-4">
-              <Image
-                src="/full_logo.jpg"
-                alt="SCCA logo"
-                width={200}
-                height={200}
-                priority
-                className="object-contain"
-              />
-            </div>
-
-            <p className="text-[var(--text-secondary)] max-w-xl mx-auto leading-relaxed mb-8">
-              Privacy-first AI conversations with AES-256-GCM encryption,
-              single-row storage, and cryptographic integrity verification.
-              Your messages never exist unencrypted at rest.
+            <p className="font-mono text-xs uppercase tracking-[0.3em] text-[var(--neon-cyan)] mb-6">
+              Secure Compact Chat Architecture
             </p>
 
-            <div className="flex items-center justify-center gap-4">
+            <p className="text-[var(--text-secondary)] max-w-xl mx-auto leading-relaxed mb-10">
+              Privacy-first AI conversations with AES-256-GCM encryption at rest,
+              single-row storage, and Merkle integrity verification.
+            </p>
+
+            <div className="flex items-center justify-center gap-6">
               <Link href="/auth/register" className="cyber-btn-solid">
                 Initialize Session
-                <ArrowRight className="w-4 h-4 ml-2 inline" />
+                <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
                 href="/docs"
-                className="text-sm text-terminal-dim hover:text-terminal-text transition-colors"
+                className="font-mono text-xs uppercase tracking-wider text-[var(--text-secondary)] hover:text-[var(--neon-cyan)] transition-colors"
               >
-                View Protocol Spec...
+                Protocol spec →
               </Link>
             </div>
           </motion.div>
@@ -167,57 +148,50 @@ export function LandingPage() {
             className="grid grid-cols-1 md:grid-cols-2 gap-4"
           >
             {features.map((feature) => (
-              <motion.div
-                key={feature.title}
-                variants={item}
-                className="cyber-card-hover p-6 group"
-              >
-                <feature.icon className="w-5 h-5 text-neon-cyan mb-3 group-hover:text-neon-green transition-colors" />
-                <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-2 tracking-wide">
-                  {feature.title}
-                </h3>
-                <p className="text-xs leading-relaxed" style={{ color: 'var(--neon-cyan)' }}>
-                  {feature.description}
-                </p>
+              <motion.div key={feature.title} variants={item}>
+                <Card hover className="p-6 h-full group">
+                  <feature.icon className="w-5 h-5 mb-3 text-[var(--neon-cyan)] group-hover:text-[var(--neon-green)] transition-colors" />
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-2 tracking-wide">
+                    {feature.title}
+                  </h3>
+                  <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+                    {feature.description}
+                  </p>
+                </Card>
               </motion.div>
             ))}
           </motion.div>
 
-          {/* Protocol Summary */}
+          {/* Protocol Status */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.8 }}
-            className="mt-12 cyber-card p-6"
+            transition={{ delay: 0.7 }}
+            className="mt-12"
           >
-            <div className="flex items-center gap-2 mb-3">
-              <div className="status-dot-active" />
-              <span className="text-xs text-neon-green tracking-wider uppercase">
-                Protocol Status
-              </span>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-              {[
-                { label: 'Encryption', value: 'AES-256-GCM' },
-                { label: 'Key Derivation', value: 'HKDF-SHA256' },
-                { label: 'Integrity', value: 'Merkle-HMAC' },
-                { label: 'Compression', value: 'zlib' },
-              ].map((stat) => (
-                <div key={stat.label}>
-                  <div className="text-xs mb-1 text-[var(--text-secondary)]">{stat.label}</div>
-                  <div className="text-sm neon-text font-semibold" style={{ color: 'var(--neon-cyan)' }}>{stat.value}</div>
-                </div>
-              ))}
-            </div>
+            <Card className="p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="status-dot-active" />
+                <span className="font-mono text-xs text-[var(--neon-green)] tracking-wider uppercase">
+                  Protocol status
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Badge tone="cyan">Encryption · AES-256-GCM</Badge>
+                <Badge tone="cyan">Key derivation · HKDF-SHA256</Badge>
+                <Badge tone="cyan">Integrity · Merkle-HMAC</Badge>
+                <Badge tone="neutral">Compression · zlib</Badge>
+              </div>
+            </Card>
           </motion.div>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="border-t py-4" style={{ borderColor: 'var(--border-color)' }}>
+      <footer className="border-t border-[var(--border-color)] py-4">
         <div className="max-w-6xl mx-auto px-6 flex items-center justify-between text-xs text-[var(--text-secondary)]">
           <span>Secure Compact Chat Architecture v2.0</span>
-          <span style={{ color: 'var(--neon-green)' }}>All systems operational</span>
+          <span className="text-[var(--neon-green)]">All systems operational</span>
         </div>
       </footer>
     </div>
