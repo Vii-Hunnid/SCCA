@@ -8,21 +8,16 @@ import {
   Check,
   AlertTriangle,
   TrendingUp,
-  FileText,
   Settings,
-  Download,
-  Eye,
   ExternalLink,
   Loader2,
   ArrowUpRight,
   Rocket,
   CheckCircle2,
 } from 'lucide-react';
-import Link from 'next/link';
 import { DashboardPageShell } from '@/components/dashboard/dashboard-page-shell';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { trackEvent } from '@/lib/analytics';
 
@@ -66,22 +61,6 @@ interface BillingData {
     upgradeThresholdDisplay: string;
     isCurrent: boolean;
   }>;
-  invoices: Array<{
-    id: string;
-    periodStart: string;
-    periodEnd: string;
-    totalDisplay: string;
-    totalMicro: number;
-    requestCount: number;
-    totalTokens: number;
-    totalBytes: number;
-    status: string;
-    polarOrderId: string | null;
-    polarInvoiceUrl: string | null;
-    billingReason: string | null;
-    currency: string;
-    hasInvoice: boolean;
-  }>;
 }
 
 function formatNumber(n: number): string {
@@ -95,14 +74,6 @@ function formatCostPer(micro: number): string {
   return `$${(micro / 1_000_000).toFixed(4)}`;
 }
 
-const STATUS_TONES: Record<string, 'green' | 'yellow' | 'red' | 'neutral'> = {
-  draft: 'neutral',
-  pending: 'yellow',
-  paid: 'green',
-  overdue: 'red',
-  void: 'neutral',
-};
-
 export default function BillingPage() {
   const [data, setData] = useState<BillingData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -111,7 +82,6 @@ export default function BillingPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [budgetInput, setBudgetInput] = useState('');
   const [autoUpgrade, setAutoUpgrade] = useState(false);
-  const [loadingInvoice, setLoadingInvoice] = useState<string | null>(null);
   const [checkingOut, setCheckingOut] = useState(false);
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
 
@@ -194,35 +164,6 @@ export default function BillingPage() {
       setError(err.message);
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleViewInvoice = async (invoiceId: string, cachedUrl: string | null) => {
-    if (cachedUrl) {
-      window.open(cachedUrl, '_blank');
-      return;
-    }
-
-    setLoadingInvoice(invoiceId);
-    try {
-      const res = await fetch(`/api/scca/billing/invoices/${invoiceId}`);
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error);
-      if (json.url) {
-        window.open(json.url, '_blank');
-        if (data) {
-          setData({
-            ...data,
-            invoices: data.invoices.map((inv) =>
-              inv.id === invoiceId ? { ...inv, polarInvoiceUrl: json.url } : inv
-            ),
-          });
-        }
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to load invoice');
-    } finally {
-      setLoadingInvoice(null);
     }
   };
 
@@ -619,124 +560,6 @@ export default function BillingPage() {
             </Card>
           </motion.div>
         )}
-
-        {/* Invoices */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.25 }}
-        >
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-[var(--text-secondary)]" />
-                Invoice History
-              </CardTitle>
-              <Link
-                href="/dashboard/invoices"
-                className="text-[10px] hover:opacity-80 transition-colors flex items-center gap-1"
-                style={{ color: 'var(--neon-cyan)' }}
-              >
-                View All
-                <ExternalLink className="w-3 h-3" />
-              </Link>
-            </CardHeader>
-            <CardContent>
-          {data?.invoices.length ? (
-            <div className="space-y-2">
-              {data.invoices.map((inv) => (
-                <div
-                  key={inv.id}
-                  className="p-4 rounded-lg border transition-colors hover:border-[var(--border-light)]"
-                  style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-[var(--text-primary)] font-semibold">
-                          {new Date(inv.periodStart).toLocaleDateString()} —{' '}
-                          {new Date(inv.periodEnd).toLocaleDateString()}
-                        </span>
-                        {inv.billingReason && (
-                          <Badge tone="neutral">
-                            {inv.billingReason === 'subscription_cycle'
-                              ? 'Renewal'
-                              : inv.billingReason === 'subscription_create'
-                              ? 'New Subscription'
-                              : inv.billingReason === 'subscription_update'
-                              ? 'Plan Change'
-                              : inv.billingReason === 'purchase'
-                              ? 'One-time'
-                              : inv.billingReason}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="text-[10px] font-mono tabular-nums text-[var(--text-secondary)] mt-1">
-                        {inv.requestCount.toLocaleString()} requests |{' '}
-                        {formatNumber(Number(inv.totalTokens))} tokens |{' '}
-                        {inv.currency.toUpperCase()}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-semibold font-mono tabular-nums text-[var(--text-primary)]">
-                        {inv.totalDisplay}
-                      </span>
-                      <Badge tone={STATUS_TONES[inv.status] || 'neutral'}>
-                        {inv.status}
-                      </Badge>
-
-                      {/* Invoice Actions */}
-                      {inv.hasInvoice && (
-                        <div className="flex items-center gap-1 ml-1">
-                          <button
-                            onClick={() =>
-                              handleViewInvoice(inv.id, inv.polarInvoiceUrl)
-                            }
-                            disabled={loadingInvoice === inv.id}
-                            className="p-1.5 rounded transition-colors"
-                            style={{ color: 'var(--text-secondary)' }}
-                            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--neon-cyan)'}
-                            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
-                            title="Preview invoice"
-                          >
-                            {loadingInvoice === inv.id ? (
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            ) : (
-                              <Eye className="w-3.5 h-3.5" />
-                            )}
-                          </button>
-                          {inv.polarInvoiceUrl && (
-                            <a
-                              href={inv.polarInvoiceUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="p-1.5 rounded transition-colors"
-                              style={{ color: 'var(--text-secondary)' }}
-                              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--neon-green)'}
-                              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
-                              title="Download invoice"
-                            >
-                              <Download className="w-3.5 h-3.5" />
-                            </a>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              icon={FileText}
-              title="No invoices yet"
-              description="Invoices are created when payments are processed through Polar."
-            />
-          )}
-            </CardContent>
-          </Card>
-        </motion.div>
 
         {/* Polar Integration Info */}
         {data?.account.hasPaymentMethod && (
