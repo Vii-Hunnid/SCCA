@@ -4,8 +4,8 @@ import path from 'node:path';
 // Next.js dev mode needs eval for React Fast Refresh; production doesn't.
 const scriptSrc =
   process.env.NODE_ENV === 'production'
-    ? "script-src 'self' 'unsafe-inline'"
-    : "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
+    ? "script-src 'self' 'unsafe-inline' https://www.sitetooling.space"
+    : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.sitetooling.space";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ['@prisma/client'],
@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
       headers: [
         {
           key: 'Content-Security-Policy',
-          value: `default-src 'self'; ${scriptSrc}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://api.polar.sh https://sandbox-api.polar.sh; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`,
+          value: `default-src 'self'; ${scriptSrc}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.sitetooling.space; media-src 'self' blob:; connect-src 'self' https://api.polar.sh https://sandbox-api.polar.sh https://www.sitetooling.space; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`,
         },
         { key: 'X-Frame-Options', value: 'DENY' },
         { key: 'X-Content-Type-Options', value: 'nosniff' },

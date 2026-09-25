@@ -13,6 +13,7 @@ import Image from 'next/image';
 import { useTheme } from '@/components/providers';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { trackEvent } from '@/lib/analytics';
 
 const features = [
   {
@@ -91,7 +92,17 @@ export function LandingPage() {
             >
               Sign In
             </Link>
-            <Link href="/auth/register" className="cyber-btn-sm">
+            <Link
+              href="/auth/register"
+              className="cyber-btn-sm"
+              onClick={() =>
+                trackEvent('button_click', {
+                  button_text: 'Get Started',
+                  location: 'nav',
+                  page: '/',
+                })
+              }
+            >
               Get Started
             </Link>
           </div>
@@ -127,13 +138,31 @@ export function LandingPage() {
             </p>
 
             <div className="flex items-center justify-center gap-6">
-              <Link href="/auth/register" className="cyber-btn-solid">
+              <Link
+                href="/auth/register"
+                className="cyber-btn-solid"
+                onClick={() =>
+                  trackEvent('button_click', {
+                    button_text: 'Initialize Session',
+                    location: 'hero_section',
+                    page: '/',
+                  })
+                }
+              >
                 Initialize Session
                 <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
                 href="/docs"
                 className="font-mono text-xs uppercase tracking-wider text-[var(--text-secondary)] hover:text-[var(--neon-cyan)] transition-colors"
+                onClick={() =>
+                  trackEvent('button_click', {
+                    button_text: 'Protocol spec',
+                    location: 'hero_section',
+                    page: '/',
+                    href: '/docs',
+                  })
+                }
               >
                 Protocol spec →
               </Link>

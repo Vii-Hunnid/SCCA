@@ -47,6 +47,7 @@ Migration note: v2 adds `password_changed_at` and `deleted_at` (users) plus `usa
 - [Authentication](#authentication)
 - [API Reference](#api-reference)
 - [Security](#security)
+- [Deployment (scca.dev)](#deployment-sccadev)
 - [Scripts](#scripts)
 - [License](#license)
 
@@ -399,7 +400,7 @@ Use SCCA's encryption engine as a standalone service. Encrypt, decrypt, and veri
 ### Encrypt
 
 ```bash
-curl -X POST https://your-instance.com/api/scca/vault/encrypt \
+curl -X POST https://scca.dev/api/scca/vault/encrypt \
   -H "Authorization: Bearer scca_k_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -430,7 +431,7 @@ Response:
 ### Decrypt
 
 ```bash
-curl -X POST https://your-instance.com/api/scca/vault/decrypt \
+curl -X POST https://scca.dev/api/scca/vault/decrypt \
   -H "Authorization: Bearer scca_k_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{"tokens": ["AQAAAAAn..."], "context": "pii-vault"}'
@@ -439,7 +440,7 @@ curl -X POST https://your-instance.com/api/scca/vault/decrypt \
 ### Verify Integrity
 
 ```bash
-curl -X POST https://your-instance.com/api/scca/vault/verify \
+curl -X POST https://scca.dev/api/scca/vault/verify \
   -H "Authorization: Bearer scca_k_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -490,7 +491,7 @@ Already-compressed formats (PNG, JPEG, MP4, MP3) skip compression — re-compres
 ### Upload Media
 
 ```bash
-curl -X POST https://your-instance.com/api/scca/media \
+curl -X POST https://scca.dev/api/scca/media \
   -H "Cookie: ..." \
   -F "file=@photo.png" \
   -F "conversationId=clx1234..." \
@@ -549,12 +550,12 @@ Generate API keys for programmatic access to the Vault and Conversation APIs.
 
 ```bash
 # Create a key (requires session auth)
-curl -X POST https://your-instance.com/api/scca/keys \
+curl -X POST https://scca.dev/api/scca/keys \
   -H "Content-Type: application/json" \
   -d '{"name": "Production Backend", "expiresInDays": 90}'
 
 # Use the key
-curl -X POST https://your-instance.com/api/scca/vault/encrypt \
+curl -X POST https://scca.dev/api/scca/vault/encrypt \
   -H "Authorization: Bearer scca_k_a1b2c3d4..." \
   -H "Content-Type: application/json" \
   -d '{"data": "encrypt this", "context": "my-app"}'
@@ -712,6 +713,63 @@ Endpoints require authentication unless noted: chat, account, billing, media, ke
 | **Permissions** | camera=(), microphone=(), geolocation=() disabled |
 | **Soft Delete** | GDPR-compliant deletedAt/deletedBy fields |
 | **Audit Trail** | Immutable logs with IP, user agent, action details |
+
+---
+
+## Deployment (scca.dev)
+
+The production instance lives at **https://scca.dev** (registered at Porkbun). Note
+that the entire `.dev` TLD is on the HSTS preload list — HTTPS is mandatory for
+the domain and every subdomain, with no exceptions.
+
+### Hosting (Vercel)
+
+1. Import the repo in Vercel and deploy.
+2. In Vercel → Project → Settings → Domains, add `scca.dev` and `www.scca.dev`
+   (redirect `www` → apex).
+3. At Porkbun → Domain Management → scca.dev → DNS Records, **delete the default
+   parked records** (`ALIAS scca.dev → pixie.porkbun.com` and
+   `CNAME *.scca.dev → pixie.porkbun.com`), then add:
+
+   | Type | Host | Answer | TTL |
+   |------|------|--------|-----|
+   | `A` | `scca.dev` | `76.76.21.21` | 600 |
+   | `CNAME` | `www` | `cname.vercel-dns.com` | 600 |
+
+   (Use the exact values Vercel shows in the Domains panel — it displays
+   per-project records and verifies them automatically.)
+
+### Environment variables (production)
+
+Set these in Vercel → Settings → Environment Variables (see `.env.example`):
+
+```env
+NEXTAUTH_URL="https://scca.dev"
+NEXT_PUBLIC_APP_URL="https://scca.dev"
+NODE_ENV="production"
+# plus DATABASE_URL, DIRECT_URL, NEXTAUTH_SECRET, MASTER_KEY_SECRET,
+# GROQ_API_KEY, POLAR_ACCESS_TOKEN, POLAR_WEBHOOK_SECRET, POLAR_ENVIRONMENT
+```
+
+`NEXTAUTH_URL` drives the Polar checkout `successUrl`
+(`src/app/api/scca/billing/checkout/route.ts`), so it must match the public
+origin exactly.
+
+### OAuth callbacks
+
+If you enable GitHub/Google sign-in in production, register the production
+callback URLs in each provider's console:
+`https://scca.dev/api/auth/callback/github` and
+`https://scca.dev/api/auth/callback/google`.
+
+### Polar webhook
+
+In the Polar dashboard → Settings → Webhooks, set the endpoint to
+`https://scca.dev/api/webhooks/polar`, subscribe to `order.paid`,
+`order.refunded`, `subscription.created`, `subscription.updated`,
+`subscription.canceled`, `subscription.revoked`, and `checkout.updated`, and copy
+the signing secret into `POLAR_WEBHOOK_SECRET`. The handler verifies signatures
+and is idempotent under retries.
 
 ---
 

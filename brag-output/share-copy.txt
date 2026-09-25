@@ -1,0 +1,1 @@
+Your AI chat logs, as your database sees them: noise. SCCA v2.0 encrypts every message at rest with AES-256-GCM, packs 1,000 messages into one ~85 KB row, and when you edit message #5, messages 6 onward are actually gone. Open source: github.com/Vii-Hunnid/SCCA

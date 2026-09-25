@@ -8,6 +8,7 @@ import { UserPlus, Eye, EyeOff, ArrowRight, ArrowLeft, AlertCircle, Loader2 } fr
 import Link from 'next/link';
 import Image from 'next/image';
 import { Card } from '@/components/ui/card';
+import { trackEvent } from '@/lib/analytics';
 
 function GitHubIcon({ className }: { className?: string }) {
   return (
@@ -77,9 +78,12 @@ export default function RegisterPage() {
       const data = await res.json();
 
       if (!res.ok) {
+        trackEvent('form_submit', { form_name: 'register', success: false });
         setError(data.error || 'Registration failed.');
         return;
       }
+
+      trackEvent('form_submit', { form_name: 'register', success: true });
 
       // Auto-login after registration
       const result = await signIn('credentials', {
@@ -102,6 +106,11 @@ export default function RegisterPage() {
   };
 
   const handleOAuthSignIn = (provider: string) => {
+    trackEvent('button_click', {
+      button_text: `Continue with ${provider}`,
+      location: 'register_page',
+      page: '/auth/register',
+    });
     setOauthLoading(provider);
     signIn(provider, { callbackUrl: '/dashboard' });
   };

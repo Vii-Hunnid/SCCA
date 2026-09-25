@@ -1,0 +1,397 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=block" rel="stylesheet">
+<style>
+  :root {
+    --bg-primary: #05070d; --bg-secondary: #090c15; --bg-tertiary: #10141f;
+    --bg-card: #0b0f1a; --bg-elevated: #12172a;
+    --text-primary: #e7eaf0; --text-secondary: #9aa3b4; --text-tertiary: #596374;
+    --border-color: rgba(148,163,184,.14);
+    --cyan: #22d3ee; --green: #34d399; --red: #f87171;
+    --shadow-card: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px -8px rgba(0,0,0,.5);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg-primary); }
+  body { font-family: 'Inter', system-ui, sans-serif; color: var(--text-primary); -webkit-font-smoothing: antialiased; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  #stage { position: absolute; inset: 0; overflow: hidden; }
+  #grid { position: absolute; inset: -100px;
+    background-image: linear-gradient(rgba(34,211,238,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(34,211,238,.045) 1px, transparent 1px);
+    background-size: 60px 60px; }
+  #glow { position: absolute; width: 1600px; height: 1000px; left: 160px; top: 40px; border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(34,211,238,.10), rgba(52,211,153,.04) 55%, transparent); }
+  #vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.55)); pointer-events: none; }
+  #scan { position: absolute; left: 0; right: 0; height: 2px; background: var(--cyan); opacity: .10; }
+  .scene { position: absolute; inset: 0; opacity: 0; }
+  .center { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+  /* chat primitives (from SCCAMessageBubble) */
+  .row { display: flex; gap: 18px; align-items: flex-start; }
+  .row.user { flex-direction: row-reverse; }
+  .avatar { flex: none; width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, rgba(16,185,129,.15), rgba(16,185,129,.05)); }
+  .avatar.u { border: 1.5px solid color-mix(in srgb, var(--cyan) 25%, transparent); }
+  .avatar.a { border: 1.5px solid color-mix(in srgb, var(--green) 25%, transparent); }
+  .who { font-size: 19px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 8px; }
+  .bubble { padding: 22px 28px; line-height: 1.5; color: var(--text-primary); }
+  .bubble.u { border-radius: 28px 28px 8px 28px;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--cyan) 14%, transparent), color-mix(in srgb, var(--cyan) 8%, transparent));
+    border: 1.5px solid color-mix(in srgb, var(--cyan) 25%, transparent); }
+  .bubble.a { border-radius: 28px 28px 28px 8px; background: var(--bg-card); border: 1.5px solid var(--border-color); box-shadow: var(--shadow-card); }
+  .badge { display: inline-flex; align-items: center; gap: 10px; padding: 7px 18px; border-radius: 999px; font-size: 17px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: .1em; border: 1.5px solid; }
+  .badge.cyan { color: var(--cyan); border-color: color-mix(in srgb, var(--cyan) 35%, transparent); background: color-mix(in srgb, var(--cyan) 8%, transparent); }
+  .badge.green { color: var(--green); border-color: color-mix(in srgb, var(--green) 35%, transparent); background: color-mix(in srgb, var(--green) 8%, transparent); }
+  .badge.neutral { color: var(--text-secondary); border-color: var(--border-color); background: var(--bg-tertiary); }
+  .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--green); box-shadow: 0 0 12px color-mix(in srgb, var(--green) 55%, transparent); }
+  .caption { font-weight: 700; letter-spacing: -.02em; color: var(--text-primary); }
+  .caption em { font-style: normal; color: var(--cyan); }
+  .caption .g { color: var(--green); } .caption .r { color: var(--red); }
+  .wave span { display: inline-block; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="grid"></div>
+  <div id="glow"></div>
+  <div id="scan"></div>
+
+  <!-- 1 HOOK -->
+  <div class="scene center" id="s1">
+    <div id="s1label" class="mono" style="font-size:30px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:44px">
+      What your database sees<span style="color:var(--cyan)">:</span>
+    </div>
+    <div id="s1wrap" class="row user">
+      <div class="avatar u" style="width:72px;height:72px"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;max-width:1250px">
+        <div class="who" style="color:var(--cyan);font-size:22px">You</div>
+        <div id="s1bubble" class="bubble u" style="font-size:54px;font-weight:500;padding:30px 42px;min-height:113px;max-width:1250px;word-break:break-all"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2 REVEAL -->
+  <div class="scene center" id="s2">
+    <div id="s2badge" class="badge green" style="font-size:20px;margin-bottom:40px"><span class="dot"></span>Encryption active</div>
+    <img id="s2logo" src="logo.png" style="width:900px;margin-bottom:10px">
+    <div id="s2sub" class="mono" style="font-size:26px;letter-spacing:.3em;color:var(--cyan);text-transform:uppercase;margin-bottom:34px">Secure Compact Chat Architecture</div>
+    <div id="s2tag" style="font-size:46px;color:var(--text-secondary);font-weight:500">Privacy-first AI chat. <span style="color:var(--text-primary)">Encrypted at rest.</span></div>
+  </div>
+
+  <!-- 3 REAL CHAT -->
+  <div class="scene" id="s3">
+    <div id="s3cap" class="caption" style="position:absolute;top:92px;width:100%;text-align:center;font-size:64px">
+      Every message encrypted. <em>Every chat, its own key.</em>
+    </div>
+    <div id="s3win" style="position:absolute;left:260px;top:270px;width:1400px;height:560px;border-radius:24px;background:var(--bg-secondary);border:1.5px solid var(--border-color);box-shadow:0 30px 80px -20px rgba(0,0,0,.7);overflow:hidden">
+      <div style="height:84px;border-bottom:1.5px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;padding:0 34px;background:var(--bg-card)">
+        <div style="display:flex;align-items:center;gap:14px"><span class="dot"></span><span class="mono" style="font-size:20px;letter-spacing:.2em;color:var(--green)">SECURE CHANNEL</span></div>
+        <div id="s3chips" style="display:flex;gap:12px">
+          <span class="badge cyan mono" style="font-size:15px">AES-256-GCM</span>
+          <span class="badge cyan mono" style="font-size:15px">HKDF-SHA256</span>
+          <span class="badge cyan mono" style="font-size:15px">Merkle-HMAC</span>
+          <span class="badge neutral mono" style="font-size:15px">zlib</span>
+        </div>
+      </div>
+      <div style="padding:40px 60px;display:flex;flex-direction:column;gap:34px">
+        <div id="s3u" class="row user">
+          <div class="avatar u"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end">
+            <div class="who" style="color:var(--cyan)">You</div>
+            <div class="bubble u" style="font-size:36px">Draft my resignation letter. Keep it polite.</div>
+          </div>
+        </div>
+        <div id="s3a" class="row">
+          <div class="avatar a"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg></div>
+          <div style="display:flex;flex-direction:column;align-items:flex-start;width:1060px">
+            <div class="who" style="color:var(--green)">SCCA <span id="s3gen" style="text-transform:none;letter-spacing:0;color:var(--text-secondary);font-size:17px;margin-left:8px">generating...</span></div>
+            <div class="bubble a" style="font-size:36px;min-height:104px;width:1060px"><span id="s3text"></span><span id="s3wave" class="mono wave" style="font-size:.8em;margin-left:10px"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4 SINGLE ROW -->
+  <div class="scene" id="s4">
+    <div id="s4head" class="caption" style="position:absolute;top:120px;width:100%;text-align:center;font-size:92px;font-variant-numeric:tabular-nums">
+      <span id="s4n">0</span> messages <span style="color:var(--text-tertiary)">→</span> <em>~<span id="s4kb">0</span> KB</em>
+    </div>
+    <div id="s4bars" style="position:absolute;left:0;top:0;width:1920px;height:1080px"></div>
+    <div id="s4table" style="position:absolute;left:210px;top:470px;width:1500px;border-radius:20px;background:var(--bg-card);border:1.5px solid var(--border-color);overflow:hidden;box-shadow:0 30px 80px -20px rgba(0,0,0,.7)">
+      <div class="mono" style="padding:18px 30px;border-bottom:1.5px solid var(--border-color);font-size:20px;color:var(--text-secondary);display:flex;justify-content:space-between">
+        <span><span style="color:var(--green)">postgres</span> › conversations</span><span id="s4rows">1 row</span>
+      </div>
+      <div class="mono" style="display:grid;grid-template-columns:260px 200px 1fr;padding:14px 30px;font-size:19px;color:var(--text-tertiary);border-bottom:1.5px solid var(--border-color);letter-spacing:.05em">
+        <span>id</span><span>messages</span><span>tokens (bytea)</span>
+      </div>
+      <div id="s4row" class="mono" style="display:grid;grid-template-columns:260px 200px 1fr;padding:26px 30px;font-size:26px;align-items:center">
+        <span style="color:var(--text-secondary)">c_8f2e41a9</span><span id="s4rn" style="color:var(--text-primary)">0</span><span id="s4hex" style="color:var(--green);white-space:nowrap;overflow:hidden"></span>
+      </div>
+    </div>
+    <div id="s4one" class="caption" style="position:absolute;top:750px;width:100%;text-align:center;font-size:110px">One row.</div>
+  </div>
+
+  <!-- 5 DESTRUCTIVE EDIT -->
+  <div class="scene" id="s5">
+    <div id="s5list" style="position:absolute;left:150px;top:0;width:900px;height:1080px"></div>
+    <div style="position:absolute;left:1150px;top:0;width:680px;height:1080px;display:flex;flex-direction:column;justify-content:center;gap:34px">
+      <div id="s5c1" class="caption" style="font-size:84px">Edit <em>#5.</em></div>
+      <div id="s5c2" class="caption" style="font-size:84px;line-height:1.1">Messages 6–8?<br><span class="r">Gone.</span></div>
+      <div id="s5c3" class="mono" style="font-size:30px;color:var(--text-secondary);letter-spacing:.02em">No branches. No ghost data.</div>
+    </div>
+    <svg id="cursor" width="46" height="46" viewBox="0 0 24 24" style="position:absolute;left:0;top:0;filter:drop-shadow(0 4px 8px rgba(0,0,0,.6))"><path d="M4 2 L4 19 L8.5 14.8 L11.6 21.5 L14.4 20.3 L11.4 13.6 L17.5 13.6 Z" fill="#fff" stroke="#05070d" stroke-width="1.2" stroke-linejoin="round"/></svg>
+  </div>
+
+  <!-- 6 OUTRO -->
+  <div class="scene center" id="s6">
+    <div class="mono" style="font-size:30px;width:720px;display:flex;flex-direction:column;gap:12px;margin-bottom:56px">
+      <div id="s6l1" style="color:var(--cyan)"></div>
+      <div id="s6l2" style="color:var(--green)"></div>
+    </div>
+    <img id="s6logo" src="logo.png" style="width:720px">
+    <div id="s6meta" style="display:flex;gap:16px;margin-top:22px;align-items:center">
+      <span class="badge cyan mono" style="font-size:20px">v2.0</span>
+      <span class="badge neutral mono" style="font-size:20px">Open source · MIT</span>
+    </div>
+    <div id="s6url" class="mono" style="margin-top:40px;font-size:34px;color:var(--text-primary)">github.com/<span style="color:var(--cyan)">Vii-Hunnid/SCCA</span></div>
+  </div>
+
+  <div id="vignette"></div>
+  <div id="flash" style="position:absolute;inset:0;background:#22d3ee;opacity:0;mix-blend-mode:screen;pointer-events:none"></div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const eo = (x) => 1 - Math.pow(1 - x, 3);           // ease out cubic
+const eio = (x) => x < .5 ? 4*x*x*x : 1 - Math.pow(-2*x + 2, 3) / 2;
+const eback = (x) => { const c1 = 1.5, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
+const lerp = (a, b, x) => a + (b - a) * x;
+function rnd(n) { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); }
+
+// element enter: fade + rise; exit: fade + drop. Returns nothing, writes style.
+function show(el, t, inA, inDur, outA, outDur, dy = 24, scale = 0) {
+  const i = eo(seg(t, inA, inA + inDur));
+  const o = outA == null ? 0 : eio(seg(t, outA, outA + outDur));
+  el.style.opacity = i * (1 - o);
+  const s = 1 - scale * (1 - i) - 0.03 * o;
+  el.style.transform = `translateY(${(1 - i) * dy - o * 16}px) scale(${s})`;
+  el.style.filter = o > 0 ? `blur(${o * 8}px)` : (i < 1 ? `blur(${(1 - i) * 6}px)` : 'none');
+}
+function sceneOn(id, t, a, b) { const el = $(id); const on = t >= a - 0.001 && t < b; el.style.opacity = on ? 1 : 0; el.style.visibility = on ? 'visible' : 'hidden'; return on; }
+
+const WAVE = ['░','▒','▓','█','▓','▒','░'];
+function wave(el, t) {
+  el.innerHTML = WAVE.map((c, i) => {
+    const d = Math.abs(i - 3);
+    const p = 0.5 + 0.5 * Math.sin(t * 2 * Math.PI / 1.4 - d * 0.9);
+    const col = `rgb(${lerp(16,110,p)|0},${lerp(185,231,p)|0},${lerp(129,183,p)|0})`;
+    return `<span style="opacity:${(0.15 + 0.85 * p).toFixed(3)};color:${col}">${c}</span>`;
+  }).join('');
+}
+
+// ---------- scene 1 ----------
+const S1_TEXT = 'is it normal to cry at the dentist?';
+const HEXCH = '0123456789abcdef';
+const S1_HEX = Array.from({ length: 52 }, (_, i) => HEXCH[(rnd(i + 9) * 16) | 0]).join('');
+const GLITCH = '░▒▓█<>/\\#%$&@*' + HEXCH;
+function s1(t) {
+  show($('s1wrap'), t, 0.0, 0.35, 3.3, 0.22, 30);
+  show($('s1label'), t, 1.45, 0.3, 3.3, 0.22, 14);
+  const typed = Math.floor(clamp((t - 0.12) / 0.95) * S1_TEXT.length);
+  const b = $('s1bubble');
+  if (t < 1.7) {
+    const caret = t < 1.25 || Math.floor(t * 4) % 2 === 0 ? '<span style="color:var(--cyan);font-weight:400">▍</span>' : '<span style="opacity:0">▍</span>';
+    b.innerHTML = S1_TEXT.slice(0, typed) + caret;
+    b.style.fontFamily = ''; b.style.fontSize = '54px'; b.style.color = '';
+  } else {
+    // scramble: sans char -> glitch glyph -> hex, staggered left to right
+    let html = '';
+    const n = S1_HEX.length;
+    for (let i = 0; i < n; i++) {
+      const st = 1.7 + i * 0.011;
+      if (i < S1_TEXT.length && t < st) { html += `<span style="font-family:Inter">${S1_TEXT[i] === ' ' ? '&nbsp;' : S1_TEXT[i]}</span>`; continue; }
+      if (i >= S1_TEXT.length && t < st) continue;
+      if (t < st + 0.16) { const g = GLITCH[(rnd(i * 31 + Math.floor(t * 30)) * GLITCH.length) | 0]; html += `<span style="color:#e7eaf0">${g === '<' ? '&lt;' : g === '>' ? '&gt;' : g === '&' ? '&amp;' : g}</span>`; continue; }
+      html += `<span style="color:${i % 8 < 2 ? '#22d3ee' : '#34d399'}">${S1_HEX[i]}</span>` + (i % 2 === 1 && i < n - 1 ? '<span> </span>' : '');
+    }
+    b.innerHTML = html;
+    b.style.fontFamily = "'JetBrains Mono', monospace"; b.style.fontSize = '44px';
+  }
+}
+
+// ---------- scene 2 ----------
+function s2(t) {
+  show($('s2badge'), t, 3.55, 0.35, 6.3, 0.22, 16);
+  show($('s2logo'), t, 3.62, 0.5, 6.3, 0.22, 30, 0.06);
+  show($('s2sub'), t, 3.85, 0.4, 6.3, 0.22, 16);
+  show($('s2tag'), t, 4.05, 0.45, 6.3, 0.22, 20);
+}
+
+// ---------- scene 3 ----------
+const S3_REPLY = 'Dear Sarah, after three genuinely wonderful years, I’ve decided it’s time for my next chapter…';
+function s3(t) {
+  show($('s3cap'), t, 6.65, 0.4, 10.3, 0.22, 20);
+  show($('s3win'), t, 6.55, 0.45, 10.3, 0.22, 40, 0.03);
+  const chips = $('s3chips').children;
+  for (let i = 0; i < chips.length; i++) show(chips[i], t, 7.0 + i * 0.12, 0.3, null, 0, 8, 0.2);
+  show($('s3u'), t, 7.05, 0.35, null, 0, 20);
+  show($('s3a'), t, 7.45, 0.35, null, 0, 20);
+  const k = clamp((t - 8.0) / 1.7);
+  const txt = S3_REPLY.slice(0, Math.floor(k * S3_REPLY.length));
+  $('s3text').textContent = txt;
+  wave($('s3wave'), t);
+  $('s3gen').style.opacity = t < 9.8 ? 1 : 0;
+}
+
+// ---------- scene 4 ----------
+const BARS = Array.from({ length: 27 }, (_, i) => {
+  const lane = i % 3, col = Math.floor(i / 3);
+  return { x: 170 + col * 180 + lane * 40, y: 280 + lane * 50, w: 110 + rnd(i + 90) * 50, user: (i + lane) % 2 === 0, d: col * 0.05 + lane * 0.02 };
+});
+(function initBars() {
+  $('s4bars').innerHTML = BARS.map((b, i) => `<div id="bar${i}" style="position:absolute;height:34px;border-radius:12px;width:${b.w}px;${b.user
+    ? 'background:linear-gradient(135deg,rgba(34,211,238,.28),rgba(34,211,238,.12));border:1.5px solid rgba(34,211,238,.4)'
+    : 'background:#0b0f1a;border:1.5px solid rgba(52,211,153,.35)'}"></div>`).join('');
+})();
+const S4_HEX = Array.from({ length: 80 }, (_, i) => HEXCH[(rnd(i + 400) * 16) | 0]).join('');
+function s4(t) {
+  show($('s4head'), t, 10.55, 0.35, 14.3, 0.22, 20);
+  show($('s4table'), t, 10.7, 0.4, 14.3, 0.22, 30);
+  show($('s4one'), t, 12.75, 0.3, 14.3, 0.22, 30, 0.12);
+  const c = eo(seg(t, 10.9, 12.4));
+  $('s4n').textContent = Math.round(c * 1000).toLocaleString('en-US');
+  $('s4kb').textContent = Math.round(c * 85);
+  $('s4rn').textContent = Math.round(c * 1000).toLocaleString('en-US');
+  $('s4hex').textContent = '\\x' + S4_HEX.slice(0, Math.floor(eo(seg(t, 10.9, 12.4)) * 80));
+  const tx = 1110, ty = 568; // target: tokens cell
+  BARS.forEach((b, i) => {
+    const el = $('bar' + i);
+    const a = seg(t, 10.85 + b.d, 11.55 + b.d);
+    const e = eio(a);
+    const appear = eo(seg(t, 10.55 + b.d * .5, 10.85 + b.d * .5));
+    const x = lerp(b.x, tx, e), y = lerp(b.y + (1 - appear) * 30, ty, e);
+    const sc = lerp(1, 0.1, e);
+    el.style.transform = `translate(${x}px,${y}px) scaleX(${sc}) scaleY(${lerp(1, .3, e)})`;
+    el.style.opacity = appear * (1 - seg(t, 11.45 + b.d, 11.6 + b.d)) * (t < 14.3 ? 1 : 0);
+  });
+  // cell pulse as bars land
+  const pulse = BARS.reduce((m, b) => Math.max(m, 1 - Math.abs(t - (11.55 + b.d)) / 0.12), 0);
+  $('s4row').style.background = `rgba(52,211,153,${(clamp(pulse) * 0.10 + 0.02).toFixed(3)})`;
+}
+
+// ---------- scene 5 ----------
+const MSGS = [
+  ['u', 'Help me plan a surprise party for Sam.'],
+  ['a', 'Love it. Budget and guest count?'],
+  ['u', '$300, about 20 people.'],
+  ['a', 'Rooftop, taco bar, confetti cannon.'],
+  ['u', 'Wait — Sam hates surprises.'],
+  ['a', 'Then maybe skip the party horn.'],
+  ['u', 'And the confetti cannon?'],
+  ['a', 'Especially the confetti cannon.'],
+];
+const S5_EDIT = 'Make it a quiet dinner instead.';
+(function initList() {
+  $('s5list').innerHTML = MSGS.map(([r, txt], i) => `
+    <div id="m${i}" style="position:absolute;left:0;width:900px;display:flex;${r === 'u' ? 'justify-content:flex-end' : ''}">
+      <div style="display:flex;align-items:center;gap:14px;${r === 'u' ? 'flex-direction:row-reverse' : ''}">
+        <span class="mono" style="font-size:18px;color:var(--text-tertiary);width:34px;text-align:center">#${i + 1}</span>
+        <div id="mb${i}" class="bubble ${r}" style="font-size:25px;padding:14px 22px;${r === 'u' ? 'border-radius:22px 22px 6px 22px' : 'border-radius:22px 22px 22px 6px'}">${txt}</div>
+        ${i === 4 ? `<div id="pencil" style="width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--border-color);background:var(--bg-card)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9aa3b4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg></div>` : ''}
+      </div>
+    </div>`).join('') + `
+    <div id="warn" style="position:absolute;left:180px;width:720px;padding:22px 26px;border-radius:14px;border:1.5px solid color-mix(in srgb,#f87171 30%,transparent);background:color-mix(in srgb,#f87171 7%,#05070d)">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+        <span style="font-size:22px;font-weight:600;color:#f87171">Destructive Edit</span>
+      </div>
+      <div style="font-size:19px;line-height:1.5;color:var(--text-secondary);margin-bottom:16px">All messages after this point will be permanently deleted and the response will be regenerated with new encryption keys.</div>
+      <div style="display:flex;gap:10px">
+        <span id="confirm" style="padding:8px 22px;border-radius:6px;font-size:19px;font-weight:500;color:#f87171;border:1.5px solid color-mix(in srgb,#f87171 40%,transparent);background:color-mix(in srgb,#f87171 15%,transparent)">Confirm</span>
+        <span style="padding:8px 22px;border-radius:6px;font-size:19px;font-weight:500;color:var(--text-secondary);background:var(--bg-tertiary)">Cancel</span>
+      </div>
+    </div>`;
+})();
+function s5(t) {
+  show($('s5c1'), t, 15.3, 0.3, 18.8, 0.22, 20);
+  show($('s5c2'), t, 16.95, 0.3, 18.8, 0.22, 20);
+  show($('s5c3'), t, 17.55, 0.3, 18.8, 0.22, 14);
+  const warnOpen = eback(seg(t, 15.55, 15.85)) * (1 - eio(seg(t, 16.65, 16.85)));
+  const WARN_H = 215 * clamp(warnOpen, 0, 1.1);
+  const gone = seg(t, 16.75, 17.25);
+  let y = 110, WARN_Y = 0;
+  MSGS.forEach((m, i) => {
+    const el = $('m' + i);
+    const enter = eo(seg(t, 14.5 + i * 0.07, 14.85 + i * 0.07));
+    let op = enter, dx = 0, blur = 0, h = 92;
+    if (i === 4) { WARN_Y = y; y += WARN_H; }
+    if (i > 4) {
+      const g = seg(t, 16.75 + (i - 5) * 0.08, 17.1 + (i - 5) * 0.08);
+      op *= 1 - g; dx = (rnd(i * 7 + Math.floor(t * 30)) - .5) * 40 * (g > 0 && g < 1 ? 1 : 0);
+      blur = g * 10;
+    }
+    const exit = eio(seg(t, 18.8, 19.0));
+    el.style.opacity = op * (1 - exit);
+    el.style.transform = `translate(${dx}px, ${y + (1 - enter) * 20}px)`;
+    el.style.filter = blur ? `blur(${blur}px)` : 'none';
+    if (i > 4) el.style.color = gone > 0 && gone < 1 ? '#f87171' : '';
+    y += h;
+  });
+  // edited #5 text
+  const mb = $('mb4');
+  mb.textContent = t > 16.7 ? S5_EDIT : MSGS[4][1];
+  mb.style.boxShadow = t > 16.7 && t < 17.6 ? `0 0 ${(1 - seg(t, 16.7, 17.6)) * 30}px rgba(34,211,238,.5)` : 'none';
+  const w = $('warn');
+  w.style.opacity = clamp(warnOpen) * (1 - eio(seg(t, 18.8, 19.0)));
+  w.style.transform = `translateY(${WARN_Y}px) scale(${lerp(.92, 1, clamp(warnOpen))})`;
+  w.style.transformOrigin = 'top left';
+  // cursor path: in -> pencil(#5) -> click -> confirm -> click -> away
+  const P = [[900, 950, 14.6], [900, 950, 14.75], [574, 506, 15.25], [574, 506, 15.6], [404, 624, 16.35], [404, 624, 16.8], [640, 980, 17.6]];
+  let cx = P[0][0], cy = P[0][1];
+  for (let i = 0; i < P.length - 1; i++) {
+    const [x0, y0, t0] = P[i], [x1, y1, t1] = P[i + 1];
+    if (t >= t0) { const e = eio(seg(t, t0, t1)); cx = lerp(x0, x1, e); cy = lerp(y0, y1, e); }
+  }
+  const click = Math.max(1 - Math.abs(t - 15.4) / 0.08, 1 - Math.abs(t - 16.6) / 0.08, 0);
+  const cur = $('cursor');
+  cur.style.transform = `translate(${cx}px, ${cy}px) scale(${1 - 0.18 * clamp(click)})`;
+  cur.style.opacity = eo(seg(t, 14.7, 14.9)) * (1 - seg(t, 17.4, 17.7));
+  $('pencil').style.borderColor = t > 15.2 && t < 15.9 ? '#22d3ee' : '';
+  $('confirm').style.background = t > 16.45 && t < 16.8 ? 'color-mix(in srgb,#f87171 32%,transparent)' : '';
+}
+
+// ---------- scene 6 ----------
+const L1 = '> Merkle integrity chain verified', L2 = '> System ready';
+function s6(t) {
+  const k1 = clamp((t - 19.1) / 0.5), k2 = clamp((t - 19.7) / 0.3);
+  $('s6l1').textContent = L1.slice(0, Math.floor(k1 * L1.length));
+  $('s6l2').textContent = L2.slice(0, Math.floor(k2 * L2.length));
+  show($('s6logo'), t, 20.1, 0.5, null, 0, 30, 0.05);
+  show($('s6meta'), t, 20.35, 0.4, null, 0, 16);
+  show($('s6url'), t, 20.5, 0.4, null, 0, 16);
+}
+
+const SCENES = [['s1', 0, 3.52, s1], ['s2', 3.52, 6.52, s2], ['s3', 6.52, 10.52, s3], ['s4', 10.52, 14.52, s4], ['s5', 14.52, 19.02, s5], ['s6', 19.02, 99, s6]];
+window.DURATION = 22.0;
+window.render = function (t) {
+  for (const [id, a, b, fn] of SCENES) if (sceneOn(id, t, a, b)) fn(t);
+  $('grid').style.transform = `translate(${-(t * 12) % 60}px, ${-(t * 6) % 60}px)`;
+  $('glow').style.transform = `translate(${Math.sin(t * .5) * 60}px, ${Math.cos(t * .4) * 30}px)`;
+  $('scan').style.top = `${((t / 3) % 1) * 1080}px`;
+  // cyan flash on the hook scramble and the "gone" glitch
+  const f = Math.max(0.10 * (1 - Math.abs(t - 1.72) / 0.1), 0.08 * (1 - Math.abs(t - 16.8) / 0.1), 0);
+  $('flash').style.opacity = clamp(f);
+  $('flash').style.background = t > 10 ? '#f87171' : '#22d3ee';
+  // final fade to black
+  $('stage').style.opacity = 1 - seg(t, 21.65, 22.0) * 0;
+};
+window.render(0);
+</script>
+</body>
+</html>

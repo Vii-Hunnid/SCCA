@@ -1,8 +1,11 @@
 import type { Metadata } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
+import Script from 'next/script';
 import '@/styles/globals.css';
 import { Providers } from '@/components/providers';
 import { SecurityOverlay } from '@/components/security-overlay';
+
+const STS_TRACKING_TOKEN = 'st_O5qQ11BFYsb1w8XXKqskghypwpsWymGU_mugn6npg';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -43,6 +46,18 @@ export default function RootLayout({
             {children}
           </div>
         </Providers>
+        <Script
+          src="https://www.sitetooling.space/track.js"
+          data-token={STS_TRACKING_TOKEN}
+          strategy="afterInteractive"
+        />
+        <noscript>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`https://www.sitetooling.space/noscript.gif?token=${STS_TRACKING_TOKEN}`}
+            alt="sitetooling.space"
+          />
+        </noscript>
       </body>
     </html>
   );

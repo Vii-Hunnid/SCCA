@@ -24,6 +24,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
+import { trackEvent } from '@/lib/analytics';
 
 interface BillingData {
   account: {
@@ -126,6 +127,10 @@ export default function BillingPage() {
   }, []);
 
   const handleUpgrade = async (tierName?: string) => {
+    trackEvent('begin_checkout', {
+      tier: tierName ?? 'current',
+      page: '/dashboard/billing',
+    });
     setCheckingOut(true);
     setError('');
     try {

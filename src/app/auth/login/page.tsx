@@ -8,6 +8,7 @@ import { Lock, Eye, EyeOff, ArrowRight, ArrowLeft, AlertCircle, Loader2 } from '
 import Link from 'next/link';
 import Image from 'next/image';
 import { Card } from '@/components/ui/card';
+import { trackEvent } from '@/lib/analytics';
 
 function GitHubIcon({ className }: { className?: string }) {
   return (
@@ -62,12 +63,15 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
+        trackEvent('form_submit', { form_name: 'login', success: false });
         setError('Invalid credentials. Access denied.');
       } else {
+        trackEvent('form_submit', { form_name: 'login', success: true });
         router.push('/dashboard');
         router.refresh();
       }
     } catch {
+      trackEvent('form_submit', { form_name: 'login', success: false });
       setError('Connection failed. Try again.');
     } finally {
       setLoading(false);
@@ -75,6 +79,11 @@ export default function LoginPage() {
   };
 
   const handleOAuthSignIn = (provider: string) => {
+    trackEvent('button_click', {
+      button_text: `Continue with ${provider}`,
+      location: 'login_page',
+      page: '/auth/login',
+    });
     setOauthLoading(provider);
     signIn(provider, { callbackUrl: '/dashboard' });
   };
