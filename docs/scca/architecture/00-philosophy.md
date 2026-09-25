@@ -18,9 +18,9 @@ This matches how people think: *"Change what I said, then continue from there."*
 
 Every byte costs money and slows backups. SCCA uses ~24 bytes of overhead per message vs 200-300 bytes traditional, 800+ bytes JWT-based. A 1,000-message conversation: ~85 KB instead of 800 KB - 2 MB.
 
-### 3. User-Controlled Encryption
+### 3. Encryption at Rest
 
-The server **cannot read message content** without the user's master key. The master key is derived from the user's password and never stored in plaintext on the server. Database breach = useless encrypted blobs.
+Every message is AES-256-GCM encrypted before it touches the database. Keys are derived from a server-held master secret (`MASTER_KEY_SECRET`) combined with each user's salt, so a database breach alone yields only useless encrypted blobs. Note: this is **not** end-to-end encryption — the server derives the keys and decrypts messages to build AI context. See [Threat Model](01-threat-model.md).
 
 ### 4. Linear Timeline Only
 

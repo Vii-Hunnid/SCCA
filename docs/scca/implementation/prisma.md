@@ -15,7 +15,7 @@ model SCCAConversation {
   model         String    @default("llama-3.3-70b-versatile")
   messageTokens String[]  @default([])    // Encrypted message blobs
   messageCount  Int       @default(0)     // Cached count
-  merkleRoot    String?                    // SHA-256 integrity hash
+  merkleRoot    String?                    // Merkle-HMAC integrity root
   deletedAt     DateTime?                  // Soft delete
   deletedBy     String?
   auditLogs     AuditLog[]
@@ -63,22 +63,24 @@ model User {
 
 ## Database Helper Functions
 
-Located in `lib/db/client.ts`:
+Located in `lib/db/client.ts` — the only path by which encrypted tokens reach
+PostgreSQL (it imports `packMessage` / `computeNextMerkleRoot` from the crypto
+engine):
 
 | Function | Description |
 |----------|-------------|
 | `createSCCAConversation(userId, title?, model?)` | Create new conversation row |
 | `getSCCAConversationsByUser(userId)` | List non-deleted conversations |
-| `getSCCAConversationById(id)` | Get single conversation |
+| `getSCCAConversationById(id, userId)` | Get single conversation |
 | `updateSCCAConversation(id, data)` | Update title/model/tokens/merkle |
 | `deleteSCCAConversation(id, userId)` | Soft delete (set deletedAt) |
-| `appendSCCAMessageTokens(id, tokens, count, merkle)` | Append tokens + update count |
+| `appendSCCAMessageTokenAtomic(...)` | Append one token with optimistic `messageCount` check |
+| `replaceSCCAMessageTokens(...)` | Replace token array (destructive edit) with the same check |
+| `appendMessageAtomically(id, content, role, convKey, intKey)` | Pack + append in one atomic step (409 on conflict) |
 | `createAuditLog(data)` | Create immutable audit entry |
-| `ensureUserMasterKeySalt(userId)` | Generate salt if not exists |
 
 ## Important Notes
 
-- **Prisma v5.7.0 required** - v7 has breaking changes with datasource URL
-- Use `npx -p prisma@5.7.0 prisma generate` not bare `npx prisma generate`
-- `prisma db push` requires direct PostgreSQL URL, not Accelerate URL
-- Run schema push locally with: `DATABASE_URL="postgres://..." npx -p prisma@5.7.0 prisma db push`
+- **Prisma v5 required** — the project pins `prisma` / `@prisma/client` ^5.22.0
+- Use `npx prisma generate` / `npx prisma db push` (no migration files by default)
+- `prisma db push` requires a direct PostgreSQL URL, not a pooled/Accelerate URL

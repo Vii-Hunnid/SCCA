@@ -4,7 +4,7 @@
 
 ## Overview
 
-The engine provides server-side encryption and decryption of chat messages using a hierarchical key system and compact binary format.
+The engine provides server-side encryption and decryption of chat messages using a hierarchical key system and compact binary format. It is **pure crypto** — it imports only `crypto`/`zlib` and never touches the database. Encrypted tokens reach PostgreSQL exclusively through `lib/db/client.ts`, which imports `packMessage` / `computeNextMerkleRoot` from this engine.
 
 ## Key Hierarchy
 
@@ -42,21 +42,22 @@ HKDF-SHA256: `userKey` + `conversationId` + "integrity" context → 32-byte key.
 
 ```
 Input:  "Hello world" (user, seq=0)
-Output: base64 string
+Output: base64url string
 
-Binary layout:
+Binary layout (format v2, current; v1 readable):
 ┌────────────────────────────────────────────────┐
 │ Header (10 bytes)                              │
-│  [version:1][role:1][sequence:2][timestamp:4]  │
-│  [flags:2]                                     │
+│  [version:1][role:1][sequence:4][timestamp:4]  │
 ├────────────────────────────────────────────────┤
-│ Nonce (12 bytes) - random, never reused        │
+│ Ciphertext length (4 bytes, uint32 BE)         │
+│  (v1: 2 bytes uint16 at the same offset)       │
 ├────────────────────────────────────────────────┤
 │ Ciphertext (variable)                          │
 │  AES-256-GCM(conversationKey, nonce,           │
 │    zlib.deflate(content))                      │
+│  + auth tag (16 bytes) appended                │
 ├────────────────────────────────────────────────┤
-│ Auth Tag (16 bytes) - GCM authentication       │
+│ Nonce (16 bytes) - random, never reused        │
 └────────────────────────────────────────────────┘
 ```
 
@@ -98,13 +99,24 @@ merkleRoot = hash[N-1]
 
 If any token is modified, the entire Merkle root changes.
 
+### `computeNextMerkleRoot(previousRoot, newToken, integrityKey): string`
+
+Extends a stored root with one appended token in O(1), without re-chaining the
+whole conversation. Used by `appendMessage` when a previous root exists.
+
+### `verifyMerkleRoot(tokens, storedRoot, integrityKey): boolean`
+
+Recomputes the root over all tokens and constant-time-compares it against the
+stored root. The conversation GET route runs this on every load.
+
 ## Conversation Operations
 
-### `appendMessage(tokens, content, role, sequence, convKey, intKey)`
+### `appendMessage(tokens, content, role, sequence, convKey, intKey, previousRoot?)`
 
 1. Pack the message
 2. Append to tokens array
-3. Recompute Merkle root
+3. Extend the Merkle root incrementally (`computeNextMerkleRoot`) when a
+   previous root exists, otherwise compute it in full
 4. Return `{ newTokens, merkleRoot }`
 
 ### `decryptMessages(tokens, convKey, offset?, limit?)`
@@ -131,4 +143,4 @@ Decrypt a range of tokens (viewport loading). Returns array of `DecryptedMessage
 | Authenticity | GCM auth tag - tampering detected |
 | Integrity | Merkle root - any modification detected |
 | Key isolation | Per-conversation keys via HKDF |
-| Nonce safety | Random 12-byte nonce per encryption |
+| Nonce safety | Random 16-byte nonce per encryption |

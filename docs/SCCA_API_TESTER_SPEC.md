@@ -59,7 +59,7 @@ Access-Control-Allow-Headers: Authorization, Content-Type
 ```
 
 ### 4. API Key Authentication
-The test page expects API keys in format: `scca_...`
+The test page expects API keys in format: `scca_k_...`
 The key is sent in the Authorization header: `Bearer {apiKey}`
 
 ## Endpoint Categories to Support
@@ -76,6 +76,7 @@ The key is sent in the Authorization header: `Bearer {apiKey}`
 - `PATCH /api/scca/conversations/:id` - Update conversation
 - `DELETE /api/scca/conversations/:id` - Delete conversation
 - `POST /api/scca/conversations/:id/messages` - Send message
+- `POST /api/scca/conversations/:id/edit` - Destructive edit/delete/regenerate
 
 ### Account Endpoints
 - `GET /api/scca/account` - Get account info
@@ -99,7 +100,7 @@ The key is sent in the Authorization header: `Bearer {apiKey}`
 {
   method: 'POST',
   headers: {
-    'Authorization': 'Bearer scca_xxx',
+    'Authorization': 'Bearer scca_k_xxx',
     'Content-Type': 'application/json'
   },
   body: JSON.stringify({

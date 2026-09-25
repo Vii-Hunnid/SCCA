@@ -9,11 +9,16 @@ app/api/scca/
   conversations/
     route.ts                    → GET (list) + POST (create)
     [id]/
-      route.ts                  → GET (load) + PATCH (update) + DELETE (soft delete)
+      route.ts                  → GET (viewport pagination + Merkle verification)
+                                  + PATCH (update) + DELETE (soft delete)
       messages/
         route.ts                → POST (send message with streaming)
       edit/
-        route.ts                → POST (destructive edit/delete)
+        route.ts                → POST (destructive edit/delete/regenerate)
+  account/
+    route.ts                    → GET (profile) + PATCH (update) + DELETE (delete account)
+    password/route.ts           → POST (change password; revokes older sessions)
+    sessions/[id]/route.ts      → DELETE (revoke a tracked session)
   keys/
     route.ts                    → GET (list) + POST (create API key)
     [id]/
@@ -22,44 +27,69 @@ app/api/scca/
     encrypt/route.ts            → POST (encrypt data)
     decrypt/route.ts            → POST (decrypt tokens)
     verify/route.ts             → POST (verify integrity)
+  media/
+    route.ts                    → GET (list) + POST (upload + encrypt)
+    [id]/route.ts               → GET (decrypt + download) + DELETE (remove)
   usage/
     route.ts                    → GET (usage analytics with period filter)
   billing/
     route.ts                    → GET (account/tiers/invoices) + POST (update settings)
+    checkout/route.ts           → POST (create Polar checkout session)
+    invoices/route.ts           → GET (list invoices)
+    invoices/[id]/route.ts      → GET (invoice detail; PDF via Polar REST API)
   rate-limits/
     route.ts                    → GET (current rate limit status)
+
+app/api/auth/
+  [...nextauth]/route.ts        → NextAuth handler (credentials + OAuth)
+  register/route.ts             → POST (user registration)
+
+app/api/webhooks/
+  polar/route.ts                → POST (Polar.sh events; signature-verified, no session)
 ```
 
-## Authentication Pattern
+## Authentication Patterns
 
-All routes use the same auth pattern:
+Most routes resolve the session via `requireUser()` in `lib/session.ts` (which
+calls `getServerSession(authOptions)` and rejects revoked/deleted users):
 
 ```typescript
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireUser } from "@/lib/session";
 
-const session = await getServerSession(authOptions);
-if (!session?.user?.id) {
+const auth = await requireUser();
+if (!auth) {
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 }
-const userId = session.user.id;
+const userId = auth.id;
 ```
+
+Two exceptions:
+
+- **Vault routes** authenticate through `authenticateRequest()` in
+  `lib/api-key-auth.ts`: an `scca_k_` Bearer API key is tried first, with
+  fallback to the NextAuth session.
+- **The Polar webhook** (`app/api/webhooks/polar/route.ts`) uses no session at
+  all — it verifies the Polar webhook signature and is idempotent under retries.
 
 ## Send Message Flow (SSE Streaming)
 
 The most complex route. Flow:
 
 ```
-1. Authenticate user
-2. Load conversation from database
-3. Derive encryption keys (user key → conversation key)
-4. Decrypt existing messages for AI context
-5. Pack and append user message to tokens
-6. Call Groq API with streaming
-7. Stream tokens to client via SSE
-8. On complete: pack assistant response, append to tokens
-9. Auto-title from first message (if conversation is new)
-10. Update database with final state
+1. Authenticate user (session via requireUser)
+2. Check tier rate limits / monthly budget (429 / 402 on excess)
+3. Load conversation from database
+4. Derive encryption keys (user key → conversation key)
+5. Decrypt existing messages for AI context
+6. Pack and persist the user message BEFORE streaming
+   (atomic append with optimistic concurrency; 409 on conflict)
+7. Call Groq API with streaming
+8. Stream tokens to client via SSE
+9. On complete: pack assistant response, append to tokens
+   (client aborts propagate upstream and discard the partial response)
+10. Auto-title from first message (if conversation is new)
+11. Update database with final state
+12. Record usage (tokens, bytes, latency, cost) for metering
 ```
 
 ### Streaming Response Format
@@ -144,8 +174,11 @@ X-RateLimit-Tier: tier_1
 
 ```
 app/dashboard/
+  page.tsx                      → Main chat (drives the useScca hook)
+  account/page.tsx              → Profile, password change, active sessions
   platform/page.tsx             → Platform overview with live rate gauges
   api-keys/page.tsx             → API key management
   usage/page.tsx                → Usage analytics with charts
   billing/page.tsx              → Billing tiers, invoices, settings
+  invoices/page.tsx             → Invoice history + preview
 ```

@@ -30,6 +30,7 @@ Migration note: v2 adds `password_changed_at` and `deleted_at` (users) plus `usa
 ## Table of Contents
 
 - [Core Architecture](#core-architecture)
+- [System Diagram](#system-diagram)
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Quick Start](#quick-start)
@@ -74,6 +75,19 @@ MASTER_KEY_SECRET (env, 32 bytes)
 - **Destructive editing** — Editing message #5 permanently deletes messages 6-N. No versioning, no branches, no ghost data. Linear timeline only.
 - **Encryption at rest** — Every message is AES-256-GCM encrypted with per-conversation keys before it touches the database. A database breach alone yields only encrypted blobs. Note: SCCA is **not** end-to-end encrypted — the server derives keys from a master secret to build AI context. See [Threat Model](docs/scca/architecture/01-threat-model.md).
 - **Compact binary format** — 10-byte header + zlib compression + AES-256-GCM ciphertext. ~46 bytes overhead per message vs 200-300 bytes for traditional JSON storage.
+
+---
+
+## System Diagram
+
+![SCCA System Diagram](docs/scca/architecture/system-diagram-v2-1.png)
+
+The platform is organized into four subsystems (verified against the source — see [docs/scca/architecture/06-system-diagram.md](docs/scca/architecture/06-system-diagram.md) for the full component diagram):
+
+- **User Experience** — the chat dashboard and presentational components; all API traffic flows through the `useScca` hook, with AI responses streamed back over SSE.
+- **Chat and Encryption** — the conversation/message/edit APIs, Groq AI client, conversation data access (`src/lib/db/client.ts`, the only path by which encrypted tokens reach PostgreSQL), and the pure crypto engine.
+- **Access and Metering** — NextAuth authentication, session checks, API key management/auth, tiered rate limits, and usage analytics.
+- **Extensions and Billing** — the stateless Vault API (ciphertext never stored), encrypted media pipeline, Polar.sh billing/checkout/invoices, and the signature-verified Polar webhook.
 
 ---
 
@@ -226,7 +240,9 @@ src/
 │   │   ├── login/page.tsx                # Sign in
 │   │   └── register/page.tsx             # Sign up
 │   ├── dashboard/
+│   │   ├── layout.tsx                    # Dashboard layout
 │   │   ├── page.tsx                      # Main chat + SCCA metrics
+│   │   ├── account/page.tsx              # Account profile, password, sessions
 │   │   ├── api-keys/page.tsx             # API key management
 │   │   ├── billing/page.tsx              # Billing & tier management
 │   │   ├── invoices/page.tsx             # Invoice history + preview
@@ -241,6 +257,12 @@ src/
 │       │   └── register/route.ts         # User registration
 │       ├── scca/
 │       │   ├── conversations/            # CRUD + messaging
+│       │   │   ├── route.ts              # List + create
+│       │   │   └── [id]/
+│       │   │       ├── route.ts          # Get (viewport + Merkle), update, delete
+│       │   │       ├── messages/route.ts # Send message (SSE stream)
+│       │   │       └── edit/route.ts     # Destructive edit/delete/regenerate
+│       │   ├── account/                  # Profile, password change, sessions
 │       │   ├── vault/                    # Encrypt, decrypt, verify
 │       │   ├── keys/                     # API key management
 │       │   ├── media/                    # Media upload/download
@@ -251,30 +273,46 @@ src/
 │           └── polar/route.ts            # Polar.sh payment webhooks
 ├── components/
 │   ├── chat/
-│   │   ├── SCCAChatArea.tsx              # Message display + streaming
+│   │   ├── SCCAChatArea.tsx              # Message display (presentational)
 │   │   ├── SCCAMessageBubble.tsx         # Individual message with actions
 │   │   ├── ChatInput.tsx                 # Input + file attachments
+│   │   ├── BlockStreamingIndicator.tsx   # Streaming progress indicator
 │   │   └── SCCAPreviewPanel.tsx          # Encryption metrics sidebar
-│   └── dashboard/
-│       ├── DashboardShell.tsx            # Layout with sidebar
-│       ├── ConversationList.tsx          # Conversation sidebar
-│       └── SecurityStatus.tsx            # Encryption status display
+│   ├── dashboard/
+│   │   ├── dashboard-shell.tsx           # Layout with sidebar
+│   │   ├── dashboard-page-shell.tsx      # Page wrapper
+│   │   ├── conversation-list.tsx         # Conversation sidebar
+│   │   └── security-status.tsx           # Encryption status display
+│   ├── layout/AuthProvider.tsx           # NextAuth session provider
+│   ├── ui/                               # Shared UI primitives (button, card, ...)
+│   ├── landing-page.tsx                  # Landing page component
+│   ├── providers.tsx                     # App providers
+│   └── security-overlay.tsx              # Security status overlay
 ├── lib/
-│   ├── crypto/engine.ts                  # AES-256-GCM, HKDF, Merkle tree
+│   ├── crypto/engine.ts                  # AES-256-GCM, HKDF, Merkle tree (pure crypto)
+│   ├── db/client.ts                      # Conversation data access (only DB path for tokens)
 │   ├── media/processor.ts               # SCCA media pipeline
 │   ├── ai/client.ts                      # Groq SDK wrapper
 │   ├── auth.ts                           # NextAuth config + key derivation
+│   ├── session.ts                        # Session checks (requireUser)
+│   ├── sse-client.ts                     # SSE stream parser
 │   ├── api-key-auth.ts                   # Bearer token authentication
 │   ├── rate-limit.ts                     # Tiered rate limiting engine
 │   ├── polar.ts                          # Polar.sh billing client
 │   ├── prisma.ts                         # Database client singleton
 │   └── utils.ts                          # cn(), formatBytes(), formatRelativeTime()
 ├── hooks/
-│   └── useScca.ts                        # React hook for SCCA operations
+│   └── useScca.ts                        # React hook for all SCCA API calls
 ├── store/
-│   └── chatStore.ts                      # Zustand global state
+│   ├── chatStore.ts                      # Zustand chat state
+│   └── index.ts                          # Store exports
+├── styles/
+│   └── globals.css                       # Global styles
 └── types/
-    └── chat.ts                           # Message, Conversation, SCCAMessage types
+    ├── chat.ts                           # Message, Conversation, SCCAMessage types
+    ├── api.ts                            # API request/response types
+    ├── crypto.ts                         # Crypto engine types
+    └── next-auth.d.ts                    # NextAuth session type extensions
 ```
 
 ---
@@ -569,7 +607,7 @@ The Polar.sh webhook handler (`/api/webhooks/polar`) processes:
 
 | Method | Description |
 |--------|-------------|
-| **Email/Password** | PBKDF2-SHA512 (100K iterations, 16-byte salt) |
+| **Email/Password** | PBKDF2-SHA512 (210K iterations, 16-byte salt) |
 | **GitHub OAuth** | Auto-provision with account linking by email |
 | **Google OAuth** | Auto-provision with account linking by email |
 | **API Keys** | Bearer tokens for programmatic access |
@@ -578,14 +616,14 @@ The Polar.sh webhook handler (`/api/webhooks/polar`) processes:
 
 - **Strategy**: JWT (NextAuth.js)
 - **Expiry**: 30 days
-- **Contents**: user ID, email, name, derived master key (base64), master key salt
+- **Contents**: user ID, email, name, session issue time (`iat`) — the master key is **not** in the JWT; it is derived per request from `MASTER_KEY_SECRET` + the user's salt (see `src/lib/session.ts`)
 - **Security**: Timing attack protection on login failures, CSRF validation
 
 ---
 
 ## API Reference
 
-All endpoints require authentication (session cookie or API key Bearer token).
+Endpoints require authentication unless noted: chat, account, billing, media, keys, and usage routes use the NextAuth session; the Vault API authenticates with an API key Bearer token (`scca_k_...`) first and falls back to the session; the Polar webhook verifies the Polar signature instead of a session.
 
 ### Conversations
 
@@ -593,11 +631,11 @@ All endpoints require authentication (session cookie or API key Bearer token).
 |--------|------|-------------|
 | `GET` | `/api/scca/conversations` | List all conversations |
 | `POST` | `/api/scca/conversations` | Create new conversation |
-| `GET` | `/api/scca/conversations/[id]` | Get conversation with decrypted messages |
+| `GET` | `/api/scca/conversations/[id]` | Get conversation with decrypted messages (viewport pagination + Merkle verification) |
 | `PATCH` | `/api/scca/conversations/[id]` | Update title or model |
 | `DELETE` | `/api/scca/conversations/[id]` | Soft delete conversation |
 | `POST` | `/api/scca/conversations/[id]/messages` | Send message (SSE streaming response) |
-| `POST` | `/api/scca/conversations/[id]/edit` | Destructive edit or delete |
+| `POST` | `/api/scca/conversations/[id]/edit` | Destructive edit, delete, or regenerate |
 
 ### Vault
 
@@ -622,8 +660,17 @@ All endpoints require authentication (session cookie or API key Bearer token).
 |--------|------|-------------|
 | `GET` | `/api/scca/keys` | List active API keys |
 | `POST` | `/api/scca/keys` | Create new API key |
-| `PUT` | `/api/scca/keys/[id]` | Update key name/expiry |
 | `DELETE` | `/api/scca/keys/[id]` | Revoke API key |
+
+### Account
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/scca/account` | Get account profile |
+| `PATCH` | `/api/scca/account` | Update account profile |
+| `DELETE` | `/api/scca/account` | Delete account and all associated data |
+| `POST` | `/api/scca/account/password` | Change password (revokes older sessions) |
+| `DELETE` | `/api/scca/account/sessions/[id]` | Revoke a tracked session |
 
 ### Billing
 
@@ -656,9 +703,9 @@ All endpoints require authentication (session cookie or API key Bearer token).
 |----------|----------------|
 | **Encryption** | AES-256-GCM — computationally infeasible without key |
 | **Key Derivation** | HKDF-SHA256 — per-user, per-conversation key isolation |
-| **Password Hashing** | PBKDF2-SHA512 — 100,000 iterations |
+| **Password Hashing** | PBKDF2-SHA512 — 210,000 iterations |
 | **Integrity** | Merkle-HMAC chain — any modification invalidates root |
-| **Nonce Safety** | Random 12-byte nonce per encryption (never reused) |
+| **Nonce Safety** | Random 16-byte nonce per encryption (never reused) |
 | **API Key Storage** | SHA-256 hash only — raw key never stored |
 | **Session** | JWT with 30-day expiry, timing attack protection |
 | **Headers** | X-Frame-Options: DENY, X-Content-Type-Options: nosniff |

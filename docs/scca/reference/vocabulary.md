@@ -13,7 +13,7 @@
 | **Conversation Key** | A key derived from the user key + conversation ID via HKDF. Used to encrypt/decrypt message tokens. | Not shared between conversations. Not the user key. |
 | **Integrity Key** | A key derived from the user key + "integrity" context via HKDF. Used for Merkle tree computation. | Not used for encryption. Only for hash verification. |
 | **Message Token** | A single base64-encoded encrypted blob stored in the `messageTokens` array. Contains: header + compressed ciphertext + nonce + auth tag. | Not a JWT. Not a plain text message. Not an AI token. |
-| **Binary Header** | The first 10 bytes of a packed message: version (1), role (1), sequence (2), timestamp (4), flags (2). | Not encrypted. Readable without decryption (via `peekMessageHeader`). |
+| **Binary Header** | The first 10 bytes of a packed message: version (1), role (1), sequence (4), timestamp (4). | Not encrypted. Readable without decryption (via `peekMessageHeader`). |
 | **Merkle Root** | SHA-256 hash chain across all message tokens, using the integrity key. Stored in the conversation row for tamper detection. | Not a blockchain. Not per-message. One value for the entire conversation. |
 | **Viewport** | A subset of messages loaded by the client (e.g., messages 40-60 of 100). Enables efficient loading of large conversations. | Not all messages. Not a filter. A windowed slice. |
 | **Soft Delete** | Setting `deletedAt` timestamp on a conversation. Data remains in DB until hard delete. | Not permanent deletion. Not data removal. |
@@ -23,9 +23,9 @@
 
 | Role | Byte Value | Description |
 |------|-----------|-------------|
-| `system` | `0x00` | System prompt / context message |
-| `user` | `0x01` | User-authored message |
-| `assistant` | `0x02` | AI-generated response |
+| `user` | `0x00` | User-authored message |
+| `assistant` | `0x01` | AI-generated response |
+| `system` | `0x02` | System prompt / context message |
 
 ## Operations
 

@@ -29,7 +29,7 @@ PostgreSQL natively supports arrays. `messageTokens` is `String[]` (array of tex
 | Binary header | 10 bytes |
 | Compressed content | ~30-50% of original |
 | Authentication tag | 16 bytes |
-| Nonce | 12 bytes |
+| Nonce | 16 bytes |
 | Base64 overhead | ~10% |
 
 ### Example: 200-character message

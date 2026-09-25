@@ -7,14 +7,17 @@
 ```
 1. User types message → presses Enter
 2. UI shows message in "pending" state (optimistic update)
-3. Message sent to server via API/WebSocket
+3. Message sent to server via REST API
 4. Server decrypts existing conversation history (in memory)
-5. Server streams user message + context to AI provider
-6. AI tokens streamed back → forwarded to all connected clients
-7. AI finishes → server encrypts both user message and AI response
-8. Encrypted blobs appended to conversation's message array
-9. Database updated with new blobs, message count, Merkle root
-10. All clients receive "complete" event → pending state removed
+5. Server encrypts and persists the user message BEFORE streaming
+   (atomic append; conflicts return 409)
+6. Server streams user message + context to AI provider
+7. AI tokens streamed back → forwarded to the client via SSE
+8. AI finishes → server encrypts the AI response
+9. Encrypted blob appended to conversation's message array
+   (client aborts discard the partial response instead)
+10. Database updated with new blob, message count, Merkle root
+11. Client receives "done" event → pending state removed
 ```
 
 ## Scenario B: User Edits a Previous Message (Destructive)
@@ -60,8 +63,8 @@
                      │
                      ▼
               ┌─────────────┐
-              │  10-byte     │  version(1) + role(1) + sequence(2)
-              │  Header      │  + timestamp(4) + flags(2)
+              │  10-byte     │  version(1) + role(1) + sequence(4)
+              │  Header      │  + timestamp(4)
               └──────┬──────┘
                      │
                      ▼
@@ -73,7 +76,7 @@
                      ▼
               ┌─────────────┐
               │  AES-256-GCM │  Encrypt with conversation key
-              │  Encrypt     │  + 12-byte nonce + 16-byte auth tag
+              │  Encrypt     │  + 16-byte nonce + 16-byte auth tag
               └──────┬──────┘
                      │
                      ▼

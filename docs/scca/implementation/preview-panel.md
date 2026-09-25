@@ -85,8 +85,8 @@ function estimateTokenSize(content: string): {
   );
 
   // Step 3: Add SCCA overhead
-  // 10-byte binary header + 12-byte nonce + 16-byte auth tag
-  const encryptedBytes = 10 + compressedBytes + 12 + 16;
+  // 10-byte binary header + 4-byte length + 16-byte auth tag + 16-byte nonce
+  const encryptedBytes = 10 + 4 + compressedBytes + 16 + 16;
 
   // Step 4: Compression ratio
   const compressionRatio = rawBytes > 0 ? rawBytes / compressedBytes : 1;
