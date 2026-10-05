@@ -19,6 +19,7 @@ import {
   Mic,
   MicOff,
 } from 'lucide-react';
+import { trackEvent } from '@/lib/analytics';
 
 interface PendingAttachment {
   file: File;
@@ -165,6 +166,11 @@ export function ChatInput({
   const handleSend = useCallback(() => {
     const trimmed = content.trim();
     if ((!trimmed && attachments.length === 0) || isStreaming || disabled) return;
+    trackEvent('message_sent', {
+      has_attachments: attachments.length > 0,
+      attachment_count: attachments.length,
+      page: '/dashboard',
+    });
     onSend(trimmed, attachments.length > 0 ? attachments.map((a) => a.file) : undefined);
     setContent('');
     setAttachments([]);

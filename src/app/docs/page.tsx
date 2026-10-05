@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Lock,
@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { trackEvent } from '@/lib/analytics';
 
 type Section =
   | 'overview'
@@ -47,6 +48,8 @@ const navItems: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: 'vocabulary', label: 'Vocabulary', icon: Hash },
 ];
 
+const DocsSectionContext = createContext<Section>('overview');
+
 function CodeBlock({
   children,
   language,
@@ -55,11 +58,17 @@ function CodeBlock({
   language?: string;
 }) {
   const [copied, setCopied] = useState(false);
+  const section = useContext(DocsSectionContext);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(children);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+    trackEvent('code_copy', {
+      section,
+      language,
+      page: '/docs',
+    });
   };
 
   return (
@@ -157,6 +166,13 @@ export default function DocsPage() {
   const [activeSection, setActiveSection] = useState<Section>('overview');
   const [mobileNav, setMobileNav] = useState(false);
 
+  useEffect(() => {
+    trackEvent('docs_section_view', {
+      section: activeSection,
+      page: '/docs',
+    });
+  }, [activeSection]);
+
   const scrollToSection = (id: Section) => {
     setActiveSection(id);
     setMobileNav(false);
@@ -165,6 +181,7 @@ export default function DocsPage() {
   };
 
   return (
+    <DocsSectionContext.Provider value={activeSection}>
     <div className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-[var(--border-light)] bg-[var(--bg-primary)]/90 backdrop-blur-md">
@@ -3146,5 +3163,6 @@ merkleRoot = hash[N-1]`}</CodeBlock>
         </main>
       </div>
     </div>
+    </DocsSectionContext.Provider>
   );
 }

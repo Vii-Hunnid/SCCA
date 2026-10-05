@@ -75,7 +75,15 @@ export function LandingPage() {
           <div className="flex items-center gap-5">
             <button
               type="button"
-              onClick={toggleTheme}
+              onClick={() => {
+                trackEvent('button_click', {
+                  button_text: theme === 'dark' ? 'Day mode' : 'Night mode',
+                  location: 'nav',
+                  page: '/',
+                  theme,
+                });
+                toggleTheme();
+              }}
               className="text-xs px-3 py-1.5 rounded-full border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:border-[var(--border-light)] transition-colors"
             >
               {theme === 'dark' ? 'Day mode' : 'Night mode'}
@@ -83,12 +91,28 @@ export function LandingPage() {
             <Link
               href="/docs"
               className="text-sm text-[var(--text-secondary)] hover:text-[var(--neon-cyan)] transition-colors"
+              onClick={() =>
+                trackEvent('button_click', {
+                  button_text: 'Docs',
+                  location: 'nav',
+                  page: '/',
+                  href: '/docs',
+                })
+              }
             >
               Docs
             </Link>
             <Link
               href="/auth/login"
               className="text-sm text-[var(--text-secondary)] hover:text-[var(--neon-cyan)] transition-colors"
+              onClick={() =>
+                trackEvent('button_click', {
+                  button_text: 'Sign In',
+                  location: 'nav',
+                  page: '/',
+                  href: '/auth/login',
+                })
+              }
             >
               Sign In
             </Link>

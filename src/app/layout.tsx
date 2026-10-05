@@ -4,6 +4,7 @@ import Script from 'next/script';
 import '@/styles/globals.css';
 import { Providers } from '@/components/providers';
 import { SecurityOverlay } from '@/components/security-overlay';
+import { EngagementTracker } from '@/components/analytics/engagement-tracker';
 
 const STS_TRACKING_TOKEN = 'st_O5qQ11BFYsb1w8XXKqskghypwpsWymGU_mugn6npg';
 
@@ -42,6 +43,7 @@ export default function RootLayout({
       <body className="font-sans">
         <Providers>
           <SecurityOverlay />
+          <EngagementTracker />
           <div className="relative min-h-screen bg-[var(--bg-primary)]">
             {children}
           </div>

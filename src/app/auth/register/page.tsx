@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -8,7 +8,7 @@ import { UserPlus, Eye, EyeOff, ArrowRight, ArrowLeft, AlertCircle, Loader2 } fr
 import Link from 'next/link';
 import Image from 'next/image';
 import { Card } from '@/components/ui/card';
-import { trackEvent } from '@/lib/analytics';
+import { getCampaignProperties, trackEvent } from '@/lib/analytics';
 
 function GitHubIcon({ className }: { className?: string }) {
   return (
@@ -51,6 +51,13 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
+  const formStartedRef = useRef(false);
+
+  const handleFormStart = () => {
+    if (formStartedRef.current) return;
+    formStartedRef.current = true;
+    trackEvent('form_start', { form_name: 'register', page: '/auth/register' });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,6 +91,11 @@ export default function RegisterPage() {
       }
 
       trackEvent('form_submit', { form_name: 'register', success: true });
+      trackEvent('sign_up', {
+        method: 'credentials',
+        page: '/auth/register',
+        ...getCampaignProperties(),
+      });
 
       // Auto-login after registration
       const result = await signIn('credentials', {
@@ -110,6 +122,7 @@ export default function RegisterPage() {
       button_text: `Continue with ${provider}`,
       location: 'register_page',
       page: '/auth/register',
+      method: provider,
     });
     setOauthLoading(provider);
     signIn(provider, { callbackUrl: '/dashboard' });
@@ -190,7 +203,7 @@ export default function RegisterPage() {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} onFocus={handleFormStart} className="space-y-4">
             {error && (
               <motion.div
                 initial={{ opacity: 0, y: -8 }}

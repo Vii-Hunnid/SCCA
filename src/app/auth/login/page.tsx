@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -49,6 +49,13 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
+  const formStartedRef = useRef(false);
+
+  const handleFormStart = () => {
+    if (formStartedRef.current) return;
+    formStartedRef.current = true;
+    trackEvent('form_start', { form_name: 'login', page: '/auth/login' });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,6 +74,7 @@ export default function LoginPage() {
         setError('Invalid credentials. Access denied.');
       } else {
         trackEvent('form_submit', { form_name: 'login', success: true });
+        trackEvent('login', { method: 'credentials', page: '/auth/login' });
         router.push('/dashboard');
         router.refresh();
       }
@@ -83,6 +91,7 @@ export default function LoginPage() {
       button_text: `Continue with ${provider}`,
       location: 'login_page',
       page: '/auth/login',
+      method: provider,
     });
     setOauthLoading(provider);
     signIn(provider, { callbackUrl: '/dashboard' });
@@ -163,7 +172,7 @@ export default function LoginPage() {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} onFocus={handleFormStart} className="space-y-4">
             {error && (
               <motion.div
                 initial={{ opacity: 0, y: -8 }}

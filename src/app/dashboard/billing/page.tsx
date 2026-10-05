@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   CreditCard,
@@ -19,7 +19,7 @@ import { DashboardPageShell } from '@/components/dashboard/dashboard-page-shell'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { trackEvent } from '@/lib/analytics';
+import { getCampaignProperties, trackEvent } from '@/lib/analytics';
 
 interface BillingData {
   account: {
@@ -84,6 +84,8 @@ export default function BillingPage() {
   const [autoUpgrade, setAutoUpgrade] = useState(false);
   const [checkingOut, setCheckingOut] = useState(false);
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
+  const purchaseTrackedRef = useRef(false);
+  const impressionTrackedRef = useRef(false);
 
   // Detect ?checkout=success in URL on mount
   useEffect(() => {
@@ -96,10 +98,43 @@ export default function BillingPage() {
     }
   }, []);
 
-  const handleUpgrade = async (tierName?: string) => {
+  // Fire the purchase conversion once billing data is loaded after a
+  // successful checkout return.
+  useEffect(() => {
+    if (!checkoutSuccess || !data || purchaseTrackedRef.current) return;
+    purchaseTrackedRef.current = true;
+    trackEvent('purchase', {
+      order_id:
+        data.account.polarSubscriptionId ??
+        data.account.polarCustomerId ??
+        'pending',
+      // Polar does not return the order amount to the browser; 0 = unknown.
+      total: 0,
+      currency: 'USD',
+      tier: data.account.tier,
+      page: '/dashboard/billing',
+      ...getCampaignProperties(),
+    });
+  }, [checkoutSuccess, data]);
+
+  // Track the free-tier upgrade banner impression for funnel analysis.
+  useEffect(() => {
+    if (!data || data.account.tier !== 'free' || impressionTrackedRef.current)
+      return;
+    impressionTrackedRef.current = true;
+    trackEvent('cta_impression', {
+      cta: 'upgrade_banner',
+      tier: 'free',
+      page: '/dashboard/billing',
+    });
+  }, [data]);
+
+  const handleUpgrade = async (tierName?: string, location?: string) => {
     trackEvent('begin_checkout', {
       tier: tierName ?? 'current',
+      location,
       page: '/dashboard/billing',
+      ...getCampaignProperties(),
     });
     setCheckingOut(true);
     setError('');
@@ -250,7 +285,7 @@ export default function BillingPage() {
                 </div>
               </div>
               <button
-                onClick={() => handleUpgrade('tier_1')}
+                onClick={() => handleUpgrade('tier_1', 'upgrade_banner')}
                 disabled={checkingOut}
                 className="flex items-center gap-2 px-5 py-2.5 text-cyber-black text-xs font-semibold rounded hover:opacity-90 transition-opacity disabled:opacity-50"
                 style={{ background: 'linear-gradient(to right, var(--neon-purple), var(--neon-cyan))' }}
@@ -538,7 +573,7 @@ export default function BillingPage() {
                             <Badge tone="green">Current</Badge>
                           ) : isUpgradeable ? (
                             <button
-                              onClick={() => handleUpgrade(tier.name)}
+                              onClick={() => handleUpgrade(tier.name, 'tier_table')}
                               disabled={checkingOut}
                               className="cyber-btn-sm"
                               style={{

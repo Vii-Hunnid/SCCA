@@ -19,6 +19,7 @@ import { DashboardPageShell } from '@/components/dashboard/dashboard-page-shell'
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
+import { trackEvent } from '@/lib/analytics';
 
 interface ApiKeyInfo {
   id: string;
@@ -94,6 +95,7 @@ export default function ApiKeysPage() {
       setShowCreateForm(false);
       setKeyName('');
       setExpiresInDays('');
+      trackEvent('api_key_created', { page: '/dashboard/api-keys' });
       fetchKeys();
     } catch {
       setError('Failed to create API key');
